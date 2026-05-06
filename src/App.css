@@ -465,9 +465,32 @@ body {
   background: #fdfdfd;
   border: 1px solid #f0d0e0;
   border-radius: 10px;
-  padding: 7px 12px;
+  padding: 7px 12px 14px;
   text-align: left;
+  position: relative;
 }
+
+.diff-dots {
+  position: absolute;
+  bottom: 5px;
+  right: 8px;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.diff-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.diff-dot-easy   { background-color: #81c784; }
+.diff-dot-normal { background-color: #ffd54f; }
+.diff-dot-hard   { background-color: #ef5350; }
+.diff-dot-expert { background-color: #ba68c8; }
 
 .song-modal-lyrics {
   font-size: 0.75rem;
@@ -566,6 +589,29 @@ body {
   letter-spacing: 0.03em;
   white-space: pre;
   overflow: hidden;
+}
+
+.song-name-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0 auto clamp(3px, 0.8svh, 6px);
+  font-size: clamp(0.55rem, 2vw, 0.68rem);
+}
+
+.song-name-hint-label {
+  color: #aaa;
+}
+
+.song-name-hint-badge {
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 1px 7px;
+  color: #b8860b;
+  font-weight: bold;
+  white-space: nowrap;
 }
 
 .hint-lyrics {
@@ -1362,11 +1408,19 @@ body {
   max-width: 90vw;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   text-align: left;
-  white-space: pre-wrap;
   font-size: 0.8rem;
   line-height: 1.6;
   animation: slideUp 0.2s ease-out;
 }
+
+.info-pop-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+.info-pop-item:last-child { margin-bottom: 0; }
+.info-pop-bullet-char { flex-shrink: 0; }
+.info-pop-item > span:last-child { flex: 1; word-break: break-word; }
 
 /* --- セッション復元バナー --- */
 .resume-card {

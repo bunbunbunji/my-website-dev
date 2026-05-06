@@ -98,7 +98,7 @@ function App() {
     setIsLoadingSongModal(true);
     const { data } = await supabase
       .from('quiz_full')
-      .select('lyrics, correct_members, seq, section_name')
+      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert')
       .eq('group_name', groupName)
       .eq('song_name', title)
       .order('seq');
@@ -136,10 +136,10 @@ function App() {
   const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", expert: "げきむず" };
 
   const descriptions = {
-    easy: "・1人で歌っている歌詞が選出されます\n・有名な曲の特徴的な歌詞が選出されます\n・設問の前後2フレーズの歌詞が表示されます",
-    normal: "・1人で歌っている歌詞が選出されます\n・「やさしい」の曲に加えて、MVがでている曲の歌詞が選出されます\n・設問の前後1フレーズの歌詞が表示されます",
-    hard: "・1人または全員で歌っている歌詞が選出されます\n・すべての曲の歌詞が選出されます\n・ノーヒントです",
-    expert: "・2人以上または全員で歌っている歌詞が選出されます\n・すべての曲の歌詞が選出されます\n・ノーヒントです"
+    easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
+    normal: ["MVが存在する曲から、1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
+    hard:   ["すべての曲から、1人または全員で歌う歌詞が選出されます", "繰り返し使われる歌詞", "ヒントはありません"],
+    expert: ["すべての曲から、2人以上で歌う歌詞が選出されます", "ヒントはありません"],
   };
 
   const resultMessages = {
@@ -169,6 +169,7 @@ function App() {
     }
     setSessionId(null);
     setPendingResume(null);
+    setSelectedMembers(new Set());
     const ids = quizState.quizzes.map(q => q.id);
     const { data } = await supabase.from('sessions').insert({
       group_name: quizState.group,
@@ -637,11 +638,11 @@ function App() {
   };
 
   const quizCurr = quizState.quizzes[quizState.currentIndex];
-  const showFull = answered || quizState.difficulty === 'easy';
   const sp = quizCurr?.surroundPrev || [];
   const sn = quizCurr?.surroundNext || [];
-  const quizPrevLines = showFull ? sp : quizState.difficulty === 'normal' ? sp.slice(-1) : [];
-  const quizNextLines = showFull ? sn : quizState.difficulty === 'normal' ? sn.slice(0, 1) : [];
+  const showHint = quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered;
+  const quizPrevLines = showHint ? sp.slice(-1) : [];
+  const quizNextLines = showHint ? sn.slice(0, 1) : [];
   const quizExplanation = (quizCurr?.song_name && quizCurr?.section_name)
     ? `この歌詞は「${quizCurr.song_name}」の\n${quizCurr.section_name}部分でした！` : "";
 
@@ -731,8 +732,6 @@ function App() {
                     >
                       <div className="song-title-cell">♪ {song.title}</div>
                       <div className="badge-area">
-                        {song.isEasy && <span className="diff-badge-inline easy-badge-color">やさしい</span>}
-                        {song.isNormal && <span className="diff-badge-inline normal-badge-color">ふつう</span>}
                         {!song.hasQuiz && <span className="status-tag-unreleased">準備中</span>}
                       </div>
                     </div>
@@ -792,7 +791,12 @@ function App() {
             <div className={`info-modal-overlay${closingInfo ? ' closing' : ''}`} onClick={closeInfo}>
               <div className={`info-pop${closingInfo ? ' closing' : ''}`} onClick={e => e.stopPropagation()}>
                 {/* infoLevel が null になった瞬間のために、quizState.difficulty を予備として表示 */}
-                {descriptions[infoLevel] || descriptions[quizState.difficulty]}
+                {(descriptions[infoLevel] || descriptions[quizState.difficulty]).map((item, i) => (
+                  <div key={i} className="info-pop-item">
+                    <span className="info-pop-bullet-char">・</span>
+                    <span>{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -823,6 +827,13 @@ function App() {
             <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
           </div>
           <h2 className="title quiz-title">だれが歌ってる？</h2>
+
+          {quizState.difficulty === 'easy' && quizCurr?.song_name && (
+            <div className="song-name-hint">
+              <span className="song-name-hint-label">ヒント：</span>
+              <span className="song-name-hint-badge">{quizCurr.song_name}</span>
+            </div>
+          )}
 
           {quizPrevLines.length > 0 && (
             <div className="hint-lyrics">
@@ -964,6 +975,12 @@ function App() {
                       <div key={i} className="song-modal-row">
                         <div className="song-modal-lyrics" style={{ color: lyricsColor }}>{row.lyrics}</div>
                         <div className="song-modal-members">🎤 {memberNameNodes}</div>
+                        <div className="diff-dots">
+                          {Number(row.easy)   > 0 && <span className="diff-dot diff-dot-easy"   title="やさしい" />}
+                          {Number(row.normal) > 0 && <span className="diff-dot diff-dot-normal" title="ふつう" />}
+                          {Number(row.hard)   > 0 && <span className="diff-dot diff-dot-hard"   title="むずかしい" />}
+                          {Number(row.expert) > 0 && <span className="diff-dot diff-dot-expert" title="げきむず" />}
+                        </div>
                       </div>
                     );
                   })}
