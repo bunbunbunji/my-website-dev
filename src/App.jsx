@@ -973,7 +973,7 @@ function App() {
                         ));
                     return (
                       <div key={i} className="song-modal-row">
-                        <div className="song-modal-lyrics" style={{ color: lyricsColor }}>{row.lyrics}</div>
+                        <div className="song-modal-lyrics" style={{ color: lyricsColor, whiteSpace: 'pre-wrap' }}>{row.lyrics}</div>
                         <div className="song-modal-members">🎤 {memberNameNodes}</div>
                         <div className="diff-dots">
                           {Number(row.easy)   > 0 && <span className="diff-dot diff-dot-easy"   title="やさしい" />}
