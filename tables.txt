@@ -1,0 +1,155 @@
+
+[-table一覧-
+  {
+    "table_name": "lyric_members",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "lyrics",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "members",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quiz_full",
+    "table_type": "VIEW"
+  },
+  {
+    "table_name": "quizzes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "sessions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "sounds",
+    "table_type": "BASE TABLE"
+  }
+]
+
+[-各テーブル定義（カラム詳細）
+  {
+    table_name,column_name,ordinal_position,column_default,is_nullable,data_type,character_maximum_length,numeric_precision,numeric_scale,column_comment
+      lyric_members,lyric_id,1,null,NO,bigint,null,64,0,null
+      lyric_members,member_id,2,null,NO,bigint,null,64,0,null
+      lyrics,id,1,null,NO,bigint,null,64,0,null
+      lyrics,sounds_id,2,null,YES,smallint,null,16,0,null
+      lyrics,lyric,3,null,YES,text,null,null,null,null
+      lyrics,section_name,5,null,YES,text,null,null,null,null
+      lyrics,seq,6,null,YES,smallint,null,16,0,null
+      lyrics,is_active,7,null,YES,boolean,null,null,null,null
+      lyrics,created_at,9,now(),YES,timestamp with time zone,null,null,null,null
+      members,id,1,null,NO,bigint,null,64,0,null
+      members,created_at,2,now(),NO,timestamp with time zone,null,null,null,null
+      members,name,3,null,YES,text,null,null,null,null
+      members,group_name,4,null,YES,text,null,null,null,null
+      members,sort_order,5,null,YES,bigint,null,64,0,null
+      members,color,6,null,YES,text,null,null,null,null
+      members,Last_name,7,null,YES,text,null,null,null,null
+      quiz_full,id,1,null,YES,bigint,null,64,0,null
+      quiz_full,easy,2,null,YES,real,null,24,null,null
+      quiz_full,normal,3,null,YES,real,null,24,null,null
+      quiz_full,hard,4,null,YES,real,null,24,null,null
+      quiz_full,expert,5,null,YES,real,null,24,null,null
+      quiz_full,lyrics,6,null,YES,text,null,null,null,null
+      quiz_full,correct_members,7,null,YES,text,null,null,null,null
+      quiz_full,section_name,8,null,YES,text,null,null,null,null
+      quiz_full,seq,9,null,YES,smallint,null,16,0,null
+      quiz_full,lyrics_id,10,null,YES,bigint,null,64,0,null
+      quiz_full,sounds_id,11,null,YES,smallint,null,16,0,null
+      quiz_full,group_name,12,null,YES,text,null,null,null,null
+      quiz_full,song_name,13,null,YES,text,null,null,null,null
+      quizzes,id,1,null,NO,bigint,null,64,0,null
+      quizzes,lyrics_id,2,null,YES,smallint,null,16,0,null
+      quizzes,easy,3,null,YES,real,null,24,null,null
+      quizzes,normal,4,null,YES,real,null,24,null,null
+      quizzes,hard,5,null,YES,real,null,24,null,null
+      quizzes,expert,6,null,YES,real,null,24,null,null
+      quizzes,is_active,7,null,YES,boolean,null,null,null,null
+      quizzes,created_at,9,now(),YES,timestamp with time zone,null,null,null,null
+      sessions,session_id,1,gen_random_uuid(),NO,uuid,null,null,null,null
+      sessions,group_name,2,null,YES,text,null,null,null,null
+      sessions,difficulty,3,null,YES,text,null,null,null,null
+      sessions,current_step,4,null,YES,smallint,null,16,0,null
+      sessions,quiz_ids,5,null,YES,jsonb,null,null,null,null
+      sessions,correct_count,6,null,YES,smallint,null,16,0,null
+      sessions,created_at,7,now(),NO,timestamp with time zone,null,null,null,null
+      sessions,updated_at,8,null,YES,timestamp with time zone,null,null,null,null
+      sounds,id,1,null,NO,bigint,null,64,0,null
+      sounds,group_name,2,null,YES,text,null,null,null,null
+      sounds,song_name,3,null,YES,text,null,null,null,null
+      sounds,is_active,4,null,YES,boolean,null,null,null,null
+      sounds,created_at,6,now(),YES,timestamp with time zone,null,null,null,null
+  }
+]
+
+[-主キー制約
+  {
+    table_name,column_name
+      lyric_members,member_id
+      lyric_members,lyric_id
+      lyrics,id
+      members,id
+      quizzes,id
+      sessions,session_id
+      sessions,id
+      sounds,id 
+  }
+]
+
+[-外部キー制約
+  {
+    from_table,from_column,to_table,to_column,constraint_name
+      lyric_members,lyric_id,lyrics,id,lyric_members_lyric_id_fkey
+      lyric_members,member_id,members,id,lyric_members_member_id_fkey
+      lyrics,sounds_id,sounds,id,fk_lyrics_sounds
+      quizzes,lyrics_id,lyrics,id,fk_quizzes_lyrics
+  }
+]
+
+[-インデックス一覧
+  {
+    tablename,indexname,indexdef
+      lyric_members,lyric_members_pkey,"CREATE UNIQUE INDEX lyric_members_pkey ON public.lyric_members USING btree (lyric_id, member_id)"
+      lyrics,idx_lyrics_sounds_seq,"CREATE INDEX idx_lyrics_sounds_seq ON public.lyrics USING btree (sounds_id, seq)"
+      lyrics,lyrics_pkey,CREATE UNIQUE INDEX lyrics_pkey ON public.lyrics USING btree (id)
+      lyrics,lyrics_sounds_seq_unique,"CREATE UNIQUE INDEX lyrics_sounds_seq_unique ON public.lyrics USING btree (sounds_id, seq)"
+      members,members_pkey,CREATE UNIQUE INDEX members_pkey ON public.members USING btree (id)
+      quizzes,idx_quizzes_lyrics,CREATE INDEX idx_quizzes_lyrics ON public.quizzes USING btree (lyrics_id)
+      quizzes,quizzes_lyrics_id_unique,CREATE UNIQUE INDEX quizzes_lyrics_id_unique ON public.quizzes USING btree (lyrics_id)
+      quizzes,quizzes_pkey,CREATE UNIQUE INDEX quizzes_pkey ON public.quizzes USING btree (id)
+      sessions,sessions_pkey,CREATE UNIQUE INDEX sessions_pkey ON public.sessions USING btree (session_id)
+      sounds,idx_sounds_group,CREATE INDEX idx_sounds_group ON public.sounds USING btree (group_name)
+      sounds,sounds_group_song_unique,"CREATE UNIQUE INDEX sounds_group_song_unique ON public.sounds USING btree (group_name, song_name)"
+      sounds,sounds_pkey,CREATE UNIQUE INDEX sounds_pkey ON public.sounds USING btree (id)
+  }
+]
+
+[-ビュー定義
+  {
+    view_name,view_definition
+      quiz_full," SELECT q.id,
+          q.easy,
+          q.normal,
+          q.hard,
+          q.expert,
+          l.lyric AS lyrics,
+          string_agg(m.name, ','::text ORDER BY m.sort_order) AS correct_members,
+          l.section_name,
+          l.seq,
+          l.id AS lyrics_id,
+          l.sounds_id,
+          s.group_name,
+          s.song_name
+        FROM ((((quizzes q
+          JOIN lyrics l ON ((q.lyrics_id = l.id)))
+          JOIN sounds s ON ((l.sounds_id = s.id)))
+          LEFT JOIN lyric_members lm ON ((l.id = lm.lyric_id)))
+          LEFT JOIN members m ON ((lm.member_id = m.id)))
+        WHERE ((q.is_active = true) AND (l.is_active = true) AND (s.is_active = true))
+        GROUP BY q.id, q.easy, q.normal, q.hard, q.expert, l.lyric, l.section_name, l.seq, l.id, l.sounds_id, s.group_name, s.song_name;"
+  }
+]
