@@ -147,9 +147,8 @@ function App() {
   // elapsed: 回答にかかった秒数 (整数)
   const calcTimerunBonus = (elapsed, isCorrect) => {
     if (!isCorrect) return -Math.min(5, Math.max(0, 15 - elapsed));
-    if (elapsed <= 5) return 10 - elapsed;
-    if (elapsed <= 10) return Math.floor(elapsed * 0.5);
-    return Math.floor(elapsed * 0.2);
+    if (elapsed <= 5) return 6 - elapsed;
+    return 0;
   };
 
   const descriptions = {

@@ -1642,8 +1642,10 @@ body {
 .timerun-header-top {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   margin-bottom: 5px;
+  position: relative;
 }
 
 .timerun-main-timer {
@@ -1668,25 +1670,31 @@ body {
 .timerun-timer-num  { font-size: clamp(1.5rem, min(7vw, 5svh), 2rem); }
 .timerun-timer-unit { font-size: clamp(0.7rem, 2.5vw, 0.85rem); }
 
-/* タイマー横のフィードバック表示 */
-@keyframes feedbackFade {
-  0%   { opacity: 0; transform: translateX(-4px) scale(0.9); }
-  15%  { opacity: 1; transform: translateX(0) scale(1); }
-  65%  { opacity: 1; }
-  100% { opacity: 0; }
+/* フィードバック（ピョン跳ね→フェードアウト） */
+@keyframes feedbackBounceUp {
+  0%   { opacity: 0;   transform: translateX(-50%) translateY(0px); }
+  15%  { opacity: 1;   transform: translateX(-50%) translateY(-8px); }
+  30%  { opacity: 1;   transform: translateX(-50%) translateY(-4px); }
+  50%  { opacity: 1;   transform: translateX(-50%) translateY(-12px); }
+  75%  { opacity: 0.6; transform: translateX(-50%) translateY(-20px); }
+  100% { opacity: 0;   transform: translateX(-50%) translateY(-30px); }
 }
 .timerun-feedback-inline {
   font-family: 'Mochiy Pop One', sans-serif;
-  font-size: clamp(0.7rem, 3.2vw, 0.9rem);
+  font-size: clamp(0.8rem, 3.5vw, 1rem);
   font-weight: bold;
   white-space: nowrap;
-  animation: feedbackFade 1.1s ease-out forwards;
+  position: absolute;
+  left: 50%;
+  top: 0;
+  pointer-events: none;
+  animation: feedbackBounceUp 1.2s ease-out forwards;
 }
 .timerun-feedback-inline.correct  { color: #2e7d32; }
 .timerun-feedback-inline.incorrect { color: #c62828; }
 .timerun-feedback-inline.timeover { color: #e65100; }
 
-.timerun-qbar-wrap { }
+.timerun-qbar-wrap { margin-top: 2px; }
 .timerun-qbar-label {
   display: block;
   font-size: 0.62rem;
