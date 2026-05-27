@@ -78,6 +78,14 @@ function App() {
   const [displayScore, setDisplayScore] = useState(0);
   const [resultPhase, setResultPhase] = useState('idle');
 
+  // --- タイムランモード ---
+  const [gameMode, setGameMode] = useState('normal'); // 'normal' | 'timerun'
+  const [mainTimer, setMainTimer] = useState(60);
+  const [questionTimer, setQuestionTimer] = useState(15);
+  const [isTimerunGameOver, setIsTimerunGameOver] = useState(false);
+  const [timerunFeedback, setTimerunFeedback] = useState({ text: '', type: '', key: 0 });
+  const questionTimerIntervalRef = useRef(null);
+
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [songModal, setSongModal] = useState(null);
@@ -135,6 +143,15 @@ function App() {
 
   const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", expert: "げきむず" };
 
+  // --- タイムランボーナス計算 ---
+  // elapsed: 回答にかかった秒数 (整数)
+  const calcTimerunBonus = (elapsed, isCorrect) => {
+    if (!isCorrect) return -Math.min(5, Math.max(0, 15 - elapsed));
+    if (elapsed <= 5) return 10 - elapsed;
+    if (elapsed <= 10) return Math.floor(elapsed * 0.5);
+    return Math.floor(elapsed * 0.2);
+  };
+
   const descriptions = {
     easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
     normal: ["MVが存在する曲から、1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
@@ -162,6 +179,18 @@ function App() {
 
   // --- クイズ開始（セッション作成） ---
   const startQuiz = async () => {
+    // タイムランはセッション不要
+    if (gameMode === 'timerun') {
+      setMainTimer(60);
+      setQuestionTimer(15);
+      setIsTimerunGameOver(false);
+      setSelectedMembers(new Set());
+      setAnswered(false);
+      setResultMsg({ text: '', type: '' });
+      setQuizState(prev => ({ ...prev, currentIndex: 0, correctCount: 0 }));
+      setScreen('quiz');
+      return;
+    }
     const oldId = sessionId || pendingResume?.session_id;
     if (oldId) {
       await supabase.from('sessions').delete().eq('session_id', oldId);
@@ -271,6 +300,35 @@ function App() {
     setIsPreparing(false);
   };
 
+  // --- タイムラン用クイズ準備（最大30問を重み付き抽選） ---
+  const prepareTimerunQuiz = async (selectedGroup, selectedDiff) => {
+    setIsPreparing(true);
+    setStatusMsg("問題を準備しています…");
+    const { data: qData } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).gt(selectedDiff, 0);
+    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    if (!qData || qData.length === 0) {
+      setStatusMsg("問題が見つかりませんでした");
+      setIsPreparing(false);
+      return;
+    }
+    const selectedQuizzes = [];
+    const tempPool = [...qData];
+    const count = Math.min(30, tempPool.length);
+    for (let i = 0; i < count && tempPool.length > 0; i++) {
+      const totalWeight = tempPool.reduce((sum, q) => sum + (q[selectedDiff] || 0), 0);
+      let random = Math.random() * totalWeight;
+      for (let j = 0; j < tempPool.length; j++) {
+        random -= tempPool[j][selectedDiff];
+        if (random <= 0) { selectedQuizzes.push(tempPool[j]); tempPool.splice(j, 1); break; }
+      }
+    }
+    const quizzesWithSurrounds = await fetchSurrounds(selectedQuizzes);
+    setQuizState(prev => ({ ...prev, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
+    setMembers(mData || []);
+    setStatusMsg(`${quizzesWithSurrounds.length}問を準備しました！`);
+    setIsPreparing(false);
+  };
+
   // --- 楽曲リスト取得（ループ取得 & 強力正規化） ---
   const fetchSongList = async () => {
     setIsLoadingList(true);
@@ -376,6 +434,25 @@ function App() {
     const isAll = correctArray.length === members.length && members.length > 0;
     const correctLabel = formatCorrectLabel(correctArray, isAll ? '1' : '0');
 
+    // --- タイムランモード ---
+    if (gameMode === 'timerun') {
+      const elapsed = 15 - questionTimer;
+      const bonus = calcTimerunBonus(elapsed, isCorrect);
+      setMainTimer(prev => Math.min(60, Math.max(0, prev + bonus)));
+      clearInterval(questionTimerIntervalRef.current);
+      if (isCorrect) setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
+      const bonusSuffix = isCorrect && bonus > 0 ? ` ＋${bonus}秒` : (isCorrect ? '' : bonus < 0 ? ` ${bonus}秒` : '');
+      setTimerunFeedback(prev => ({
+        text: isCorrect ? `⭕ 正解！${bonusSuffix}` : `❌ 不正解...${bonusSuffix}`,
+        type: isCorrect ? 'correct' : 'incorrect',
+        key: prev.key + 1
+      }));
+      setAnswered(true);
+      setTimeout(() => nextQuestion(), 0);
+      return;
+    }
+
+    // --- 通常モード ---
     if (isCorrect) {
       setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
       setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "correct" });
@@ -400,19 +477,64 @@ function App() {
   };
 
   const nextQuestion = () => {
-    if (quizState.currentIndex + 1 < quizState.quizzes.length) {
-      setQuizState(prev => ({ ...prev, currentIndex: prev.currentIndex + 1 }));
-      setSelectedMembers(new Set());
-      setAnswered(false);
-      setResultMsg({ text: "", type: "" });
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      setScreen('result');
-    }
+    setQuizState(prev => {
+      if (prev.currentIndex + 1 < prev.quizzes.length) {
+        return { ...prev, currentIndex: prev.currentIndex + 1 };
+      }
+      // 問題切れ
+      if (gameMode === 'timerun') {
+        clearInterval(questionTimerIntervalRef.current);
+        setIsTimerunGameOver(true);
+      } else {
+        setScreen('result');
+      }
+      return prev;
+    });
+    setSelectedMembers(new Set());
+    setAnswered(false);
+    setResultMsg({ text: "", type: "" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // --- タイムラン：メインタイマー ---
+  useEffect(() => {
+    if (screen !== 'quiz' || gameMode !== 'timerun' || isTimerunGameOver) return;
+    const id = setInterval(() => {
+      setMainTimer(prev => {
+        if (prev <= 1) { setIsTimerunGameOver(true); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [screen, gameMode, isTimerunGameOver]);
+
+  // --- タイムラン：問題タイマー（問題が変わるたびリセット） ---
+  useEffect(() => {
+    if (screen !== 'quiz' || gameMode !== 'timerun' || isTimerunGameOver) return;
+    setQuestionTimer(15);
+    const id = setInterval(() => {
+      setQuestionTimer(prev => {
+        if (prev <= 1) { clearInterval(id); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    questionTimerIntervalRef.current = id;
+    return () => clearInterval(id);
+  }, [quizState.currentIndex, screen, gameMode, isTimerunGameOver]);
+
+  // --- タイムラン：問題タイマー切れ → 即時次の問題 ---
+  useEffect(() => {
+    if (gameMode !== 'timerun' || screen !== 'quiz' || isTimerunGameOver || answered) return;
+    if (questionTimer === 0) {
+      setTimerunFeedback(prev => ({ text: '⏱️ 時間切れ！', type: 'timeover', key: prev.key + 1 }));
+      setAnswered(true);
+      setTimeout(() => nextQuestion(), 0);
+    }
+  }, [questionTimer, gameMode, screen, isTimerunGameOver, answered]);
 
   useEffect(() => {
     if (screen === 'result') {
+      if (gameMode === 'timerun') { setResultPhase('reveal'); return; }
       setDisplayScore(0);
       setResultPhase('announce');
       const target = quizState.correctCount;
@@ -624,6 +746,11 @@ function App() {
     return 'zero';
   };
 
+  const shareTimerunOnX = () => {
+    const text = encodeURIComponent(`タイムランの結果！\n【${quizState.correctCount}問正解】\n${quizState.group}・${difficultyLabel[quizState.difficulty]}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+  };
+
   const shareOnX = () => {
     const rank = getRank(quizState.correctCount);
     const text = encodeURIComponent(`歌割り検定の結果は…\n【${rank}】でした！(正解：${quizState.correctCount}/10問)\n難易度：${difficultyLabel[quizState.difficulty]}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
@@ -673,6 +800,11 @@ function App() {
       <div className="global-footer-link">
         {screen !== 'top' && screen !== 'result' && (
           <span onClick={async () => {
+            if (gameMode === 'timerun') {
+              clearInterval(questionTimerIntervalRef.current);
+              setIsTimerunGameOver(false);
+              setMainTimer(60);
+            }
             if (sessionId) {
               const { data } = await supabase.from('sessions').select('*').eq('session_id', sessionId).maybeSingle();
               if (data) setPendingResume(data);
@@ -704,7 +836,7 @@ function App() {
           <p ref={catchText2Ref} className="catch-text">✨たくさん正解して推しへの愛を証明しよう！✨</p>
 
           <div className="top-buttons">
-            <button className="start-btn-sparkle" onClick={() => pendingResume ? (setResumeModalSource('group'), setShowResumeModal(true)) : setScreen('group')}>
+            <button className="start-btn-sparkle" onClick={() => setScreen('mode')}>
               <span className="btn-inner">検定開始！</span>
             </button>
             <button className="start-btn-list" onClick={() => pendingResume ? (setResumeModalSource('songlist'), setShowResumeModal(true)) : fetchSongList()}>
@@ -744,6 +876,28 @@ function App() {
         </div>
       )}
 
+      {/* --- モード選択 --- */}
+      {screen === 'mode' && (
+        <div className="box mode-card zoom-in">
+          <h2 className="title">モードを選んでね！</h2>
+          <button className="mode-btn mode-btn-normal" onClick={() => {
+            setGameMode('normal');
+            if (pendingResume) { setResumeModalSource('group'); setShowResumeModal(true); }
+            else { setScreen('group'); }
+          }}>
+            <span className="mode-btn-icon">📝</span>
+            <span className="mode-btn-name">検定モード</span>
+            <span className="mode-btn-desc">10問制・じっくり挑戦！</span>
+          </button>
+          <button className="mode-btn mode-btn-timerun" onClick={() => { setGameMode('timerun'); setScreen('group'); }}>
+            <span className="mode-btn-icon">⏱️</span>
+            <span className="mode-btn-name">タイムランモード</span>
+            <span className="mode-btn-desc">60秒以内に何問解ける？</span>
+          </button>
+          <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
+        </div>
+      )}
+
       {/* --- グループ選択 --- */}
       {screen === 'group' && (
         <div className="box group-card zoom-in">
@@ -753,7 +907,7 @@ function App() {
           <button className="group-choice-btn group-btn-ss" onClick={() => { setQuizState({...quizState, group: 'SWEET STEADY'}); setScreen('difficulty'); }}>💐SWEET STEADY💐</button>
           <button className="group-choice-btn group-btn-cs" onClick={() => { setQuizState({...quizState, group: 'CUTIE STREET'}); setScreen('difficulty'); }}>💎CUTIE STREET💎</button>
           <button className="group-choice-btn group-btn-ms" onClick={() => { setQuizState({...quizState, group: 'MORE STAR'}); setScreen('difficulty'); }}>🌟MORE STAR🌟</button>
-          <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
+          <button className="back-btn-group back-btn-top" onClick={() => setScreen('mode')}>モード選択に戻る</button>
         </div>
       )}
 
@@ -769,7 +923,8 @@ function App() {
                   if (infoLevel) return;
                   setQuizState(prev => ({...prev, difficulty: level}));
                   setScreen('confirm');
-                  prepareQuiz(quizState.group, level);
+                  if (gameMode === 'timerun') prepareTimerunQuiz(quizState.group, level);
+                  else prepareQuiz(quizState.group, level);
                 }}>
                   {difficultyLabel[level]}
                 </button>
@@ -821,11 +976,43 @@ function App() {
       {/* --- クイズ画面 --- */}
       {screen === 'quiz' && (
         <div className="box quiz-card zoom-in">
+          {/* タイムランタイマー表示（コンパクト） */}
+          {gameMode === 'timerun' && (
+            <div className="timerun-header">
+              <div className="timerun-header-top">
+                <div className={`timerun-main-timer${mainTimer <= 10 ? ' danger' : ''}`}>
+                  <span className="timerun-timer-num">{mainTimer}</span>
+                  <span className="timerun-timer-unit">秒</span>
+                </div>
+                {timerunFeedback.text && (
+                  <span
+                    key={timerunFeedback.key}
+                    className={`timerun-feedback-inline ${timerunFeedback.type}`}
+                  >{timerunFeedback.text}</span>
+                )}
+              </div>
+              <div className="timerun-qbar-wrap">
+                <span className="timerun-qbar-label">次の問題まで</span>
+                <div className="timerun-qbar-bg">
+                  <div
+                    className={`timerun-qbar-fill${questionTimer <= 5 ? ' danger' : ''}`}
+                    style={{ width: `${(questionTimer / 15) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           <p className="quiz-challenge-label">{quizState.group}の{difficultyLabel[quizState.difficulty]}に挑戦中</p>
-          <p className="quiz-counter">{quizState.currentIndex + 1} / {quizState.quizzes.length} 問目</p>
-          <div className="progress-container">
-            <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
-          </div>
+          {gameMode === 'timerun' ? (
+            <p className="quiz-counter">✅ {quizState.correctCount}問正解中</p>
+          ) : (
+            <p className="quiz-counter">{quizState.currentIndex + 1} / {quizState.quizzes.length} 問目</p>
+          )}
+          {gameMode === 'normal' && (
+            <div className="progress-container">
+              <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
+            </div>
+          )}
           <h2 className="title quiz-title">だれが歌ってる？</h2>
 
           {quizState.difficulty === 'easy' && quizCurr?.song_name && (
@@ -881,14 +1068,30 @@ function App() {
             <div id="explanation">{quizExplanation}</div>
           )}
 
-          {answered && (
+          {answered && gameMode === 'normal' && (
             <button className="submit" onClick={nextQuestion}>次の問題へ</button>
           )}
         </div>
       )}
 
+      {/* --- タイムランゲームオーバーオーバーレイ --- */}
+      {screen === 'quiz' && gameMode === 'timerun' && isTimerunGameOver && (
+        <div className="timerun-gameover-overlay">
+          <div className="timerun-gameover-box">
+            <p className="timerun-go-title">⏰ タイムアップ！</p>
+            <div className="timerun-go-score">
+              <span className="timerun-go-num">{quizState.correctCount}</span>
+              <span className="timerun-go-unit">問正解！</span>
+            </div>
+            <button className="timerun-go-btn" onClick={() => setScreen('result')}>
+              リザルトへ進む →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* --- ドラムロールオーバーレイ --- */}
-      {screen === 'result' && (resultPhase === 'announce' || resultPhase === 'drumroll') && (
+      {screen === 'result' && gameMode === 'normal' && (resultPhase === 'announce' || resultPhase === 'drumroll') && (
         <div className="drumroll-overlay">
           {resultPhase === 'announce' ? (
             <p className="drumroll-announce">あなたの得点は…</p>
@@ -901,8 +1104,46 @@ function App() {
         </div>
       )}
 
-      {/* --- リザルト画面 --- */}
-      {screen === 'result' && resultPhase === 'reveal' && (
+      {/* --- タイムランリザルト画面 --- */}
+      {screen === 'result' && gameMode === 'timerun' && resultPhase === 'reveal' && (
+        <div className="box result-box zoom-in">
+          <p className="result-label">タイムランの結果は…</p>
+          <div className="timerun-result-hero">
+            <span className="timerun-result-num">{quizState.correctCount}</span>
+            <span className="timerun-result-unit">問正解！</span>
+          </div>
+          <div className="info-badges">
+            <span className="badge">{quizState.group}</span>
+            <span className="badge">{difficultyLabel[quizState.difficulty]}</span>
+            <span className="badge badge-timerun">タイムラン</span>
+          </div>
+          <div className="result-buttons">
+            <button className="share-btn" onClick={shareTimerunOnX}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{marginRight: '8px'}}>
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
+              </svg>
+              結果をXでつぶやく
+            </button>
+            <div className="result-btn-row">
+              <button className="retry-btn" onClick={() => {
+                setIsTimerunGameOver(false);
+                setMainTimer(60);
+                setQuestionTimer(15);
+                setAnswered(false);
+                setSelectedMembers(new Set());
+                setQuizState(p => ({...p, correctCount: 0, currentIndex: 0}));
+                setScreen('confirm');
+                prepareTimerunQuiz(quizState.group, quizState.difficulty);
+              }}>もう一回</button>
+              <button className="group-btn" onClick={() => { setIsTimerunGameOver(false); setScreen('group'); }}>グループ選択</button>
+            </div>
+            <button className="result-back-link" onClick={() => { setIsTimerunGameOver(false); setScreen('top'); }}>トップに戻る</button>
+          </div>
+        </div>
+      )}
+
+      {/* --- 通常モードリザルト画面 --- */}
+      {screen === 'result' && gameMode === 'normal' && resultPhase === 'reveal' && (
         <div className="box result-box zoom-in">
           <p className="result-label">あなたの検定結果は…</p>
 

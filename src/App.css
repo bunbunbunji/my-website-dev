@@ -1596,3 +1596,192 @@ body {
 }
 
 .debug-jump-btn:hover { opacity: 0.85; }
+
+/* ===== モード選択画面 ===== */
+.mode-card { border: 4px solid #fff; }
+
+.mode-btn {
+  font-family: 'Mochiy Pop One', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 85%;
+  max-width: 300px;
+  margin: 12px auto;
+  padding: 18px 16px;
+  border: 3px solid rgba(255,255,255,0.5);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  top: 0;
+  color: white;
+}
+.mode-btn:hover  { transform: translateY(-3px); }
+.mode-btn:active { top: 3px; transform: translateY(0) scale(0.98); box-shadow: none !important; }
+
+.mode-btn-normal  { background: linear-gradient(135deg, #ff69b2, #ff8a65); box-shadow: 0 5px 0 #c2185b; }
+.mode-btn-normal:hover  { box-shadow: 0 7px 0 #c2185b; }
+.mode-btn-timerun { background: linear-gradient(135deg, #7e57c2, #5c6bc0); box-shadow: 0 5px 0 #4527a0; }
+.mode-btn-timerun:hover { box-shadow: 0 7px 0 #4527a0; }
+
+.mode-btn-icon { font-size: 1.8rem; line-height: 1; }
+.mode-btn-name { font-size: clamp(1rem, 4vw, 1.2rem); letter-spacing: 0.05em; }
+.mode-btn-desc { font-size: clamp(0.6rem, 2.5vw, 0.75rem); opacity: 0.9; }
+
+/* ===== タイムランタイマー表示（コンパクト） ===== */
+.timerun-header {
+  margin-bottom: clamp(4px, 0.8svh, 8px);
+  padding: clamp(6px, 1svh, 10px) 12px;
+  background: linear-gradient(135deg, #f3e5f5, #e8eaf6);
+  border-radius: 14px;
+  border: 2px solid #ce93d8;
+}
+
+.timerun-header-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.timerun-main-timer {
+  font-family: 'Mochiy Pop One', sans-serif;
+  line-height: 1;
+  color: #7e57c2;
+  transition: color 0.3s;
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.timerun-main-timer.danger {
+  color: #f44336;
+  animation: timerDanger 0.45s ease-in-out infinite;
+}
+@keyframes timerDanger {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.1); }
+}
+
+.timerun-timer-num  { font-size: clamp(1.5rem, min(7vw, 5svh), 2rem); }
+.timerun-timer-unit { font-size: clamp(0.7rem, 2.5vw, 0.85rem); }
+
+/* タイマー横のフィードバック表示 */
+@keyframes feedbackFade {
+  0%   { opacity: 0; transform: translateX(-4px) scale(0.9); }
+  15%  { opacity: 1; transform: translateX(0) scale(1); }
+  65%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.timerun-feedback-inline {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(0.7rem, 3.2vw, 0.9rem);
+  font-weight: bold;
+  white-space: nowrap;
+  animation: feedbackFade 1.1s ease-out forwards;
+}
+.timerun-feedback-inline.correct  { color: #2e7d32; }
+.timerun-feedback-inline.incorrect { color: #c62828; }
+.timerun-feedback-inline.timeover { color: #e65100; }
+
+.timerun-qbar-wrap { }
+.timerun-qbar-label {
+  display: block;
+  font-size: 0.62rem;
+  color: #9575cd;
+  margin-bottom: 3px;
+  font-family: 'Mochiy Pop One', sans-serif;
+}
+.timerun-qbar-bg {
+  width: 100%;
+  height: 7px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.timerun-qbar-fill {
+  height: 100%;
+  background: #ff8a65;
+  border-radius: 4px;
+  transition: width 1s linear, background-color 0.3s;
+}
+.timerun-qbar-fill.danger {
+  background: #f44336;
+  animation: barDanger 0.35s ease-in-out infinite;
+}
+@keyframes barDanger {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+/* ===== タイムランゲームオーバーオーバーレイ ===== */
+.timerun-gameover-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 8000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.timerun-gameover-box {
+  text-align: center;
+  padding: 32px 40px;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 24px;
+  animation: zoomIn 0.4s ease-out;
+}
+
+.timerun-go-title {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  color: #fff;
+  margin-bottom: 16px;
+  text-shadow: 0 0 20px rgba(255,105,180,0.8);
+}
+
+.timerun-go-score {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.timerun-go-num  { font-size: clamp(3rem, 14vw, 5rem); font-weight: 900; color: #ff69b2; text-shadow: 0 0 20px rgba(255,105,180,0.7); }
+.timerun-go-unit { font-size: clamp(1rem, 4vw, 1.4rem); color: #fff; font-family: 'Mochiy Pop One', sans-serif; }
+
+.timerun-go-btn {
+  font-family: 'Mochiy Pop One', sans-serif;
+  background: linear-gradient(135deg, #ff69b2, #ff8a65);
+  color: #fff;
+  border: 3px solid rgba(255,255,255,0.4);
+  border-radius: 50px;
+  padding: 14px 36px;
+  font-size: 1rem;
+  cursor: pointer;
+  box-shadow: 0 5px 0 #c2185b;
+  transition: all 0.2s;
+  position: relative;
+  top: 0;
+}
+.timerun-go-btn:hover  { transform: translateY(-3px); box-shadow: 0 8px 0 #c2185b; }
+.timerun-go-btn:active { top: 4px; box-shadow: 0 1px 0 #c2185b; transform: translateY(0); }
+
+/* ===== タイムランリザルト ===== */
+.timerun-result-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px 0 16px;
+}
+.timerun-result-num  { font-size: clamp(3.5rem, 16vw, 5.5rem); font-weight: 900; color: #7e57c2; line-height: 1; }
+.timerun-result-unit { font-size: clamp(1.1rem, 4vw, 1.5rem); font-family: 'Mochiy Pop One', sans-serif; color: #9575cd; }
+
+.badge-timerun { background: #f3e5f5 !important; border-color: #ce93d8 !important; color: #7e57c2 !important; }
