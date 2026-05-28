@@ -1730,6 +1730,41 @@ body {
   72%  { transform: scale(1);    opacity: 1; }
   100% { transform: scale(1.04); opacity: 0; }
 }
+/* ===== コナミコマンド解放フラッシュ ===== */
+@keyframes konamiFlashAnim {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes konamiTextPop {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  35%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  75%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
+}
+.konami-flash-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(255, 215, 0, 0.25);
+  z-index: 999;
+  pointer-events: none;
+  animation: konamiFlashAnim 2s ease-out forwards;
+}
+.konami-flash-text {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255,200,0,1), 0 2px 8px rgba(0,0,0,0.6);
+  white-space: nowrap;
+  animation: konamiTextPop 2s ease-out forwards;
+}
+
 .endless-diffup-overlay {
   position: fixed;
   top: 0; left: 0;

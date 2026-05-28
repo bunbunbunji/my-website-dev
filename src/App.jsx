@@ -94,6 +94,8 @@ function App() {
   const [endlessNextQLoading, setEndlessNextQLoading] = useState(false);
   const [endlessLifeBonus, setEndlessLifeBonus] = useState({ type: 'none', amount: 0, key: 0 });
   const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', tier: '', key: 0 });
+  const [endlessUnlocked, setEndlessUnlocked] = useState(localStorage.getItem('kawaii_endless_unlocked') === 'true');
+  const [konamiFlash, setKonamiFlash] = useState(false);
 
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -193,6 +195,28 @@ function App() {
     setEndlessNextQLoading(true);
     fetchSurrounds([selected]).then(([q]) => { setEndlessNextQ(q); setEndlessNextQLoading(false); });
   };
+
+  // --- コナミコマンドでエンドレスモード解放 ---
+  useEffect(() => {
+    const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
+    let pos = 0;
+    const onKey = (e) => {
+      if (e.key === KONAMI[pos]) {
+        pos++;
+        if (pos === KONAMI.length) {
+          pos = 0;
+          localStorage.setItem('kawaii_endless_unlocked', 'true');
+          setEndlessUnlocked(true);
+          setKonamiFlash(true);
+          setTimeout(() => setKonamiFlash(false), 2000);
+        }
+      } else {
+        pos = e.key === KONAMI[0] ? 1 : 0;
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const descriptions = {
     easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
@@ -1012,7 +1036,7 @@ function App() {
             <span className="mode-btn-name">検定モード</span>
             <span className="mode-btn-desc">10問制・1問60秒！じっくり挑戦！</span>
           </button>
-          {(debugMode || localStorage.getItem('kawaii_endless_unlocked') === 'true') && (
+          {(debugMode || endlessUnlocked) && (
             <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
               <span className="mode-btn-icon">🎯</span>
               <span className="mode-btn-name">エンドレスモード</span>
@@ -1246,6 +1270,13 @@ function App() {
           <div className={`endless-diffup-card${endlessDiffNotif.text === '難易度MAX！！' ? ' endless-diffup-max' : ''}`}>
             <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
           </div>
+        </div>
+      )}
+
+      {/* --- コナミコマンド解放フラッシュ --- */}
+      {konamiFlash && (
+        <div className="konami-flash-overlay">
+          <div className="konami-flash-text">🎮 エンドレスモード解放！</div>
         </div>
       )}
 
