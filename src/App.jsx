@@ -78,13 +78,22 @@ function App() {
   const [displayScore, setDisplayScore] = useState(0);
   const [resultPhase, setResultPhase] = useState('idle');
 
-  // --- タイムランモード ---
-  const [gameMode, setGameMode] = useState('normal'); // 'normal' | 'timerun'
-  const [mainTimer, setMainTimer] = useState(60);
-  const [questionTimer, setQuestionTimer] = useState(15);
-  const [isTimerunGameOver, setIsTimerunGameOver] = useState(false);
-  const [timerunFeedback, setTimerunFeedback] = useState({ text: '', type: '', key: 0 });
+  // --- モード管理 ---
+  const [gameMode, setGameMode] = useState('normal'); // 'normal' | 'endless'
+  const [questionTimer, setQuestionTimer] = useState(60);
   const questionTimerIntervalRef = useRef(null);
+
+  // --- エンドレスモード ---
+  const endlessPoolRef = useRef([]);
+  const endlessPendingNotifRef = useRef(null);
+  const [endlessQNum, setEndlessQNum] = useState(1);
+  const [endlessLives, setEndlessLives] = useState(3);
+  const [endlessConsecutive, setEndlessConsecutive] = useState(0);
+  const [endlessIsOver, setEndlessIsOver] = useState(false);
+  const [endlessNextQ, setEndlessNextQ] = useState(null);
+  const [endlessNextQLoading, setEndlessNextQLoading] = useState(false);
+  const [endlessLifeBonus, setEndlessLifeBonus] = useState({ type: 'none', amount: 0, key: 0 });
+  const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', tier: '', key: 0 });
 
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -143,12 +152,46 @@ function App() {
 
   const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", expert: "げきむず" };
 
-  // --- タイムランボーナス計算 ---
-  // elapsed: 回答にかかった秒数 (整数)
-  const calcTimerunBonus = (elapsed, isCorrect) => {
-    if (!isCorrect) return -Math.min(5, Math.max(0, 15 - elapsed));
-    if (elapsed <= 5) return 6 - elapsed;
-    return 0;
+  // --- エンドレスモード補助関数 ---
+  const getEndlessEligiblePool = (pool, qNum) => {
+    const try_ = (fn) => { const r = pool.filter(fn); return r.length > 0 ? r : null; };
+    if (qNum <= 10)
+      return try_(q => q.easy > 0) || try_(q => q.normal > 0) || try_(q => q.hard > 0) || pool;
+    if (qNum <= 20)
+      return try_(q => q.easy > 0 || q.normal > 0) || try_(q => q.hard > 0) || pool;
+    if (qNum <= 35)
+      return try_(q => q.normal > 0) || try_(q => q.easy > 0) || try_(q => q.hard > 0) || pool;
+    if (qNum <= 50)
+      return try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
+    if (qNum <= 70)
+      return try_(q => q.hard > 0) || try_(q => q.normal > 0) || try_(q => q.expert > 0) || pool;
+    return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || pool;
+  };
+
+  const selectEndlessWeighted = (eligible, qNum) => {
+    const w = (q) => {
+      if (qNum <= 10) return q.easy || 0;
+      if (qNum <= 20) return (q.easy || 0) + (q.normal || 0);
+      if (qNum <= 35) return q.normal || 0;
+      if (qNum <= 50) return (q.normal || 0) + (q.hard || 0);
+      if (qNum <= 70) return q.hard || 0;
+      return (q.hard || 0) + (q.expert || 0);
+    };
+    const total = eligible.reduce((s, q) => s + w(q), 0);
+    if (total === 0) return eligible[Math.floor(Math.random() * eligible.length)];
+    let r = Math.random() * total;
+    for (const q of eligible) { r -= w(q); if (r <= 0) return q; }
+    return eligible[eligible.length - 1];
+  };
+
+  const prefetchEndlessNext = (pool, nextQNum) => {
+    const eligible = getEndlessEligiblePool(pool, nextQNum);
+    if (!eligible || eligible.length === 0) { setEndlessNextQ(null); setEndlessNextQLoading(false); return; }
+    const selected = selectEndlessWeighted(eligible, nextQNum);
+    const newPool = pool.filter(q => q.id !== selected.id);
+    endlessPoolRef.current = newPool;
+    setEndlessNextQLoading(true);
+    fetchSurrounds([selected]).then(([q]) => { setEndlessNextQ(q); setEndlessNextQLoading(false); });
   };
 
   const descriptions = {
@@ -178,15 +221,8 @@ function App() {
 
   // --- クイズ開始（セッション作成） ---
   const startQuiz = async () => {
-    // タイムランはセッション不要
-    if (gameMode === 'timerun') {
-      setMainTimer(60);
-      setQuestionTimer(15);
-      setIsTimerunGameOver(false);
-      setSelectedMembers(new Set());
-      setAnswered(false);
-      setResultMsg({ text: '', type: '' });
-      setQuizState(prev => ({ ...prev, currentIndex: 0, correctCount: 0 }));
+    // エンドレスはセッション不要
+    if (gameMode === 'endless') {
       setScreen('quiz');
       return;
     }
@@ -299,33 +335,45 @@ function App() {
     setIsPreparing(false);
   };
 
-  // --- タイムラン用クイズ準備（最大30問を重み付き抽選） ---
-  const prepareTimerunQuiz = async (selectedGroup, selectedDiff) => {
+  // --- エンドレスモード準備（全問メタデータ取得 + Q1先読み） ---
+  const prepareEndlessMode = async (selectedGroup) => {
     setIsPreparing(true);
+    setEndlessNextQ(null);
+    setEndlessNextQLoading(false);
     setStatusMsg("問題を準備しています…");
-    const { data: qData } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).gt(selectedDiff, 0);
-    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    const [{ data: qData }, { data: mData }] = await Promise.all([
+      supabase.from("quiz_full").select("*").eq("group_name", selectedGroup),
+      supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order")
+    ]);
     if (!qData || qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
       setIsPreparing(false);
       return;
     }
-    const selectedQuizzes = [];
-    const tempPool = [...qData];
-    const count = Math.min(30, tempPool.length);
-    for (let i = 0; i < count && tempPool.length > 0; i++) {
-      const totalWeight = tempPool.reduce((sum, q) => sum + (q[selectedDiff] || 0), 0);
-      let random = Math.random() * totalWeight;
-      for (let j = 0; j < tempPool.length; j++) {
-        random -= tempPool[j][selectedDiff];
-        if (random <= 0) { selectedQuizzes.push(tempPool[j]); tempPool.splice(j, 1); break; }
-      }
-    }
-    const quizzesWithSurrounds = await fetchSurrounds(selectedQuizzes);
-    setQuizState(prev => ({ ...prev, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
     setMembers(mData || []);
-    setStatusMsg(`${quizzesWithSurrounds.length}問を準備しました！`);
+    // Q1を選択してfullデータ取得
+    let pool = [...qData];
+    const eligible1 = getEndlessEligiblePool(pool, 1);
+    const q1Meta = selectEndlessWeighted(eligible1, 1);
+    pool = pool.filter(q => q.id !== q1Meta.id);
+    const [q1] = await fetchSurrounds([q1Meta]);
+    // 状態を初期化
+    endlessPoolRef.current = pool;
+    endlessPendingNotifRef.current = null;
+    setEndlessQNum(1);
+    setEndlessLives(3);
+    setEndlessConsecutive(0);
+    setEndlessIsOver(false);
+    setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
+    setEndlessDiffNotif({ text: '', tier: '', key: 0 });
+    setQuizState(prev => ({ ...prev, group: selectedGroup, quizzes: [q1], currentIndex: 0, correctCount: 0 }));
+    setAnswered(false);
+    setSelectedMembers(new Set());
+    setResultMsg({ text: '', type: '' });
+    setStatusMsg(`全${qData.length}問から出題します！`);
     setIsPreparing(false);
+    // Q2を裏で先読み
+    prefetchEndlessNext(pool, 2);
   };
 
   // --- 楽曲リスト取得（ループ取得 & 強力正規化） ---
@@ -433,21 +481,31 @@ function App() {
     const isAll = correctArray.length === members.length && members.length > 0;
     const correctLabel = formatCorrectLabel(correctArray, isAll ? '1' : '0');
 
-    // --- タイムランモード ---
-    if (gameMode === 'timerun') {
-      const elapsed = 15 - questionTimer;
-      const bonus = calcTimerunBonus(elapsed, isCorrect);
-      setMainTimer(prev => Math.min(60, Math.max(0, prev + bonus)));
-      clearInterval(questionTimerIntervalRef.current);
-      if (isCorrect) setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
-      const bonusSuffix = isCorrect && bonus > 0 ? ` ＋${bonus}秒` : (isCorrect ? '' : bonus < 0 ? ` ${bonus}秒` : '');
-      setTimerunFeedback(prev => ({
-        text: isCorrect ? `⭕ 正解！${bonusSuffix}` : `❌ 不正解...${bonusSuffix}`,
-        type: isCorrect ? 'correct' : 'incorrect',
-        key: prev.key + 1
-      }));
+    // --- 検定モード：タイマー停止 ---
+    if (gameMode === 'normal') clearInterval(questionTimerIntervalRef.current);
+
+    // --- エンドレスモード ---
+    if (gameMode === 'endless') {
       setAnswered(true);
-      setTimeout(() => nextQuestion(), 0);
+      if (isCorrect) {
+        setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
+        const newConsec = endlessConsecutive + 1;
+        setEndlessConsecutive(newConsec);
+        if (newConsec % 5 === 0) {
+          const bonus = newConsec / 5;
+          endlessPendingNotifRef.current = { type: 'bonus', amount: bonus, lifeDelta: bonus };
+        }
+        setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "correct" });
+      } else {
+        setEndlessConsecutive(0);
+        if (endlessLives === 0) {
+          setEndlessIsOver(true);
+        } else {
+          endlessPendingNotifRef.current = { type: 'penalty', amount: 1, lifeDelta: -1 };
+        }
+        setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！💔</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "incorrect" });
+      }
+      setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
       return;
     }
 
@@ -476,17 +534,13 @@ function App() {
   };
 
   const nextQuestion = () => {
+    if (gameMode === 'endless') { advanceEndlessQuestion(); return; }
+    setQuestionTimer(60);
     setQuizState(prev => {
       if (prev.currentIndex + 1 < prev.quizzes.length) {
         return { ...prev, currentIndex: prev.currentIndex + 1 };
       }
-      // 問題切れ
-      if (gameMode === 'timerun') {
-        clearInterval(questionTimerIntervalRef.current);
-        setIsTimerunGameOver(true);
-      } else {
-        setScreen('result');
-      }
+      setScreen('result');
       return prev;
     });
     setSelectedMembers(new Set());
@@ -495,22 +549,44 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // --- タイムラン：メインタイマー ---
-  useEffect(() => {
-    if (screen !== 'quiz' || gameMode !== 'timerun' || isTimerunGameOver) return;
-    const id = setInterval(() => {
-      setMainTimer(prev => {
-        if (prev <= 1) { setIsTimerunGameOver(true); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [screen, gameMode, isTimerunGameOver]);
+  const advanceEndlessQuestion = () => {
+    // プール枯渇 or ゲームオーバー → リザルトへ
+    if (!endlessNextQ && !endlessNextQLoading) { setScreen('result'); return; }
+    if (!endlessNextQ) return; // まだ先読み中（ボタンはdisabledのため通常ここには来ない）
+    // 予約済みの通知とライフ増減を次の問題画面で適用
+    const pending = endlessPendingNotifRef.current;
+    endlessPendingNotifRef.current = null;
+    if (pending) {
+      if (pending.lifeDelta) setEndlessLives(prev => prev + pending.lifeDelta);
+      setEndlessLifeBonus({ type: pending.type, amount: pending.amount, key: Date.now() });
+    } else {
+      setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
+    }
+    const newQNum = endlessQNum + 1;
+    const DIFF_THRESHOLDS = {
+      11: { text: '難易度UP！',   tier: 'やさしい × ふつう' },
+      21: { text: '難易度UP！',   tier: 'ふつうのみ' },
+      36: { text: '難易度UP！',   tier: 'ふつう × むずかしい' },
+      51: { text: '難易度UP！',   tier: 'むずかしいのみ' },
+      71: { text: '難易度MAX！！', tier: 'むずかしい × げきむず' },
+    };
+    if (DIFF_THRESHOLDS[newQNum]) setEndlessDiffNotif({ ...DIFF_THRESHOLDS[newQNum], key: Date.now() });
+    else setEndlessDiffNotif({ text: '', tier: '', key: 0 });
+    setEndlessQNum(newQNum);
+    setQuizState(prev => ({ ...prev, quizzes: [endlessNextQ], currentIndex: 0 }));
+    setEndlessNextQ(null);
+    setAnswered(false);
+    setSelectedMembers(new Set());
+    setResultMsg({ text: "", type: "" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    // 次の次を先読み
+    prefetchEndlessNext(endlessPoolRef.current, newQNum + 1);
+  };
 
-  // --- タイムラン：問題タイマー（問題が変わるたびリセット） ---
+  // --- 検定モード：問題タイマー（60秒・問題が変わるたびリセット） ---
   useEffect(() => {
-    if (screen !== 'quiz' || gameMode !== 'timerun' || isTimerunGameOver) return;
-    setQuestionTimer(15);
+    if (screen !== 'quiz' || gameMode !== 'normal') return;
+    setQuestionTimer(60);
     const id = setInterval(() => {
       setQuestionTimer(prev => {
         if (prev <= 1) { clearInterval(id); return 0; }
@@ -519,21 +595,67 @@ function App() {
     }, 1000);
     questionTimerIntervalRef.current = id;
     return () => clearInterval(id);
-  }, [quizState.currentIndex, screen, gameMode, isTimerunGameOver]);
+  }, [quizState.currentIndex, screen, gameMode]);
 
-  // --- タイムラン：問題タイマー切れ → 即時次の問題 ---
+  // --- 検定モード：タイムアップ → 強制不正解 ---
   useEffect(() => {
-    if (gameMode !== 'timerun' || screen !== 'quiz' || isTimerunGameOver || answered) return;
+    if (gameMode !== 'normal' || screen !== 'quiz' || answered) return;
     if (questionTimer === 0) {
-      setTimerunFeedback(prev => ({ text: '⏱️ 時間切れ！', type: 'timeover', key: prev.key + 1 }));
+      clearInterval(questionTimerIntervalRef.current);
+      const curr = quizState.quizzes[quizState.currentIndex];
+      const correctArr = (curr?.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+      setResultMsg({
+        text: `<span style="font-size:1.15em">⏱️ 時間切れ！😢</span><br><span style="font-size:0.8em">( 正解：${correctArr.join('・')} )</span>`,
+        type: "incorrect"
+      });
       setAnswered(true);
-      setTimeout(() => nextQuestion(), 0);
+      if (sessionId) {
+        const isLast = quizState.currentIndex + 1 === quizState.quizzes.length;
+        if (isLast) {
+          supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
+          localStorage.removeItem('quiz_session_id');
+          setSessionId(null);
+        } else {
+          supabase.from('sessions').update({
+            correct_count: quizState.correctCount,
+            current_step: quizState.currentIndex + 2
+          }).eq('session_id', sessionId).then(() => {});
+        }
+      }
+      setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
     }
-  }, [questionTimer, gameMode, screen, isTimerunGameOver, answered]);
+  }, [questionTimer, gameMode, screen, answered]);
 
   useEffect(() => {
     if (screen === 'result') {
-      if (gameMode === 'timerun') { setResultPhase('reveal'); return; }
+      if (gameMode === 'endless') {
+        setDisplayScore(0);
+        setResultPhase('announce');
+        const target = quizState.correctCount;
+        const announceTimer = setTimeout(() => {
+          setResultPhase('drumroll');
+          if (target > 0) {
+            const totalMs = 2800;
+            const raw = Array.from({ length: target + 1 }, (_, i) => {
+              const t = i / target;
+              const speed = Math.sin(t * Math.PI);
+              return 1 / Math.max(speed, 0.25);
+            });
+            const sum = raw.reduce((s, d) => s + d, 0);
+            let elapsed = 0;
+            for (let i = 0; i <= target; i++) {
+              const delay = elapsed;
+              const val = i;
+              setTimeout(() => setDisplayScore(val), delay);
+              elapsed += (raw[i] / sum) * totalMs;
+            }
+            setTimeout(() => { setResultPhase('reveal'); }, elapsed + 300);
+          } else {
+            setTimeout(() => { setResultPhase('reveal'); }, 600);
+          }
+        }, 1000);
+        return () => clearTimeout(announceTimer);
+      }
       setDisplayScore(0);
       setResultPhase('announce');
       const target = quizState.correctCount;
@@ -567,15 +689,21 @@ function App() {
       const announceTimer = setTimeout(() => {
         setResultPhase('drumroll');
         if (target > 0) {
-          let start = 0;
-          const timer = setInterval(() => {
-            start++;
-            setDisplayScore(start);
-            if (start >= target) {
-              clearInterval(timer);
-              setTimeout(() => { setResultPhase('reveal'); fireConfetti(); }, 400);
-            }
-          }, 100);
+          const totalMs = 2000;
+          const raw = Array.from({ length: target + 1 }, (_, i) => {
+            const t = i / target;
+            const speed = t < 0.5 ? 4 * t : 4 * (1 - t);
+            return 1 / Math.max(speed, 0.15);
+          });
+          const sum = raw.reduce((s, d) => s + d, 0);
+          let elapsed = 0;
+          for (let i = 0; i <= target; i++) {
+            const delay = elapsed;
+            const val = i;
+            setTimeout(() => setDisplayScore(val), delay);
+            elapsed += (raw[i] / sum) * totalMs;
+          }
+          setTimeout(() => { setResultPhase('reveal'); fireConfetti(); }, elapsed + 300);
         } else {
           setTimeout(() => { setResultPhase('reveal'); }, 600);
         }
@@ -745,8 +873,8 @@ function App() {
     return 'zero';
   };
 
-  const shareTimerunOnX = () => {
-    const text = encodeURIComponent(`タイムランの結果！\n【${quizState.correctCount}問正解】\n${quizState.group}・${difficultyLabel[quizState.difficulty]}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
+  const shareEndlessOnX = () => {
+    const text = encodeURIComponent(`エンドレスモードの結果！\n【${endlessQNum}問中${quizState.correctCount}問正解】\n${quizState.group}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
@@ -799,11 +927,7 @@ function App() {
       <div className="global-footer-link">
         {screen !== 'top' && screen !== 'result' && (
           <span onClick={async () => {
-            if (gameMode === 'timerun') {
-              clearInterval(questionTimerIntervalRef.current);
-              setIsTimerunGameOver(false);
-              setMainTimer(60);
-            }
+            clearInterval(questionTimerIntervalRef.current);
             if (sessionId) {
               const { data } = await supabase.from('sessions').select('*').eq('session_id', sessionId).maybeSingle();
               if (data) setPendingResume(data);
@@ -886,13 +1010,15 @@ function App() {
           }}>
             <span className="mode-btn-icon">📝</span>
             <span className="mode-btn-name">検定モード</span>
-            <span className="mode-btn-desc">10問制・じっくり挑戦！</span>
+            <span className="mode-btn-desc">10問制・1問60秒！じっくり挑戦！</span>
           </button>
-          <button className="mode-btn mode-btn-timerun" onClick={() => { setGameMode('timerun'); setScreen('group'); }}>
-            <span className="mode-btn-icon">⏱️</span>
-            <span className="mode-btn-name">タイムランモード</span>
-            <span className="mode-btn-desc">60秒以内に何問解ける？</span>
-          </button>
+          {(debugMode || localStorage.getItem('kawaii_endless_unlocked') === 'true') && (
+            <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
+              <span className="mode-btn-icon">🎯</span>
+              <span className="mode-btn-name">エンドレスモード</span>
+              <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
+            </button>
+          )}
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
         </div>
       )}
@@ -901,11 +1027,19 @@ function App() {
       {screen === 'group' && (
         <div className="box group-card zoom-in">
           <h2 className="title">グループを選択しましょう！</h2>
-          <button className="group-choice-btn group-btn-fz" onClick={() => { setQuizState({...quizState, group: 'FRUITS ZIPPER'}); setScreen('difficulty'); }}>🍎FRUITS ZIPPER🍎</button>
-          <button className="group-choice-btn group-btn-cd" onClick={() => { setQuizState({...quizState, group: 'CANDY TUNE'}); setScreen('difficulty'); }}>🍬CANDY TUNE🍬</button>
-          <button className="group-choice-btn group-btn-ss" onClick={() => { setQuizState({...quizState, group: 'SWEET STEADY'}); setScreen('difficulty'); }}>💐SWEET STEADY💐</button>
-          <button className="group-choice-btn group-btn-cs" onClick={() => { setQuizState({...quizState, group: 'CUTIE STREET'}); setScreen('difficulty'); }}>💎CUTIE STREET💎</button>
-          <button className="group-choice-btn group-btn-ms" onClick={() => { setQuizState({...quizState, group: 'MORE STAR'}); setScreen('difficulty'); }}>🌟MORE STAR🌟</button>
+          {[
+            { name: 'FRUITS ZIPPER', label: '🍎FRUITS ZIPPER🍎', cls: 'fz' },
+            { name: 'CANDY TUNE',    label: '🍬CANDY TUNE🍬',    cls: 'cd' },
+            { name: 'SWEET STEADY',  label: '💐SWEET STEADY💐',  cls: 'ss' },
+            { name: 'CUTIE STREET',  label: '💎CUTIE STREET💎',  cls: 'cs' },
+            { name: 'MORE STAR',     label: '🌟MORE STAR🌟',     cls: 'ms' },
+          ].map(g => (
+            <button key={g.name} className={`group-choice-btn group-btn-${g.cls}`} onClick={() => {
+              setQuizState(prev => ({ ...prev, group: g.name }));
+              if (gameMode === 'endless') { setScreen('confirm'); prepareEndlessMode(g.name); }
+              else setScreen('difficulty');
+            }}>{g.label}</button>
+          ))}
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('mode')}>モード選択に戻る</button>
         </div>
       )}
@@ -922,8 +1056,7 @@ function App() {
                   if (infoLevel) return;
                   setQuizState(prev => ({...prev, difficulty: level}));
                   setScreen('confirm');
-                  if (gameMode === 'timerun') prepareTimerunQuiz(quizState.group, level);
-                  else prepareQuiz(quizState.group, level);
+                  prepareQuiz(quizState.group, level);
                 }}>
                   {difficultyLabel[level]}
                 </button>
@@ -964,52 +1097,68 @@ function App() {
           <h2 className="title">出題内容の確認</h2>
           <div className="info-card">
             <div className="confirm-item"><span className="confirm-label">グループ</span><span className="confirm-value">{quizState.group}</span></div>
-            <div className="confirm-item"><span className="confirm-label">難易度</span><span className="confirm-value">{difficultyLabel[quizState.difficulty]}</span></div>
+            <div className="confirm-item"><span className="confirm-label">難易度</span><span className="confirm-value">{gameMode === 'endless' ? '全難易度' : difficultyLabel[quizState.difficulty]}</span></div>
             <p className="preparing-status">{statusMsg}</p>
           </div>
           <button className="start-btn" disabled={isPreparing || quizState.quizzes.length === 0} onClick={startQuiz}>クイズを始める！</button>
-          <button className="back-btn" onClick={() => setScreen('difficulty')}>難易度選択に戻る</button>
+          <button className="back-btn" onClick={() => setScreen(gameMode === 'endless' ? 'group' : 'difficulty')}>
+            {gameMode === 'endless' ? 'グループ選択に戻る' : '難易度選択に戻る'}
+          </button>
         </div>
       )}
 
       {/* --- クイズ画面 --- */}
       {screen === 'quiz' && (
         <div className="box quiz-card zoom-in">
-          {/* タイムランタイマー表示（コンパクト） */}
-          {gameMode === 'timerun' && (
-            <div className="timerun-header">
-              <div className="timerun-header-top">
-                <div className={`timerun-main-timer${mainTimer <= 10 ? ' danger' : ''}`}>
-                  <span className="timerun-timer-num">{mainTimer}</span>
-                  <span className="timerun-timer-unit">秒</span>
-                </div>
-                {timerunFeedback.text && (
-                  <span
-                    key={timerunFeedback.key}
-                    className={`timerun-feedback-inline ${timerunFeedback.type}`}
-                  >{timerunFeedback.text}</span>
-                )}
+          {/* エンドレスモード：ライフ表示 */}
+          {gameMode === 'endless' && (
+            <div className="endless-quiz-header">
+              <div className="endless-lives-row">
+                {(() => {
+                  const yellow = Math.floor(endlessLives / 10);
+                  const red = endlessLives % 10;
+                  return (<>
+                    {Array.from({ length: Math.min(yellow, 9) }).map((_, i) => (
+                      <span key={`y${i}`} className="endless-heart yellow">♥</span>
+                    ))}
+                    {yellow > 9 && <span className="endless-heart-overflow">×{yellow}</span>}
+                    {Array.from({ length: red }).map((_, i) => (
+                      <span key={`r${i}`} className="endless-heart">♥</span>
+                    ))}
+                    {endlessLives === 0 && <span className="endless-heart empty">♡</span>}
+                  </>);
+                })()}
               </div>
-              <div className="timerun-qbar-wrap">
-                <span className="timerun-qbar-label">次の問題まで</span>
-                <div className="timerun-qbar-bg">
-                  <div
-                    className={`timerun-qbar-fill${questionTimer <= 5 ? ' danger' : ''}`}
-                    style={{ width: `${(questionTimer / 15) * 100}%` }}
-                  />
-                </div>
-              </div>
+              {endlessLifeBonus.type !== 'none' && (
+                <span key={endlessLifeBonus.key} className={`endless-life-bonus-popup${endlessLifeBonus.type === 'penalty' ? ' endless-life-penalty-popup' : ''}`}>
+                  {endlessLifeBonus.type === 'bonus'
+                    ? `COMBOボーナス！♥+${endlessLifeBonus.amount}`
+                    : `♥-1`}
+                </span>
+              )}
             </div>
           )}
-          <p className="quiz-challenge-label">{quizState.group}の{difficultyLabel[quizState.difficulty]}に挑戦中</p>
-          {gameMode === 'timerun' ? (
-            <p className="quiz-counter">✅ {quizState.correctCount}問正解中</p>
+          <p className="quiz-challenge-label">
+            {quizState.group}の{gameMode === 'endless' ? 'エンドレス' : difficultyLabel[quizState.difficulty]}に挑戦中
+          </p>
+          {gameMode === 'endless' ? (
+            <p className="quiz-counter">{endlessQNum} 問目</p>
           ) : (
             <p className="quiz-counter">{quizState.currentIndex + 1} / {quizState.quizzes.length} 問目</p>
           )}
           {gameMode === 'normal' && (
             <div className="progress-container">
               <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
+            </div>
+          )}
+          {/* 検定モード：60秒タイマー */}
+          {gameMode === 'normal' && (
+            <div className="quiz-qtimer-wrap">
+              <div className="quiz-qtimer-track">
+                <div className={`quiz-qtimer-bar${questionTimer <= 10 ? ' danger' : ''}`}
+                     style={{ width: `${(questionTimer / 60) * 100}%` }} />
+              </div>
+              <span className={`quiz-qtimer-num${questionTimer <= 10 ? ' danger' : ''}`}>{questionTimer}秒</span>
             </div>
           )}
           <h2 className="title quiz-title">だれが歌ってる？</h2>
@@ -1067,25 +1216,49 @@ function App() {
             <div id="explanation">{quizExplanation}</div>
           )}
 
-          {answered && gameMode === 'normal' && (
-            <button className="submit" onClick={nextQuestion}>次の問題へ</button>
+          {answered && !(gameMode === 'endless' && endlessIsOver) && (
+            <button
+              className="submit"
+              onClick={nextQuestion}
+              disabled={gameMode === 'endless' && endlessNextQLoading}
+            >
+              {gameMode === 'endless' && endlessNextQLoading ? '読み込み中…' : '次の問題へ'}
+            </button>
           )}
         </div>
       )}
 
-      {/* --- タイムランゲームオーバーオーバーレイ --- */}
-      {screen === 'quiz' && gameMode === 'timerun' && isTimerunGameOver && (
-        <div className="timerun-gameover-overlay">
-          <div className="timerun-gameover-box">
-            <p className="timerun-go-title">⏰ タイムアップ！</p>
-            <div className="timerun-go-score">
-              <span className="timerun-go-num">{quizState.correctCount}</span>
-              <span className="timerun-go-unit">問正解！</span>
-            </div>
-            <button className="timerun-go-btn" onClick={() => setScreen('result')}>
+      {/* --- エンドレスゲームオーバーオーバーレイ --- */}
+      {screen === 'quiz' && gameMode === 'endless' && endlessIsOver && (
+        <div className="endless-gameover-overlay">
+          <div className="endless-gameover-box">
+            <p className="endless-go-title">💔 ゲームオーバー！</p>
+            <button className="endless-go-btn" onClick={() => setScreen('result')}>
               リザルトへ進む →
             </button>
           </div>
+        </div>
+      )}
+
+      {/* --- 難易度UPオーバーレイ --- */}
+      {screen === 'quiz' && gameMode === 'endless' && endlessDiffNotif.text && (
+        <div key={endlessDiffNotif.key} className="endless-diffup-overlay">
+          <div className={`endless-diffup-card${endlessDiffNotif.text === '難易度MAX！！' ? ' endless-diffup-max' : ''}`}>
+            <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
+          </div>
+        </div>
+      )}
+
+      {/* --- エンドレスドラムロールオーバーレイ --- */}
+      {screen === 'result' && gameMode === 'endless' && (resultPhase === 'announce' || resultPhase === 'drumroll') && (
+        <div className="drumroll-overlay">
+          {resultPhase === 'announce' ? (
+            <p className="drumroll-announce">あなたの正解数は…</p>
+          ) : (
+            <div className="score-circle drumroll-circle">
+              <span className="score-num">{displayScore}</span>
+            </div>
+          )}
         </div>
       )}
 
@@ -1097,27 +1270,27 @@ function App() {
           ) : (
             <div className="score-circle drumroll-circle">
               <span className="score-num">{displayScore}</span>
-              <span className="score-unit">/ 10 問</span>
             </div>
           )}
         </div>
       )}
 
-      {/* --- タイムランリザルト画面 --- */}
-      {screen === 'result' && gameMode === 'timerun' && resultPhase === 'reveal' && (
+      {/* --- エンドレスリザルト画面 --- */}
+      {screen === 'result' && gameMode === 'endless' && resultPhase === 'reveal' && (
         <div className="box result-box zoom-in">
-          <p className="result-label">タイムランの結果は…</p>
-          <div className="timerun-result-hero">
-            <span className="timerun-result-num">{quizState.correctCount}</span>
-            <span className="timerun-result-unit">問正解！</span>
+          <p className="result-label">エンドレスの結果は…</p>
+          <div className="endless-result-hero">
+            <span className="endless-result-num">{quizState.correctCount}</span>
+            <span className="endless-result-slash"> / </span>
+            <span className="endless-result-total">{endlessQNum}</span>
+            <span className="endless-result-unit">問正解！</span>
           </div>
           <div className="info-badges">
             <span className="badge">{quizState.group}</span>
-            <span className="badge">{difficultyLabel[quizState.difficulty]}</span>
-            <span className="badge badge-timerun">タイムラン</span>
+            <span className="badge badge-endless">エンドレス</span>
           </div>
           <div className="result-buttons">
-            <button className="share-btn" onClick={shareTimerunOnX}>
+            <button className="share-btn" onClick={shareEndlessOnX}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{marginRight: '8px'}}>
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path>
               </svg>
@@ -1125,18 +1298,12 @@ function App() {
             </button>
             <div className="result-btn-row">
               <button className="retry-btn" onClick={() => {
-                setIsTimerunGameOver(false);
-                setMainTimer(60);
-                setQuestionTimer(15);
-                setAnswered(false);
-                setSelectedMembers(new Set());
-                setQuizState(p => ({...p, correctCount: 0, currentIndex: 0}));
                 setScreen('confirm');
-                prepareTimerunQuiz(quizState.group, quizState.difficulty);
+                prepareEndlessMode(quizState.group);
               }}>もう一回</button>
-              <button className="group-btn" onClick={() => { setIsTimerunGameOver(false); setScreen('group'); }}>グループ選択</button>
+              <button className="group-btn" onClick={() => setScreen('group')}>グループ選択</button>
             </div>
-            <button className="result-back-link" onClick={() => { setIsTimerunGameOver(false); setScreen('top'); }}>トップに戻る</button>
+            <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
           </div>
         </div>
       )}
@@ -1150,7 +1317,6 @@ function App() {
             <h2 ref={rankRef} className={`rank-display rank-display--${getRankTier(quizState.correctCount)}${quizState.difficulty === 'expert' && quizState.correctCount === 10 ? ' genius' : ''}`}>{getRank(quizState.correctCount)}</h2>
             <div className={`score-circle score-circle--${getRankTier(quizState.correctCount)}`}>
               <span className="score-num">{displayScore}</span>
-              <span className="score-unit">/ 10 問</span>
             </div>
           </div>
 
@@ -1331,6 +1497,41 @@ function App() {
             setDisplayScore(debugScore);
             setScreen('result');
           }}>▶ リザルト画面へジャンプ</button>
+
+          <div className="debug-section" style={{marginTop: '10px', borderTop: '1px solid #333', paddingTop: '8px'}}>
+            <div className="debug-label" style={{color:'#81c784'}}>▶ エンドレス専用</div>
+            <div className="debug-label" style={{marginTop:'6px'}}>問題番号セット <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {endlessQNum})</span></div>
+            <div className="debug-btn-group">
+              {[10, 20, 35, 50, 70].map(v => (
+                <button key={v}
+                  className={`debug-btn ${endlessQNum === v ? 'on' : ''}`}
+                  onClick={() => setEndlessQNum(v)}>{v}</button>
+              ))}
+            </div>
+            <div className="debug-label" style={{marginTop:'6px'}}>連続正解セット <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {endlessConsecutive})</span></div>
+            <div className="debug-btn-group">
+              {[4, 9, 14, 19, 24].map(v => (
+                <button key={v}
+                  className={`debug-btn ${endlessConsecutive === v ? 'on' : ''}`}
+                  onClick={() => setEndlessConsecutive(v)}>{v}</button>
+              ))}
+            </div>
+            <div className="debug-label" style={{marginTop:'6px'}}>正解数セット <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {quizState.correctCount})</span></div>
+            <div style={{display:'flex', gap:'6px', alignItems:'center'}}>
+              <input
+                className="debug-id-input"
+                type="number" min="0"
+                placeholder="正解数"
+                style={{width:'80px'}}
+                onKeyDown={e => { if (e.key === 'Enter') setQuizState(p => ({...p, correctCount: Number(e.target.value)})); }}
+                onChange={e => {}}
+              />
+              <button className="debug-jump-btn" style={{marginTop:0}} onClick={e => {
+                const val = Number(e.currentTarget.previousElementSibling.value);
+                setQuizState(p => ({...p, correctCount: val}));
+              }}>セット</button>
+            </div>
+          </div>
 
           <div className="debug-section" style={{marginTop: '10px'}}>
             <div className="debug-label">クイズID指定</div>

@@ -1623,121 +1623,160 @@ body {
 
 .mode-btn-normal  { background: linear-gradient(135deg, #ff69b2, #ff8a65); box-shadow: 0 5px 0 #c2185b; }
 .mode-btn-normal:hover  { box-shadow: 0 7px 0 #c2185b; }
-.mode-btn-timerun { background: linear-gradient(135deg, #7e57c2, #5c6bc0); box-shadow: 0 5px 0 #4527a0; }
-.mode-btn-timerun:hover { box-shadow: 0 7px 0 #4527a0; }
+.mode-btn-endless { background: linear-gradient(135deg, #43a047, #00897b); box-shadow: 0 5px 0 #2e7d32; }
+.mode-btn-endless:hover { box-shadow: 0 7px 0 #2e7d32; }
 
 .mode-btn-icon { font-size: 1.8rem; line-height: 1; }
 .mode-btn-name { font-size: clamp(1rem, 4vw, 1.2rem); letter-spacing: 0.05em; }
 .mode-btn-desc { font-size: clamp(0.6rem, 2.5vw, 0.75rem); opacity: 0.9; }
 
-/* ===== タイムランタイマー表示（コンパクト） ===== */
-.timerun-header {
-  margin-bottom: clamp(4px, 0.8svh, 8px);
-  padding: clamp(6px, 1svh, 10px) 12px;
-  background: linear-gradient(135deg, #f3e5f5, #e8eaf6);
-  border-radius: 14px;
-  border: 2px solid #ce93d8;
-}
-
-.timerun-header-top {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 5px;
-  position: relative;
-}
-
-.timerun-main-timer {
-  font-family: 'Mochiy Pop One', sans-serif;
-  line-height: 1;
-  color: #7e57c2;
-  transition: color 0.3s;
-  display: flex;
-  align-items: baseline;
-  gap: 3px;
-  flex-shrink: 0;
-}
-.timerun-main-timer.danger {
-  color: #f44336;
-  animation: timerDanger 0.45s ease-in-out infinite;
-}
-@keyframes timerDanger {
-  0%, 100% { transform: scale(1); }
-  50%       { transform: scale(1.1); }
-}
-
-.timerun-timer-num  { font-size: clamp(1.5rem, min(7vw, 5svh), 2rem); }
-.timerun-timer-unit { font-size: clamp(0.7rem, 2.5vw, 0.85rem); }
-
-/* フィードバック（ピョン跳ね→フェードアウト） */
-@keyframes feedbackBounceUp {
-  0%   { opacity: 0;   transform: translateX(-50%) translateY(0px); }
-  15%  { opacity: 1;   transform: translateX(-50%) translateY(-8px); }
-  30%  { opacity: 1;   transform: translateX(-50%) translateY(-4px); }
-  50%  { opacity: 1;   transform: translateX(-50%) translateY(-12px); }
-  75%  { opacity: 0.6; transform: translateX(-50%) translateY(-20px); }
-  100% { opacity: 0;   transform: translateX(-50%) translateY(-30px); }
-}
-.timerun-feedback-inline {
-  font-family: 'Mochiy Pop One', sans-serif;
-  font-size: clamp(0.8rem, 3.5vw, 1rem);
-  font-weight: bold;
-  white-space: nowrap;
-  position: absolute;
-  left: 50%;
-  top: 0;
-  pointer-events: none;
-  animation: feedbackBounceUp 1.2s ease-out forwards;
-}
-.timerun-feedback-inline.correct  { color: #2e7d32; }
-.timerun-feedback-inline.incorrect { color: #c62828; }
-.timerun-feedback-inline.timeover { color: #e65100; }
-
-.timerun-qbar-wrap { margin-top: 2px; }
-.timerun-qbar-label {
-  display: block;
-  font-size: 0.62rem;
-  color: #9575cd;
-  margin-bottom: 3px;
-  font-family: 'Mochiy Pop One', sans-serif;
-}
-.timerun-qbar-bg {
+/* ===== 検定モード：問題タイマー ===== */
+.quiz-qtimer-wrap {
   width: 100%;
-  height: 7px;
+  margin: 8px 0 10px;
+}
+.quiz-qtimer-track {
+  position: relative;
+  width: 100%;
+  height: 18px;
   background: #e0e0e0;
-  border-radius: 4px;
+  border-radius: 9px;
   overflow: hidden;
 }
-.timerun-qbar-fill {
+.quiz-qtimer-bar {
   height: 100%;
-  background: #ff8a65;
-  border-radius: 4px;
-  transition: width 1s linear, background-color 0.3s;
+  background: linear-gradient(90deg, #ff69b2, #ff8a65);
+  border-radius: 9px;
+  transition: width 1s linear;
 }
-.timerun-qbar-fill.danger {
-  background: #f44336;
-  animation: barDanger 0.35s ease-in-out infinite;
+.quiz-qtimer-bar.danger { background: linear-gradient(90deg, #f44336, #ff5722); }
+.quiz-qtimer-num {
+  display: block;
+  text-align: right;
+  margin-top: 3px;
+  font-size: 0.78rem;
+  font-weight: bold;
+  color: #555;
+  font-family: 'Mochiy Pop One', sans-serif;
 }
-@keyframes barDanger {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
+.quiz-qtimer-num.danger {
+  color: #c62828;
 }
 
-/* ===== タイムランゲームオーバーオーバーレイ ===== */
-.timerun-gameover-overlay {
+/* ===== エンドレスリザルト ===== */
+.endless-result-hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  margin: 8px 0 16px;
+}
+.endless-result-num   { font-size: clamp(3.5rem, 16vw, 5.5rem); font-weight: 900; color: #43a047; line-height: 1; }
+.endless-result-slash { font-size: clamp(1.5rem, 6vw, 2.5rem); color: #aaa; }
+.endless-result-total { font-size: clamp(2rem, 10vw, 3.5rem); font-weight: 700; color: #aaa; line-height: 1; }
+.endless-result-unit  { font-size: clamp(1.1rem, 4vw, 1.5rem); font-family: 'Mochiy Pop One', sans-serif; color: #66bb6a; }
+
+.badge-endless { background: #e8f5e9 !important; border-color: #a5d6a7 !important; color: #388e3c !important; }
+
+/* ===== エンドレスモード：クイズ内ライフ表示 ===== */
+.endless-quiz-header {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 6px;
+  min-height: 32px;
+}
+.endless-lives-row { display: flex; gap: 4px; align-items: center; }
+.endless-heart { font-size: clamp(1.2rem, 5vw, 1.6rem); color: #e53935; line-height: 1; }
+.endless-heart.empty { color: #bbb; }
+.endless-heart.yellow { color: #ffd600; filter: drop-shadow(0 0 4px rgba(255, 214, 0, 0.7)); }
+.endless-heart-overflow { font-size: 0.9rem; color: #e53935; font-weight: bold; }
+
+@keyframes lifeBonusPop {
+  0%   { opacity: 0; transform: translateY(0) scale(0.7); }
+  20%  { opacity: 1; transform: translateY(-10px) scale(1.1); }
+  60%  { opacity: 1; transform: translateY(-18px) scale(1); }
+  100% { opacity: 0; transform: translateY(-30px) scale(0.9); }
+}
+.endless-life-bonus-popup {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(0.8rem, 3.2vw, 0.95rem);
+  color: #e53935;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: lifeBonusPop 1.6s ease-out forwards;
+}
+.endless-life-penalty-popup {
+  color: #bdbdbd;
+  font-size: clamp(0.85rem, 3.5vw, 1rem);
+}
+
+/* ===== 難易度UPオーバーレイ ===== */
+@keyframes diffupOverlayAnim {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  72%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes diffupCardAnim {
+  0%   { transform: scale(0.4); opacity: 0; }
+  18%  { transform: scale(1.12); opacity: 1; }
+  30%  { transform: scale(1);    opacity: 1; }
+  72%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(1.04); opacity: 0; }
+}
+.endless-diffup-overlay {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  pointer-events: none;
+  animation: diffupOverlayAnim 1.6s ease-out forwards;
+}
+.endless-diffup-card {
+  text-align: center;
+  animation: diffupCardAnim 1.6s ease-out forwards;
+}
+.endless-diffup-label {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(2.2rem, 11vw, 3.8rem);
+  color: #ff9800;
+  text-shadow: 0 0 24px rgba(255, 152, 0, 0.9), 0 2px 8px rgba(0,0,0,0.5);
+}
+.endless-diffup-max .endless-diffup-label {
+  color: #ff5252;
+  text-shadow: 0 0 28px rgba(255, 82, 82, 0.95), 0 2px 8px rgba(0,0,0,0.5);
+}
+.endless-diffup-tier {
+  margin-top: 10px;
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(0.95rem, 4.5vw, 1.3rem);
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+/* ===== エンドレスゲームオーバーオーバーレイ ===== */
+.endless-gameover-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.82);
   z-index: 8000;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: fadeIn 0.4s ease-out;
 }
-
-.timerun-gameover-box {
+.endless-gameover-box {
   text-align: center;
   padding: 32px 40px;
   background: rgba(255,255,255,0.06);
@@ -1745,51 +1784,37 @@ body {
   border-radius: 24px;
   animation: zoomIn 0.4s ease-out;
 }
-
-.timerun-go-title {
+.endless-go-title {
   font-family: 'Mochiy Pop One', sans-serif;
   font-size: clamp(1.4rem, 6vw, 2rem);
   color: #fff;
-  margin-bottom: 16px;
-  text-shadow: 0 0 20px rgba(255,105,180,0.8);
+  margin-bottom: 12px;
+  text-shadow: 0 0 20px rgba(229,57,53,0.8);
 }
-
-.timerun-go-score {
+.endless-go-score {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 6px;
 }
-.timerun-go-num  { font-size: clamp(3rem, 14vw, 5rem); font-weight: 900; color: #ff69b2; text-shadow: 0 0 20px rgba(255,105,180,0.7); }
-.timerun-go-unit { font-size: clamp(1rem, 4vw, 1.4rem); color: #fff; font-family: 'Mochiy Pop One', sans-serif; }
-
-.timerun-go-btn {
+.endless-go-num  { font-size: clamp(3rem, 14vw, 5rem); font-weight: 900; color: #ff69b2; text-shadow: 0 0 20px rgba(255,105,180,0.7); }
+.endless-go-unit { font-size: clamp(1rem, 4vw, 1.4rem); color: #fff; font-family: 'Mochiy Pop One', sans-serif; }
+.endless-go-correct { color: #aaa; font-size: 0.9rem; margin-bottom: 24px; }
+.endless-go-btn {
+  margin-top: 28px;
   font-family: 'Mochiy Pop One', sans-serif;
-  background: linear-gradient(135deg, #ff69b2, #ff8a65);
+  background: linear-gradient(135deg, #43a047, #00897b);
   color: #fff;
   border: 3px solid rgba(255,255,255,0.4);
   border-radius: 50px;
   padding: 14px 36px;
   font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 5px 0 #c2185b;
+  box-shadow: 0 5px 0 #2e7d32;
   transition: all 0.2s;
   position: relative;
   top: 0;
 }
-.timerun-go-btn:hover  { transform: translateY(-3px); box-shadow: 0 8px 0 #c2185b; }
-.timerun-go-btn:active { top: 4px; box-shadow: 0 1px 0 #c2185b; transform: translateY(0); }
-
-/* ===== タイムランリザルト ===== */
-.timerun-result-hero {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 10px;
-  margin: 8px 0 16px;
-}
-.timerun-result-num  { font-size: clamp(3.5rem, 16vw, 5.5rem); font-weight: 900; color: #7e57c2; line-height: 1; }
-.timerun-result-unit { font-size: clamp(1.1rem, 4vw, 1.5rem); font-family: 'Mochiy Pop One', sans-serif; color: #9575cd; }
-
-.badge-timerun { background: #f3e5f5 !important; border-color: #ce93d8 !important; color: #7e57c2 !important; }
+.endless-go-btn:hover  { transform: translateY(-3px); box-shadow: 0 8px 0 #2e7d32; }
+.endless-go-btn:active { top: 4px; box-shadow: 0 1px 0 #2e7d32; transform: translateY(0); }
