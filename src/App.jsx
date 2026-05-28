@@ -918,9 +918,14 @@ function App() {
   const quizCurr = quizState.quizzes[quizState.currentIndex];
   const sp = quizCurr?.surroundPrev || [];
   const sn = quizCurr?.surroundNext || [];
-  const showHint = quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered;
-  const quizPrevLines = showHint ? sp.slice(-1) : [];
-  const quizNextLines = showHint ? sn.slice(0, 1) : [];
+  const showSongName = gameMode === 'endless'
+    ? endlessQNum <= 20
+    : quizState.difficulty === 'easy';
+  const showSurroundHint = gameMode === 'endless'
+    ? endlessQNum <= 50
+    : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
+  const quizPrevLines = showSurroundHint ? sp.slice(-1) : [];
+  const quizNextLines = showSurroundHint ? sn.slice(0, 1) : [];
   const quizExplanation = (quizCurr?.song_name && quizCurr?.section_name)
     ? `この歌詞は「${quizCurr.song_name}」の\n${quizCurr.section_name}部分でした！` : "";
 
@@ -1187,7 +1192,7 @@ function App() {
           )}
           <h2 className="title quiz-title">だれが歌ってる？</h2>
 
-          {quizState.difficulty === 'easy' && quizCurr?.song_name && (
+          {showSongName && quizCurr?.song_name && (
             <div className="song-name-hint">
               <span className="song-name-hint-label">ヒント：</span>
               <span className="song-name-hint-badge">{quizCurr.song_name}</span>
