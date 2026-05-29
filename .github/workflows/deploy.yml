@@ -29,6 +29,7 @@ jobs:
         run: npm run build
         env:
           VITE_ACCESS_CODE: ${{ secrets.VITE_ACCESS_CODE }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
