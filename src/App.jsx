@@ -112,6 +112,8 @@ function App() {
   const [customIsLoading, setCustomIsLoading] = useState(false);
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
+  const [customShowSurround, setCustomShowSurround] = useState(false);
+  const [customShowSongName, setCustomShowSongName] = useState(false);
 
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -225,14 +227,26 @@ function App() {
   const loadCustomSongs = async () => {
     setCustomIsLoadingSongs(true);
     const groups = [...customSelectedGroups];
-    const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups);
+    let allData = [];
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups).range(from, from + 999);
+      if (!data || data.length === 0) { hasMore = false; }
+      else { allData = [...allData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+    }
     const seen = new Set();
-    const songs = (data || []).filter(s => {
+    const songs = allData.filter(s => {
       const key = `${s.group_name}::${s.song_name}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    }).sort((a, b) => a.group_name.localeCompare(b.group_name) || a.song_name.localeCompare(b.song_name));
+    }).sort((a, b) => {
+      const ORDER = ['FRUITS ZIPPER', 'CANDY TUNE', 'SWEET STEADY', 'CUTIE STREET', 'MORE STAR'];
+      const gi = ORDER.indexOf(a.group_name) - ORDER.indexOf(b.group_name);
+      if (gi !== 0) return gi;
+      return a.song_name.localeCompare(b.song_name, 'ja');
+    });
     setCustomSongList(songs);
     setCustomSelectedSongs(new Set(songs.map(s => `${s.group_name}::${s.song_name}`)));
     setCustomIsLoadingSongs(false);
@@ -242,8 +256,15 @@ function App() {
   const startCustomMode = async () => {
     setCustomIsLoading(true);
     const groups = [...customSelectedGroups];
-    const { data: qData } = await supabase.from('quiz_full').select('*').in('group_name', groups);
-    const filtered = (qData || []).filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
+    let qData = [];
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data } = await supabase.from('quiz_full').select('*').in('group_name', groups).range(from, from + 999);
+      if (!data || data.length === 0) { hasMore = false; }
+      else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+    }
+    const filtered = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
     if (filtered.length === 0) { setCustomIsLoading(false); return; }
     const shuffled = shuffle(filtered);
     const withSurrounds = await fetchSurrounds(shuffled);
@@ -278,6 +299,8 @@ function App() {
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
+    setCustomShowSurround(false);
+    setCustomShowSongName(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -1069,10 +1092,10 @@ function App() {
   const sp = quizCurr?.surroundPrev || [];
   const sn = quizCurr?.surroundNext || [];
   const showSongName = gameMode === 'custom'
-    ? true
+    ? customShowSongName
     : gameMode === 'endless' ? endlessQNum <= 20 : quizState.difficulty === 'easy';
   const showSurroundHint = gameMode === 'custom'
-    ? true
+    ? customShowSurround
     : gameMode === 'endless' ? endlessQNum <= 50 : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
   const quizPrevLines = showSurroundHint ? sp.slice(-1) : [];
   const quizNextLines = showSurroundHint ? sn.slice(0, 1) : [];
@@ -1194,18 +1217,18 @@ function App() {
             <span className="mode-btn-name">検定モード</span>
             <span className="mode-btn-desc">10問制・1問60秒！じっくり挑戦！</span>
           </button>
-          {(debugMode || endlessUnlocked) && (
-            <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
-              <span className="mode-btn-icon">🎯</span>
-              <span className="mode-btn-name">エンドレスモード</span>
-              <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
-            </button>
-          )}
           <button className="mode-btn mode-btn-custom" onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
             <span className="mode-btn-icon">🎵</span>
             <span className="mode-btn-name">カスタムモード</span>
             <span className="mode-btn-desc">好きな曲だけ！全問クリアに挑戦！</span>
           </button>
+          {(debugMode || endlessUnlocked) && (
+            <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
+              <span className="mode-btn-icon">🏃‍♀️🏃‍♂️🏃</span>
+              <span className="mode-btn-name">エンドレスモード</span>
+              <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
+            </button>
+          )}
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
         </div>
       )}
@@ -1213,26 +1236,26 @@ function App() {
       {/* --- カスタム：グループ選択 --- */}
       {screen === 'custom-select-group' && (
         <div className="box custom-select-card zoom-in">
-          <h2 className="title">グループを選んでください</h2>
+          <h2 className="title">グループを選択しましょう！</h2>
           <p className="custom-select-hint">1つ以上選択してください</p>
           <div className="custom-group-list">
             {[
-              { name: 'FRUITS ZIPPER', label: '🍎 FRUITS ZIPPER', cls: 'fz' },
-              { name: 'CANDY TUNE',    label: '🍬 CANDY TUNE',    cls: 'cd' },
-              { name: 'SWEET STEADY',  label: '💐 SWEET STEADY',  cls: 'ss' },
-              { name: 'CUTIE STREET',  label: '💎 CUTIE STREET',  cls: 'cs' },
-              { name: 'MORE STAR',     label: '🌟 MORE STAR',     cls: 'ms' },
+              { name: 'FRUITS ZIPPER', label: '🍎 FRUITS ZIPPER 🍎', cls: 'fz' },
+              { name: 'CANDY TUNE',    label: '🍬 CANDY TUNE 🍬',    cls: 'cd' },
+              { name: 'SWEET STEADY',  label: '💐 SWEET STEADY 💐',  cls: 'ss' },
+              { name: 'CUTIE STREET',  label: '💎 CUTIE STREET 💎',  cls: 'cs' },
+              { name: 'MORE STAR',     label: '🌟 MORE STAR 🌟',     cls: 'ms' },
             ].map(g => (
-              <label key={g.name} className={`custom-group-item custom-group-item--${g.cls}${customSelectedGroups.has(g.name) ? ' selected' : ''}`}>
-                <input type="checkbox" checked={customSelectedGroups.has(g.name)} onChange={() => {
-                  setCustomSelectedGroups(prev => {
-                    const next = new Set(prev);
-                    next.has(g.name) ? next.delete(g.name) : next.add(g.name);
-                    return next;
-                  });
-                }} />
+              <button key={g.name} className={`custom-group-item custom-group-item--${g.cls}${customSelectedGroups.has(g.name) ? ' selected' : ''}`} onClick={() => {
+                setCustomSelectedGroups(prev => {
+                  const next = new Set(prev);
+                  next.has(g.name) ? next.delete(g.name) : next.add(g.name);
+                  return next;
+                });
+              }}>
+                <span className="custom-group-checkbox">{customSelectedGroups.has(g.name) ? '✓' : ''}</span>
                 {g.label}
-              </label>
+              </button>
             ))}
           </div>
           <button className="start-btn" disabled={customSelectedGroups.size === 0 || customIsLoadingSongs} onClick={loadCustomSongs}>
@@ -1456,6 +1479,17 @@ function App() {
             </div>
           )}
 
+          {gameMode === 'custom' && !answered && (
+            <div className="custom-hint-buttons">
+              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={() => setCustomShowSurround(v => !v)}>
+                {customShowSurround ? '前後の歌詞を隠す' : '前後の歌詞をみる'}
+              </button>
+              <button className={`custom-hint-btn${customShowSongName ? ' active' : ''}`} onClick={() => setCustomShowSongName(v => !v)}>
+                {customShowSongName ? '曲名を隠す' : '曲名をみる'}
+              </button>
+            </div>
+          )}
+
           <div className="members">
             {displayMembers.map(m => (
               <button key={m.id}
@@ -1583,9 +1617,7 @@ function App() {
               不正解の歌詞を確認（{customWrongAnswers.length}問）
             </button>
           )}
-          {customWrongAnswers.length === 0 && (
-            <p className="custom-perfect-msg">✨ 全問正解！素晴らしい！ ✨</p>
-          )}
+          <p className="custom-perfect-msg">またチャレンジしてね！</p>
           <div className="result-buttons">
             <div className="result-btn-row">
               <button className="retry-btn" onClick={restartCustomMode}>もう一回</button>

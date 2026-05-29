@@ -1623,8 +1623,8 @@ body {
 
 .mode-btn-normal  { background: linear-gradient(135deg, #ff69b2, #ff8a65); box-shadow: 0 5px 0 #c2185b; }
 .mode-btn-normal:hover  { box-shadow: 0 7px 0 #c2185b; }
-.mode-btn-endless { background: linear-gradient(135deg, #43a047, #00897b); box-shadow: 0 5px 0 #2e7d32; }
-.mode-btn-endless:hover { box-shadow: 0 7px 0 #2e7d32; }
+.mode-btn-endless { background: linear-gradient(135deg, #7b1fa2, #e91e63); box-shadow: 0 5px 0 #4a148c; }
+.mode-btn-endless:hover { box-shadow: 0 7px 0 #4a148c; }
 
 .mode-btn-icon { font-size: 1.8rem; line-height: 1; }
 .mode-btn-name { font-size: clamp(1rem, 4vw, 1.2rem); letter-spacing: 0.05em; }
@@ -1858,12 +1858,12 @@ body {
 
 /* モードボタン */
 .mode-btn-custom {
-  background: linear-gradient(135deg, #7b1fa2, #e91e63);
+  background: linear-gradient(135deg, #1565c0, #0288d1);
   border: 3px solid rgba(255,255,255,0.3);
-  box-shadow: 0 6px 0 #4a148c;
+  box-shadow: 0 6px 0 #0d47a1;
 }
-.mode-btn-custom:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #4a148c; }
-.mode-btn-custom:active { top: 4px; box-shadow: 0 2px 0 #4a148c; transform: translateY(0); }
+.mode-btn-custom:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #0d47a1; }
+.mode-btn-custom:active { top: 4px; box-shadow: 0 2px 0 #0d47a1; transform: translateY(0); }
 
 /* 選択カード共通 */
 .custom-select-card { text-align: left; }
@@ -1906,29 +1906,75 @@ body {
 }
 .custom-skip-btn:hover { border-color: #ff69b2; color: #ff69b2; }
 
+/* ヒントボタン */
+.custom-hint-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 10px 0 14px;
+}
+.custom-hint-btn {
+  background: none;
+  border: 1.5px solid #ccc;
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.75rem;
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.custom-hint-btn:hover { border-color: #90caf9; color: #1565c0; }
+.custom-hint-btn.active { border-color: #1565c0; background: #e3f2fd; color: #1565c0; }
+
 /* グループ選択 */
-.custom-group-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.custom-group-list { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-bottom: 20px; }
 .custom-group-item {
+  font-family: 'Mochiy Pop One', sans-serif;
+  width: 85%;
+  max-width: 280px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 2px solid #eee;
+  padding: 14px 16px;
+  border: 3px solid #ddd;
+  border-radius: 50px;
   cursor: pointer;
-  font-size: 0.95rem;
-  font-weight: bold;
-  transition: all 0.15s;
+  font-size: clamp(10px, 3.8vw, 16px);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   background: #fafafa;
-  color: #555;
+  color: #999;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  position: relative;
+  top: 0;
 }
-.custom-group-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: #ff69b2; cursor: pointer; }
-.custom-group-item.selected { border-color: transparent; color: #fff; }
-.custom-group-item--fz.selected { background: linear-gradient(135deg, #ff69b2, #ff1493); }
-.custom-group-item--cd.selected { background: linear-gradient(135deg, #ff8a65, #e91e63); }
-.custom-group-item--ss.selected { background: linear-gradient(135deg, #66bb6a, #26a69a); }
-.custom-group-item--cs.selected { background: linear-gradient(135deg, #42a5f5, #7e57c2); }
-.custom-group-item--ms.selected { background: linear-gradient(135deg, #ffca28, #ff7043); }
+.custom-group-item:hover  { transform: translateY(-2px); }
+.custom-group-item:active { top: 3px; transform: translateY(0) scale(0.98); box-shadow: none !important; }
+
+.custom-group-item.selected { border: 3px solid rgba(255,255,255,0.4); }
+.custom-group-item--fz.selected { background-color: #ff8a65; color: #fff; box-shadow: 3px 3px 0px #e64a19; }
+.custom-group-item--fz.selected:hover { box-shadow: 5px 5px 0px #e64a19; }
+.custom-group-item--cd.selected { background-color: #00838f; color: #fff; box-shadow: 3px 3px 0px #006064; }
+.custom-group-item--cd.selected:hover { box-shadow: 5px 5px 0px #006064; }
+.custom-group-item--ss.selected { background-color: #e1bee7; color: #6a1b9a; box-shadow: 3px 3px 0px #ce93d8; }
+.custom-group-item--ss.selected:hover { box-shadow: 5px 5px 0px #ce93d8; }
+.custom-group-item--cs.selected { background-color: #ff007f; color: #fff; box-shadow: 3px 3px 0px #c2185b; }
+.custom-group-item--cs.selected:hover { box-shadow: 5px 5px 0px #c2185b; }
+.custom-group-item--ms.selected { background-color: #7e57c2; color: #fff; box-shadow: 3px 3px 0px #5e35b1; }
+.custom-group-item--ms.selected:hover { box-shadow: 5px 5px 0px #5e35b1; }
+
+.custom-group-checkbox {
+  width: 17px;
+  height: 17px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1;
+}
 
 /* 曲選択 */
 .custom-song-toggle-row {
