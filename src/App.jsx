@@ -6,7 +6,7 @@ import logo from './assets/logo.png'
 
 // ===== Supabase 設定 =====
 const supabaseUrl = "https://atinpqtedmrfrtdlkpkd.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF0aW5wcXRlZG1yZnJ0ZGxrcGtkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTU0NjcsImV4cCI6MjA4NDY3MTQ2N30.Oor6oUuuIxa0pSxIRuwEw7ZzGYM4hOGfywHqv2FaBHg";
+const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const memberColorCSS = {
@@ -96,6 +96,22 @@ function App() {
   const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', tier: '', key: 0 });
   const [endlessUnlocked, setEndlessUnlocked] = useState(localStorage.getItem('kawaii_endless_unlocked') === 'true');
   const [konamiFlash, setKonamiFlash] = useState(false);
+
+  // --- カスタムモード ---
+  const [customSelectedGroups, setCustomSelectedGroups] = useState(new Set());
+  const [customSongList, setCustomSongList] = useState([]);
+  const [customSelectedSongs, setCustomSelectedSongs] = useState(new Set());
+  const customQueueRef = useRef([]);
+  const customOriginalPoolRef = useRef([]);
+  const customResultReadyRef = useRef(false);
+  const [customTotalQ, setCustomTotalQ] = useState(0);
+  const [customRemaining, setCustomRemaining] = useState(0);
+  const [customAnsweredTotal, setCustomAnsweredTotal] = useState(0);
+  const [customWrongAnswers, setCustomWrongAnswers] = useState([]);
+  const [customMembersByGroup, setCustomMembersByGroup] = useState({});
+  const [customIsLoading, setCustomIsLoading] = useState(false);
+  const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
+  const [customQuitModal, setCustomQuitModal] = useState(false);
 
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -196,6 +212,89 @@ function App() {
     fetchSurrounds([selected]).then(([q]) => { setEndlessNextQ(q); setEndlessNextQLoading(false); });
   };
 
+  // --- カスタムモード補助関数 ---
+  const shuffle = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const loadCustomSongs = async () => {
+    setCustomIsLoadingSongs(true);
+    const groups = [...customSelectedGroups];
+    const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups);
+    const seen = new Set();
+    const songs = (data || []).filter(s => {
+      const key = `${s.group_name}::${s.song_name}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => a.group_name.localeCompare(b.group_name) || a.song_name.localeCompare(b.song_name));
+    setCustomSongList(songs);
+    setCustomSelectedSongs(new Set(songs.map(s => `${s.group_name}::${s.song_name}`)));
+    setCustomIsLoadingSongs(false);
+    setScreen('custom-select-song');
+  };
+
+  const startCustomMode = async () => {
+    setCustomIsLoading(true);
+    const groups = [...customSelectedGroups];
+    const { data: qData } = await supabase.from('quiz_full').select('*').in('group_name', groups);
+    const filtered = (qData || []).filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
+    if (filtered.length === 0) { setCustomIsLoading(false); return; }
+    const shuffled = shuffle(filtered);
+    const withSurrounds = await fetchSurrounds(shuffled);
+    const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
+    const memberMap = {};
+    (mData || []).forEach(m => {
+      if (!memberMap[m.group_name]) memberMap[m.group_name] = [];
+      memberMap[m.group_name].push(m);
+    });
+    customOriginalPoolRef.current = withSurrounds;
+    customQueueRef.current = withSurrounds;
+    setCustomMembersByGroup(memberMap);
+    setCustomTotalQ(withSurrounds.length);
+    setCustomRemaining(withSurrounds.length);
+    setCustomWrongAnswers([]);
+    setQuizState(prev => ({ ...prev, quizzes: [withSurrounds[0]], currentIndex: 0, correctCount: 0 }));
+    setSelectedMembers(new Set());
+    setAnswered(false);
+    setResultMsg({ text: '', type: '' });
+    setCustomIsLoading(false);
+    setGameMode('custom');
+    setScreen('quiz');
+  };
+
+  const nextCustomQuestion = (isSkip = false) => {
+    const queue = customQueueRef.current;
+    const newQueue = isSkip ? [...queue.slice(1), queue[0]] : queue.slice(1);
+    customQueueRef.current = newQueue;
+    if (newQueue.length === 0) { customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ); setScreen('result'); return; }
+    setCustomRemaining(newQueue.length);
+    setQuizState(prev => ({ ...prev, quizzes: [newQueue[0]], currentIndex: 0 }));
+    setSelectedMembers(new Set());
+    setAnswered(false);
+    setResultMsg({ text: '', type: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const restartCustomMode = () => {
+    customResultReadyRef.current = false;
+    const shuffled = shuffle(customOriginalPoolRef.current);
+    customQueueRef.current = shuffled;
+    setCustomRemaining(shuffled.length);
+    setCustomTotalQ(shuffled.length);
+    setQuizState(prev => ({ ...prev, quizzes: [shuffled[0]], currentIndex: 0, correctCount: 0 }));
+    setSelectedMembers(new Set());
+    setAnswered(false);
+    setResultMsg({ text: '', type: '' });
+    setCustomWrongAnswers([]);
+    setScreen('quiz');
+  };
+
   // --- コナミコマンドでエンドレスモード解放 ---
   useEffect(() => {
     const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
@@ -221,7 +320,7 @@ function App() {
   const descriptions = {
     easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
     normal: ["MVが存在する曲から、1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
-    hard:   ["すべての曲から、1人または全員で歌う歌詞が選出されます", "繰り返し使われる歌詞", "ヒントはありません"],
+    hard:   ["すべての曲から、1人または全員で歌う歌詞が選出されます", "繰り返し使われる歌詞も選出されます\n(「◯回目」と表示されます)", "ヒントはありません"],
     expert: ["すべての曲から、2人以上で歌う歌詞が選出されます", "ヒントはありません"],
   };
 
@@ -533,6 +632,23 @@ function App() {
       return;
     }
 
+    // --- カスタムモード ---
+    if (gameMode === 'custom') {
+      const currentMembers = customMembersByGroup[current.group_name] || [];
+      const isAllCustom = correctArray.length === currentMembers.length && currentMembers.length > 0;
+      const correctLabelCustom = formatCorrectLabel(correctArray, isAllCustom ? '1' : '0');
+      if (isCorrect) {
+        setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
+        setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "correct" });
+      } else {
+        setCustomWrongAnswers(prev => [...prev, { lyrics: current.lyrics, song_name: current.song_name, correct_members: current.correct_members, group_name: current.group_name }]);
+        setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！😫</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "incorrect" });
+      }
+      setAnswered(true);
+      setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
+      return;
+    }
+
     // --- 通常モード ---
     if (isCorrect) {
       setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
@@ -559,6 +675,7 @@ function App() {
 
   const nextQuestion = () => {
     if (gameMode === 'endless') { advanceEndlessQuestion(); return; }
+    if (gameMode === 'custom') { nextCustomQuestion(); return; }
     setQuestionTimer(60);
     setQuizState(prev => {
       if (prev.currentIndex + 1 < prev.quizzes.length) {
@@ -653,6 +770,39 @@ function App() {
   useEffect(() => {
     if (screen === 'result') {
       if (gameMode === 'endless') {
+        setDisplayScore(0);
+        setResultPhase('announce');
+        const target = quizState.correctCount;
+        const announceTimer = setTimeout(() => {
+          setResultPhase('drumroll');
+          if (target > 0) {
+            const totalMs = 2800;
+            const raw = Array.from({ length: target + 1 }, (_, i) => {
+              const t = i / target;
+              const speed = Math.sin(t * Math.PI);
+              return 1 / Math.max(speed, 0.25);
+            });
+            const sum = raw.reduce((s, d) => s + d, 0);
+            let elapsed = 0;
+            for (let i = 0; i <= target; i++) {
+              const delay = elapsed;
+              const val = i;
+              setTimeout(() => setDisplayScore(val), delay);
+              elapsed += (raw[i] / sum) * totalMs;
+            }
+            setTimeout(() => { setResultPhase('reveal'); }, elapsed + 300);
+          } else {
+            setTimeout(() => { setResultPhase('reveal'); }, 600);
+          }
+        }, 1000);
+        return () => clearTimeout(announceTimer);
+      }
+      if (gameMode === 'custom') {
+        if (customResultReadyRef.current) {
+          setResultPhase('reveal');
+          return;
+        }
+        customResultReadyRef.current = true;
         setDisplayScore(0);
         setResultPhase('announce');
         const target = quizState.correctCount;
@@ -918,16 +1068,19 @@ function App() {
   const quizCurr = quizState.quizzes[quizState.currentIndex];
   const sp = quizCurr?.surroundPrev || [];
   const sn = quizCurr?.surroundNext || [];
-  const showSongName = gameMode === 'endless'
-    ? endlessQNum <= 20
-    : quizState.difficulty === 'easy';
-  const showSurroundHint = gameMode === 'endless'
-    ? endlessQNum <= 50
-    : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
+  const showSongName = gameMode === 'custom'
+    ? true
+    : gameMode === 'endless' ? endlessQNum <= 20 : quizState.difficulty === 'easy';
+  const showSurroundHint = gameMode === 'custom'
+    ? true
+    : gameMode === 'endless' ? endlessQNum <= 50 : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
   const quizPrevLines = showSurroundHint ? sp.slice(-1) : [];
   const quizNextLines = showSurroundHint ? sn.slice(0, 1) : [];
   const quizExplanation = (quizCurr?.song_name && quizCurr?.section_name)
     ? `この歌詞は「${quizCurr.song_name}」の\n${quizCurr.section_name}部分でした！` : "";
+  const displayMembers = gameMode === 'custom'
+    ? (customMembersByGroup[quizCurr?.group_name] || [])
+    : members;
 
   if (!accessGranted) {
     return (
@@ -954,7 +1107,7 @@ function App() {
   return (
     <div className="app-root" onClick={() => setInfoLevel(null)}>
       <div className="global-footer-link">
-        {screen !== 'top' && screen !== 'result' && (
+        {screen !== 'top' && screen !== 'result' && screen !== 'custom-review' && (
           <span onClick={async () => {
             clearInterval(questionTimerIntervalRef.current);
             if (sessionId) {
@@ -964,7 +1117,7 @@ function App() {
             setScreen('top');
           }}>🏠 トップにもどる</span>
         )}
-        {(screen === 'top' || screen === 'result') && (
+        {(screen === 'top' || screen === 'result' || screen === 'custom-review') && (
           <a href="https://forms.gle/EguRX6uWZYmJJLZx5" target="_blank" rel="noreferrer" className="survey-corner-link">アンケートにご協力ください</a>
         )}
       </div>
@@ -1048,7 +1201,82 @@ function App() {
               <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
             </button>
           )}
+          <button className="mode-btn mode-btn-custom" onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
+            <span className="mode-btn-icon">🎵</span>
+            <span className="mode-btn-name">カスタムモード</span>
+            <span className="mode-btn-desc">好きな曲だけ！全問クリアに挑戦！</span>
+          </button>
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
+        </div>
+      )}
+
+      {/* --- カスタム：グループ選択 --- */}
+      {screen === 'custom-select-group' && (
+        <div className="box custom-select-card zoom-in">
+          <h2 className="title">グループを選んでください</h2>
+          <p className="custom-select-hint">1つ以上選択してください</p>
+          <div className="custom-group-list">
+            {[
+              { name: 'FRUITS ZIPPER', label: '🍎 FRUITS ZIPPER', cls: 'fz' },
+              { name: 'CANDY TUNE',    label: '🍬 CANDY TUNE',    cls: 'cd' },
+              { name: 'SWEET STEADY',  label: '💐 SWEET STEADY',  cls: 'ss' },
+              { name: 'CUTIE STREET',  label: '💎 CUTIE STREET',  cls: 'cs' },
+              { name: 'MORE STAR',     label: '🌟 MORE STAR',     cls: 'ms' },
+            ].map(g => (
+              <label key={g.name} className={`custom-group-item custom-group-item--${g.cls}${customSelectedGroups.has(g.name) ? ' selected' : ''}`}>
+                <input type="checkbox" checked={customSelectedGroups.has(g.name)} onChange={() => {
+                  setCustomSelectedGroups(prev => {
+                    const next = new Set(prev);
+                    next.has(g.name) ? next.delete(g.name) : next.add(g.name);
+                    return next;
+                  });
+                }} />
+                {g.label}
+              </label>
+            ))}
+          </div>
+          <button className="start-btn" disabled={customSelectedGroups.size === 0 || customIsLoadingSongs} onClick={loadCustomSongs}>
+            {customIsLoadingSongs ? '読み込み中…' : '曲を選ぶ →'}
+          </button>
+          <button className="back-btn" onClick={() => setScreen('mode')}>モード選択に戻る</button>
+        </div>
+      )}
+
+      {/* --- カスタム：曲選択 --- */}
+      {screen === 'custom-select-song' && (
+        <div className="box custom-select-card zoom-in">
+          <h2 className="title">曲を選んでください</h2>
+          <div className="custom-song-toggle-row">
+            <button className="custom-toggle-btn" onClick={() => setCustomSelectedSongs(new Set(customSongList.map(s => `${s.group_name}::${s.song_name}`)))}>全選択</button>
+            <button className="custom-toggle-btn" onClick={() => setCustomSelectedSongs(new Set())}>全解除</button>
+            <span className="custom-selected-count">{customSelectedSongs.size}曲選択中</span>
+          </div>
+          <div className="custom-song-list">
+            {[...new Set(customSongList.map(s => s.group_name))].map(groupName => (
+              <div key={groupName}>
+                <div className="custom-song-group-header">{groupName}</div>
+                {customSongList.filter(s => s.group_name === groupName).map(s => {
+                  const key = `${s.group_name}::${s.song_name}`;
+                  return (
+                    <label key={key} className={`custom-song-item${customSelectedSongs.has(key) ? ' selected' : ''}`}>
+                      <input type="checkbox" checked={customSelectedSongs.has(key)} onChange={() => {
+                        setCustomSelectedSongs(prev => {
+                          const next = new Set(prev);
+                          next.has(key) ? next.delete(key) : next.add(key);
+                          return next;
+                        });
+                      }} />
+                      {s.song_name}
+                    </label>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <button className="start-btn" disabled={customSelectedSongs.size === 0 || customIsLoading} onClick={startCustomMode}>
+            {customIsLoading ? '問題を準備中…' : `スタート！（${customSelectedSongs.size}曲）`}
+          </button>
+          <button className="back-btn" onClick={() => setScreen('custom-select-group')}>グループ選択に戻る</button>
         </div>
       )}
 
@@ -1139,6 +1367,15 @@ function App() {
       {/* --- クイズ画面 --- */}
       {screen === 'quiz' && (
         <div className="box quiz-card zoom-in">
+          {/* カスタムモード：上部ボタン行 */}
+          {gameMode === 'custom' && (
+            <div className="custom-quiz-toprow">
+              <button className="custom-quit-btn" onClick={() => setCustomQuitModal(true)}>クイズを終わる</button>
+              {!answered && (
+                <button className="custom-skip-btn" onClick={() => nextCustomQuestion(true)}>スキップ</button>
+              )}
+            </div>
+          )}
           {/* エンドレスモード：ライフ表示 */}
           {gameMode === 'endless' && (
             <div className="endless-quiz-header">
@@ -1168,10 +1405,14 @@ function App() {
             </div>
           )}
           <p className="quiz-challenge-label">
-            {quizState.group}の{gameMode === 'endless' ? 'エンドレス' : difficultyLabel[quizState.difficulty]}に挑戦中
+            {gameMode === 'custom'
+              ? 'カスタムモードに挑戦中'
+              : `${quizState.group}の${gameMode === 'endless' ? 'エンドレス' : difficultyLabel[quizState.difficulty]}に挑戦中`}
           </p>
           {gameMode === 'endless' ? (
             <p className="quiz-counter">{endlessQNum} 問目</p>
+          ) : gameMode === 'custom' ? (
+            <p className="quiz-counter">残り <strong>{customRemaining}</strong> 問</p>
           ) : (
             <p className="quiz-counter">{quizState.currentIndex + 1} / {quizState.quizzes.length} 問目</p>
           )}
@@ -1216,7 +1457,7 @@ function App() {
           )}
 
           <div className="members">
-            {members.map(m => (
+            {displayMembers.map(m => (
               <button key={m.id}
                 className={`member-btn${selectedMembers.has(m.name) ? ' on' : ''}`}
                 onClick={() => toggleMember(m.name)}
@@ -1224,10 +1465,10 @@ function App() {
               >{m.name}</button>
             ))}
             <button
-              className={`member-btn all-btn${selectedMembers.size === members.length && members.length > 0 ? ' on' : ''}`}
+              className={`member-btn all-btn${selectedMembers.size === displayMembers.length && displayMembers.length > 0 ? ' on' : ''}`}
               onClick={() => {
-                if (selectedMembers.size === members.length) setSelectedMembers(new Set());
-                else setSelectedMembers(new Set(members.map(m => m.name)));
+                if (selectedMembers.size === displayMembers.length) setSelectedMembers(new Set());
+                else setSelectedMembers(new Set(displayMembers.map(m => m.name)));
               }}
               disabled={answered}
             >全員</button>
@@ -1285,6 +1526,19 @@ function App() {
         </div>
       )}
 
+      {/* --- カスタムドラムロールオーバーレイ --- */}
+      {screen === 'result' && gameMode === 'custom' && (resultPhase === 'announce' || resultPhase === 'drumroll') && (
+        <div className="drumroll-overlay">
+          {resultPhase === 'announce' ? (
+            <p className="drumroll-announce">あなたの正解数は…</p>
+          ) : (
+            <div className="score-circle drumroll-circle">
+              <span className="score-num">{displayScore}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* --- エンドレスドラムロールオーバーレイ --- */}
       {screen === 'result' && gameMode === 'endless' && (resultPhase === 'announce' || resultPhase === 'drumroll') && (
         <div className="drumroll-overlay">
@@ -1310,6 +1564,87 @@ function App() {
           )}
         </div>
       )}
+
+      {/* --- カスタムリザルト画面 --- */}
+      {screen === 'result' && gameMode === 'custom' && resultPhase === 'reveal' && (
+        <div className="box result-box zoom-in">
+          <p className="result-label">カスタムモードの結果</p>
+          <div className="endless-result-hero">
+            <span className="endless-result-num">{quizState.correctCount}</span>
+            <span className="endless-result-slash"> / </span>
+            <span className="endless-result-total">{customAnsweredTotal}</span>
+            <span className="endless-result-unit">問正解！</span>
+          </div>
+          <div className="info-badges">
+            <span className="badge badge-custom">カスタム</span>
+          </div>
+          {customWrongAnswers.length > 0 && (
+            <button className="review-btn" onClick={() => setScreen('custom-review')}>
+              不正解の歌詞を確認（{customWrongAnswers.length}問）
+            </button>
+          )}
+          {customWrongAnswers.length === 0 && (
+            <p className="custom-perfect-msg">✨ 全問正解！素晴らしい！ ✨</p>
+          )}
+          <div className="result-buttons">
+            <div className="result-btn-row">
+              <button className="retry-btn" onClick={restartCustomMode}>もう一回</button>
+              <button className="group-btn" onClick={() => setScreen('custom-select-group')}>曲を選び直す</button>
+            </div>
+            <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
+          </div>
+        </div>
+      )}
+
+      {/* --- カスタム：終了確認モーダル --- */}
+      {customQuitModal && (
+        <div className="modal-overlay" onClick={() => setCustomQuitModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
+            <h2>クイズを終了しますか？</h2>
+            <p style={{color: '#888', fontSize: '0.85rem', marginBottom: '20px'}}>現在の正解数でリザルトを表示します</p>
+            <button className="resume-continue-btn" onClick={() => { setCustomQuitModal(false); customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ - customRemaining); setScreen('result'); }}>はい</button>
+            <br />
+            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => setCustomQuitModal(false)}>いいえ</button>
+          </div>
+        </div>
+      )}
+
+      {/* --- カスタムレビュー画面 --- */}
+      {screen === 'custom-review' && (() => {
+        const allMembersList = Object.values(customMembersByGroup).flat();
+        const memberColorLookup = {};
+        allMembersList.forEach(m => { memberColorLookup[m.name] = memberColorCSS[m.color] || '#333'; });
+        return (
+          <div className="box custom-review-box zoom-in">
+            <h2 className="title">不正解だった歌詞</h2>
+            <div className="custom-review-list">
+              {customWrongAnswers.map((w, i) => {
+                const correctArr = w.correct_members.split(',').map(s => s.trim()).filter(Boolean);
+                const isSolo = correctArr.length === 1;
+                const lyricsColor = isSolo ? (memberColorLookup[correctArr[0]] || '#333') : '#333';
+                return (
+                  <div key={i} className="custom-review-item">
+                    <div className="custom-review-song">
+                      ♪ {w.song_name}
+                      <span className="custom-review-group">（{w.group_name}）</span>
+                    </div>
+                    <div className="custom-review-lyrics" style={{ color: lyricsColor }}>{w.lyrics}</div>
+                    <div className="custom-review-answer">
+                      🎤 {correctArr.map((name, ni) => (
+                        <span key={ni}>
+                          {ni > 0 && <span style={{ color: '#888' }}>・</span>}
+                          <span style={{ color: memberColorLookup[name] || '#c2185b' }}>{name}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button className="back-btn" onClick={() => setScreen('result')}>リザルトに戻る</button>
+          </div>
+        );
+      })()}
 
       {/* --- エンドレスリザルト画面 --- */}
       {screen === 'result' && gameMode === 'endless' && resultPhase === 'reveal' && (
