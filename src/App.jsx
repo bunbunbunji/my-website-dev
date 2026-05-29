@@ -94,8 +94,11 @@ function App() {
   const [endlessNextQLoading, setEndlessNextQLoading] = useState(false);
   const [endlessLifeBonus, setEndlessLifeBonus] = useState({ type: 'none', amount: 0, key: 0 });
   const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', tier: '', key: 0 });
-  const [endlessUnlocked, setEndlessUnlocked] = useState(localStorage.getItem('kawaii_endless_unlocked') === 'true');
-  const [konamiFlash, setKonamiFlash] = useState(false);
+  const [endlessUnlockedGroups, setEndlessUnlockedGroups] = useState(() => {
+    const saved = localStorage.getItem('kawaii_endless_unlocked_groups');
+    return new Set(saved ? JSON.parse(saved) : []);
+  });
+  const [endlessNewUnlockNotif, setEndlessNewUnlockNotif] = useState('');
 
   // --- カスタムモード ---
   const [customSelectedGroups, setCustomSelectedGroups] = useState(new Set());
@@ -112,6 +115,8 @@ function App() {
   const [customIsLoading, setCustomIsLoading] = useState(false);
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
+  const [customUnlocked, setCustomUnlocked] = useState(() => localStorage.getItem('kawaii_custom_unlocked') === 'true');
+  const [customNewUnlockNotif, setCustomNewUnlockNotif] = useState(false);
   const [customShowSurround, setCustomShowSurround] = useState(false);
   const [customShowSongName, setCustomShowSongName] = useState(false);
 
@@ -318,27 +323,6 @@ function App() {
     setScreen('quiz');
   };
 
-  // --- コナミコマンドでエンドレスモード解放 ---
-  useEffect(() => {
-    const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight'];
-    let pos = 0;
-    const onKey = (e) => {
-      if (e.key === KONAMI[pos]) {
-        pos++;
-        if (pos === KONAMI.length) {
-          pos = 0;
-          localStorage.setItem('kawaii_endless_unlocked', 'true');
-          setEndlessUnlocked(true);
-          setKonamiFlash(true);
-          setTimeout(() => setKonamiFlash(false), 2000);
-        }
-      } else {
-        pos = e.key === KONAMI[0] ? 1 : 0;
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   const descriptions = {
     easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
@@ -487,17 +471,23 @@ function App() {
     setEndlessNextQ(null);
     setEndlessNextQLoading(false);
     setStatusMsg("問題を準備しています…");
-    const [{ data: qData }, { data: mData }] = await Promise.all([
-      supabase.from("quiz_full").select("*").eq("group_name", selectedGroup),
-      supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order")
-    ]);
-    if (!qData || qData.length === 0) {
+    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    let qData = [];
+    let from = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
+      if (!data || data.length === 0) { hasMore = false; }
+      else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+    }
+    if (qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
       setIsPreparing(false);
       return;
     }
     setMembers(mData || []);
     // Q1を選択してfullデータ取得
+    if (qData.length > 999) qData = shuffle(qData).slice(0, 999);
     let pool = [...qData];
     const eligible1 = getEndlessEligiblePool(pool, 1);
     const q1Meta = selectEndlessWeighted(eligible1, 1);
@@ -900,7 +890,29 @@ function App() {
             setTimeout(() => setDisplayScore(val), delay);
             elapsed += (raw[i] / sum) * totalMs;
           }
-          setTimeout(() => { setResultPhase('reveal'); fireConfetti(); }, elapsed + 300);
+          setTimeout(() => {
+            setResultPhase('reveal');
+            fireConfetti();
+            if (target === 10 && quizState.difficulty === 'expert') {
+              setEndlessUnlockedGroups(prev => {
+                if (prev.has(quizState.group)) return prev;
+                const next = new Set(prev);
+                next.add(quizState.group);
+                localStorage.setItem('kawaii_endless_unlocked_groups', JSON.stringify([...next]));
+                localStorage.setItem('kawaii_endless_new_unlock', quizState.group);
+                return next;
+              });
+            }
+            if (!localStorage.getItem('kawaii_custom_unlocked')) {
+              const count = parseInt(localStorage.getItem('kawaii_normal_play_count') || '0') + 1;
+              localStorage.setItem('kawaii_normal_play_count', String(count));
+              if (count >= 5) {
+                localStorage.setItem('kawaii_custom_unlocked', 'true');
+                localStorage.setItem('kawaii_custom_new_unlock', 'true');
+                setCustomUnlocked(true);
+              }
+            }
+          }, elapsed + 300);
         } else {
           setTimeout(() => { setResultPhase('reveal'); }, 600);
         }
@@ -912,6 +924,20 @@ function App() {
       setResultPhase('idle');
       setResultMsg({ text: "", type: "" });
       setAnswered(false);
+    }
+    if (screen === 'mode') {
+      const newEndlessUnlock = localStorage.getItem('kawaii_endless_new_unlock');
+      if (newEndlessUnlock) {
+        setEndlessNewUnlockNotif(newEndlessUnlock);
+        localStorage.removeItem('kawaii_endless_new_unlock');
+        setTimeout(() => setEndlessNewUnlockNotif(''), 3000);
+      }
+      const newCustomUnlock = localStorage.getItem('kawaii_custom_new_unlock');
+      if (newCustomUnlock) {
+        setCustomNewUnlockNotif(true);
+        localStorage.removeItem('kawaii_custom_new_unlock');
+        setTimeout(() => setCustomNewUnlockNotif(false), 3000);
+      }
     }
   }, [screen]);
 
@@ -1215,14 +1241,16 @@ function App() {
           }}>
             <span className="mode-btn-icon">📝</span>
             <span className="mode-btn-name">検定モード</span>
-            <span className="mode-btn-desc">10問制・1問60秒！じっくり挑戦！</span>
+            <span className="mode-btn-desc">1問60秒！めざせ10点満点！</span>
           </button>
-          <button className="mode-btn mode-btn-custom" onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
-            <span className="mode-btn-icon">🎵</span>
-            <span className="mode-btn-name">カスタムモード</span>
-            <span className="mode-btn-desc">好きな曲だけ！全問クリアに挑戦！</span>
-          </button>
-          {(debugMode || endlessUnlocked) && (
+          {(debugMode || customUnlocked) && (
+            <button className="mode-btn mode-btn-custom" onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
+              <span className="mode-btn-icon">🎵</span>
+              <span className="mode-btn-name">カスタムモード</span>
+              <span className="mode-btn-desc">好きな曲を選んで練習！</span>
+            </button>
+          )}
+          {(debugMode || endlessUnlockedGroups.size > 0) && (
             <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
               <span className="mode-btn-icon">🏃‍♀️🏃‍♂️🏃</span>
               <span className="mode-btn-name">エンドレスモード</span>
@@ -1261,7 +1289,7 @@ function App() {
           <button className="start-btn" disabled={customSelectedGroups.size === 0 || customIsLoadingSongs} onClick={loadCustomSongs}>
             {customIsLoadingSongs ? '読み込み中…' : '曲を選ぶ →'}
           </button>
-          <button className="back-btn" onClick={() => setScreen('mode')}>モード選択に戻る</button>
+          <button className="back-btn" onClick={() => setScreen('mode')}>モード選択へ</button>
         </div>
       )}
 
@@ -1313,7 +1341,8 @@ function App() {
             { name: 'SWEET STEADY',  label: '💐SWEET STEADY💐',  cls: 'ss' },
             { name: 'CUTIE STREET',  label: '💎CUTIE STREET💎',  cls: 'cs' },
             { name: 'MORE STAR',     label: '🌟MORE STAR🌟',     cls: 'ms' },
-          ].map(g => (
+          ].filter(g => gameMode !== 'endless' || debugMode || endlessUnlockedGroups.has(g.name))
+           .map(g => (
             <button key={g.name} className={`group-choice-btn group-btn-${g.cls}`} onClick={() => {
               setQuizState(prev => ({ ...prev, group: g.name }));
               if (gameMode === 'endless') { setScreen('confirm'); prepareEndlessMode(g.name); }
@@ -1553,10 +1582,17 @@ function App() {
         </div>
       )}
 
-      {/* --- コナミコマンド解放フラッシュ --- */}
-      {konamiFlash && (
-        <div className="konami-flash-overlay">
-          <div className="konami-flash-text">🎮 エンドレスモード解放！</div>
+      {/* --- エンドレスモード解放フラッシュ --- */}
+      {endlessNewUnlockNotif && (
+        <div className="endless-unlock-flash-overlay">
+          <div className="endless-unlock-flash-text">🎉 エンドレスモード解放！<br/><span className="endless-unlock-flash-group">{endlessNewUnlockNotif}</span></div>
+        </div>
+      )}
+
+      {/* --- カスタムモード解放フラッシュ --- */}
+      {customNewUnlockNotif && (
+        <div className="endless-unlock-flash-overlay">
+          <div className="endless-unlock-flash-text">🎉 カスタムモード解放！</div>
         </div>
       )}
 
@@ -1609,9 +1645,7 @@ function App() {
             <span className="endless-result-total">{customAnsweredTotal}</span>
             <span className="endless-result-unit">問正解！</span>
           </div>
-          <div className="info-badges">
-            <span className="badge badge-custom">カスタム</span>
-          </div>
+
           {customWrongAnswers.length > 0 && (
             <button className="review-btn" onClick={() => setScreen('custom-review')}>
               不正解の歌詞を確認（{customWrongAnswers.length}問）
@@ -1620,8 +1654,8 @@ function App() {
           <p className="custom-perfect-msg">またチャレンジしてね！</p>
           <div className="result-buttons">
             <div className="result-btn-row">
-              <button className="retry-btn" onClick={restartCustomMode}>もう一回</button>
               <button className="group-btn" onClick={() => setScreen('custom-select-group')}>曲を選び直す</button>
+              <button className="mode-back-btn" onClick={() => setScreen('mode')}>モード選択へ</button>
             </div>
             <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
           </div>
@@ -1645,7 +1679,11 @@ function App() {
       {screen === 'custom-review' && (() => {
         const allMembersList = Object.values(customMembersByGroup).flat();
         const memberColorLookup = {};
-        allMembersList.forEach(m => { memberColorLookup[m.name] = memberColorCSS[m.color] || '#333'; });
+        const memberLastNameLookup = {};
+        allMembersList.forEach(m => {
+          memberColorLookup[m.name] = memberColorCSS[m.color] || '#333';
+          memberLastNameLookup[m.name] = m.Last_name || m.name;
+        });
         return (
           <div className="box custom-review-box zoom-in">
             <h2 className="title">不正解だった歌詞</h2>
@@ -1660,12 +1698,12 @@ function App() {
                       ♪ {w.song_name}
                       <span className="custom-review-group">（{w.group_name}）</span>
                     </div>
-                    <div className="custom-review-lyrics" style={{ color: lyricsColor }}>{w.lyrics}</div>
+                    <div className="custom-review-lyrics">{w.lyrics}</div>
                     <div className="custom-review-answer">
                       🎤 {correctArr.map((name, ni) => (
                         <span key={ni}>
                           {ni > 0 && <span style={{ color: '#888' }}>・</span>}
-                          <span style={{ color: memberColorLookup[name] || '#c2185b' }}>{name}</span>
+                          <span style={{ color: memberColorLookup[name] || '#c2185b' }}>{memberLastNameLookup[name] || name}</span>
                         </span>
                       ))}
                     </div>
@@ -1703,8 +1741,8 @@ function App() {
               <button className="retry-btn" onClick={() => {
                 setScreen('confirm');
                 prepareEndlessMode(quizState.group);
-              }}>もう一回</button>
-              <button className="group-btn" onClick={() => setScreen('group')}>グループ選択</button>
+              }}>もう一回！</button>
+              <button className="mode-back-btn" onClick={() => setScreen('mode')}>モード選択へ</button>
             </div>
             <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
           </div>
@@ -1740,8 +1778,8 @@ function App() {
               結果をXでつぶやく
             </button>
             <div className="result-btn-row">
-              <button className="retry-btn" onClick={() => { setScreen('confirm'); prepareQuiz(quizState.group, quizState.difficulty); setAnswered(false); setQuizState(p=>({...p, correctCount:0, currentIndex:0})); setSelectedMembers(new Set()); }}>もう一回やる</button>
-              <button className="group-btn" onClick={() => setScreen('group')}>グループ選択</button>
+              <button className="retry-btn" onClick={() => { setScreen('confirm'); prepareQuiz(quizState.group, quizState.difficulty); setAnswered(false); setQuizState(p=>({...p, correctCount:0, currentIndex:0})); setSelectedMembers(new Set()); }}>もう一回！</button>
+              <button className="mode-back-btn" onClick={() => setScreen('mode')}>モード選択へ</button>
             </div>
             <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
           </div>
@@ -1961,6 +1999,49 @@ function App() {
               setScreen('quiz');
             }}>▶ このクイズをテスト</button>
             {debugQuizStatus && <div style={{marginTop: '4px', fontSize: '0.65rem', color: '#aaa', wordBreak: 'break-all'}}>{debugQuizStatus}</div>}
+          </div>
+
+          <div className="debug-section" style={{marginTop: '10px', borderTop: '1px solid #333', paddingTop: '8px'}}>
+            <div className="debug-label" style={{color:'#f48fb1'}}>▶ エンドレス解放テスト</div>
+            <div className="debug-label" style={{marginTop:'6px', fontSize:'0.65rem', color:'#aaa'}}>解放済み: {[...endlessUnlockedGroups].join(', ') || 'なし'}</div>
+            <div className="debug-btn-group" style={{marginTop:'6px'}}>
+              {['FRUITS ZIPPER','CANDY TUNE','SWEET STEADY','CUTIE STREET','MORE STAR'].map(g => (
+                <button key={g} className="debug-btn" onClick={() => {
+                  setEndlessUnlockedGroups(prev => {
+                    const next = new Set(prev);
+                    next.add(g);
+                    localStorage.setItem('kawaii_endless_unlocked_groups', JSON.stringify([...next]));
+                    localStorage.setItem('kawaii_endless_new_unlock', g);
+                    return next;
+                  });
+                  setScreen('mode');
+                }}>{g.split(' ')[0]}</button>
+              ))}
+            </div>
+            <button className="debug-jump-btn" style={{marginTop:'8px', background:'#555'}} onClick={() => {
+              setEndlessUnlockedGroups(new Set());
+              localStorage.removeItem('kawaii_endless_unlocked_groups');
+              localStorage.removeItem('kawaii_endless_new_unlock');
+            }}>🗑 解放リセット</button>
+          </div>
+
+          <div className="debug-section" style={{marginTop: '10px', borderTop: '1px solid #333', paddingTop: '8px'}}>
+            <div className="debug-label" style={{color:'#90caf9'}}>▶ カスタム解放テスト</div>
+            <div className="debug-label" style={{marginTop:'6px', fontSize:'0.65rem', color:'#aaa'}}>
+              プレイ回数: {localStorage.getItem('kawaii_normal_play_count') || '0'} / 5　解放: {customUnlocked ? '✅' : '❌'}
+            </div>
+            <button className="debug-jump-btn" style={{marginTop:'6px'}} onClick={() => {
+              localStorage.setItem('kawaii_custom_unlocked', 'true');
+              localStorage.setItem('kawaii_custom_new_unlock', 'true');
+              setCustomUnlocked(true);
+              setScreen('mode');
+            }}>🎵 カスタム解放 + 通知確認</button>
+            <button className="debug-jump-btn" style={{marginTop:'6px', background:'#555'}} onClick={() => {
+              setCustomUnlocked(false);
+              localStorage.removeItem('kawaii_custom_unlocked');
+              localStorage.removeItem('kawaii_custom_new_unlock');
+              localStorage.removeItem('kawaii_normal_play_count');
+            }}>🗑 解放リセット</button>
           </div>
           </>}
         </div>

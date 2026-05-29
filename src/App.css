@@ -913,10 +913,14 @@ body {
 
 .result-buttons .share-btn { background: #000; color: #fff; border: none; box-shadow: 0 4px 0 #888; position: relative; top: -4px; }
 .result-buttons .share-btn:active { top: 0; box-shadow: none; }
-.result-btn-row .retry-btn { background: #ff69b2; color: #fff; border: none; box-shadow: 0 4px 0 #d81b60; position: relative; top: -4px; }
+.result-btn-row .retry-btn { background: #fff; color: #ff69b2; border: 3px solid #ff69b2; box-shadow: 0 4px 0 #ffb6c1; position: relative; top: -4px; }
+.result-btn-row .retry-btn:hover { background: #fff0f7; }
 .result-btn-row .retry-btn:active { top: 0; box-shadow: none; }
 .result-btn-row .group-btn { background: #fff; color: #ff69b2; border: 2px solid #ffb6c1; box-shadow: 0 4px 0 #ffb6c1; position: relative; top: -4px; }
 .result-btn-row .group-btn:active { top: 0; box-shadow: none; }
+.result-btn-row .mode-back-btn { background: linear-gradient(135deg, #ff69b2, #ff8a65); color: #fff; border: none; box-shadow: 0 4px 0 #c2185b; position: relative; top: -4px; font-family: 'Mochiy Pop One', sans-serif; font-size: clamp(0.6rem, 2.8vw, 0.85rem); padding: 10px 14px; border-radius: 50px; cursor: pointer; transition: all 0.15s; }
+.result-btn-row .mode-back-btn:hover { box-shadow: 0 6px 0 #c2185b; transform: translateY(-1px); }
+.result-btn-row .mode-back-btn:active { top: 0; box-shadow: none; transform: none; }
 
 .result-back-link {
   background: none;
@@ -1730,30 +1734,30 @@ body {
   72%  { transform: scale(1);    opacity: 1; }
   100% { transform: scale(1.04); opacity: 0; }
 }
-/* ===== コナミコマンド解放フラッシュ ===== */
-@keyframes konamiFlashAnim {
+/* ===== エンドレスモード解放フラッシュ ===== */
+@keyframes endlessUnlockFlashAnim {
   0%   { opacity: 0; }
   10%  { opacity: 1; }
   70%  { opacity: 1; }
   100% { opacity: 0; }
 }
-@keyframes konamiTextPop {
+@keyframes endlessUnlockTextPop {
   0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
   20%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
   35%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   75%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(1.05); opacity: 0; }
 }
-.konami-flash-overlay {
+.endless-unlock-flash-overlay {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(255, 215, 0, 0.25);
   z-index: 999;
   pointer-events: none;
-  animation: konamiFlashAnim 2s ease-out forwards;
+  animation: endlessUnlockFlashAnim 3s ease-out forwards;
 }
-.konami-flash-text {
+.endless-unlock-flash-text {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -1761,8 +1765,14 @@ body {
   font-size: clamp(1.4rem, 6vw, 2.2rem);
   color: #fff;
   text-shadow: 0 0 20px rgba(255,200,0,1), 0 2px 8px rgba(0,0,0,0.6);
+  text-align: center;
   white-space: nowrap;
-  animation: konamiTextPop 2s ease-out forwards;
+  line-height: 1.6;
+  animation: endlessUnlockTextPop 3s ease-out forwards;
+}
+.endless-unlock-flash-group {
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  display: block;
 }
 
 .endless-diffup-overlay {
