@@ -117,6 +117,12 @@ function App() {
   const [customQuitModal, setCustomQuitModal] = useState(false);
   const [customUnlocked, setCustomUnlocked] = useState(() => localStorage.getItem('kawaii_custom_unlocked') === 'true');
   const [customNewUnlockNotif, setCustomNewUnlockNotif] = useState(false);
+  const [newlyUnlockedMode, setNewlyUnlockedMode] = useState(null); // 'custom' | 'endless' | null
+  const [debugForceHideEndless, setDebugForceHideEndless] = useState(false);
+  const [debugForceHideCustom, setDebugForceHideCustom] = useState(false);
+  const [pendingEndlessReveal, setPendingEndlessReveal] = useState(false);
+  const [pendingCustomReveal, setPendingCustomReveal] = useState(false);
+  const [isUnlockAnimating, setIsUnlockAnimating] = useState(false);
   const [customShowSurround, setCustomShowSurround] = useState(false);
   const [customShowSongName, setCustomShowSongName] = useState(false);
 
@@ -272,20 +278,19 @@ function App() {
     const filtered = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
     if (filtered.length === 0) { setCustomIsLoading(false); return; }
     const shuffled = shuffle(filtered);
-    const withSurrounds = await fetchSurrounds(shuffled);
     const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
     const memberMap = {};
     (mData || []).forEach(m => {
       if (!memberMap[m.group_name]) memberMap[m.group_name] = [];
       memberMap[m.group_name].push(m);
     });
-    customOriginalPoolRef.current = withSurrounds;
-    customQueueRef.current = withSurrounds;
+    customOriginalPoolRef.current = shuffled;
+    customQueueRef.current = shuffled;
     setCustomMembersByGroup(memberMap);
-    setCustomTotalQ(withSurrounds.length);
-    setCustomRemaining(withSurrounds.length);
+    setCustomTotalQ(shuffled.length);
+    setCustomRemaining(shuffled.length);
     setCustomWrongAnswers([]);
-    setQuizState(prev => ({ ...prev, quizzes: [withSurrounds[0]], currentIndex: 0, correctCount: 0 }));
+    setQuizState(prev => ({ ...prev, quizzes: [shuffled[0]], currentIndex: 0, correctCount: 0 }));
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
@@ -429,6 +434,18 @@ function App() {
         surroundNext: (nextRes.data || []).map(r => r.lyric)
       };
     }));
+  };
+
+  // --- カスタムモード: 現在の問題の前後歌詞をオンデマンドでフェッチ ---
+  const fetchCurrentCustomSurrounds = async () => {
+    const curr = quizState.quizzes[quizState.currentIndex];
+    if (!curr || curr.surroundPrev !== undefined) return;
+    const [withSurrounds] = await fetchSurrounds([curr]);
+    setQuizState(prev => {
+      const quizzes = [...prev.quizzes];
+      quizzes[prev.currentIndex] = withSurrounds;
+      return { ...prev, quizzes };
+    });
   };
 
   // --- クイズ準備 ---
@@ -875,6 +892,15 @@ function App() {
 
       const announceTimer = setTimeout(() => {
         setResultPhase('drumroll');
+        if (!localStorage.getItem('kawaii_custom_unlocked')) {
+          const count = parseInt(localStorage.getItem('kawaii_normal_play_count') || '0') + 1;
+          localStorage.setItem('kawaii_normal_play_count', String(count));
+          if (count >= 5) {
+            localStorage.setItem('kawaii_custom_unlocked', 'true');
+            localStorage.setItem('kawaii_custom_new_unlock', 'true');
+            setCustomUnlocked(true);
+          }
+        }
         if (target > 0) {
           const totalMs = 2000;
           const raw = Array.from({ length: target + 1 }, (_, i) => {
@@ -893,24 +919,23 @@ function App() {
           setTimeout(() => {
             setResultPhase('reveal');
             fireConfetti();
-            if (target === 10 && quizState.difficulty === 'expert') {
+            if (target === 10 && (quizState.difficulty === 'hard' || quizState.difficulty === 'expert')) {
               setEndlessUnlockedGroups(prev => {
                 if (prev.has(quizState.group)) return prev;
                 const next = new Set(prev);
                 next.add(quizState.group);
                 localStorage.setItem('kawaii_endless_unlocked_groups', JSON.stringify([...next]));
-                localStorage.setItem('kawaii_endless_new_unlock', quizState.group);
+                const pending = JSON.parse(localStorage.getItem('kawaii_endless_pending_unlocks') || '[]');
+                const wasEmpty = pending.length === 0;
+                if (!pending.includes(quizState.group)) {
+                  pending.push(quizState.group);
+                  localStorage.setItem('kawaii_endless_pending_unlocks', JSON.stringify(pending));
+                }
+                if (prev.size === 0 && wasEmpty) {
+                  localStorage.setItem('kawaii_endless_first_unlock', 'true');
+                }
                 return next;
               });
-            }
-            if (!localStorage.getItem('kawaii_custom_unlocked')) {
-              const count = parseInt(localStorage.getItem('kawaii_normal_play_count') || '0') + 1;
-              localStorage.setItem('kawaii_normal_play_count', String(count));
-              if (count >= 5) {
-                localStorage.setItem('kawaii_custom_unlocked', 'true');
-                localStorage.setItem('kawaii_custom_new_unlock', 'true');
-                setCustomUnlocked(true);
-              }
             }
           }, elapsed + 300);
         } else {
@@ -926,17 +951,56 @@ function App() {
       setAnswered(false);
     }
     if (screen === 'mode') {
-      const newEndlessUnlock = localStorage.getItem('kawaii_endless_new_unlock');
-      if (newEndlessUnlock) {
-        setEndlessNewUnlockNotif(newEndlessUnlock);
-        localStorage.removeItem('kawaii_endless_new_unlock');
-        setTimeout(() => setEndlessNewUnlockNotif(''), 3000);
-      }
-      const newCustomUnlock = localStorage.getItem('kawaii_custom_new_unlock');
-      if (newCustomUnlock) {
-        setCustomNewUnlockNotif(true);
+      const GROUP_ORDER = ['FRUITS ZIPPER','CANDY TUNE','SWEET STEADY','CUTIE STREET','MORE STAR'];
+      const queue = [];
+
+      if (localStorage.getItem('kawaii_custom_new_unlock')) {
         localStorage.removeItem('kawaii_custom_new_unlock');
-        setTimeout(() => setCustomNewUnlockNotif(false), 3000);
+        queue.push({ type: 'custom' });
+      }
+
+      const pendingEndless = JSON.parse(localStorage.getItem('kawaii_endless_pending_unlocks') || '[]');
+      if (pendingEndless.length > 0) {
+        localStorage.removeItem('kawaii_endless_pending_unlocks');
+        const isFirst = !!localStorage.getItem('kawaii_endless_first_unlock');
+        if (isFirst) localStorage.removeItem('kawaii_endless_first_unlock');
+        const sorted = [...pendingEndless].sort((a, b) => GROUP_ORDER.indexOf(a) - GROUP_ORDER.indexOf(b));
+        sorted.forEach((group, i) => {
+          queue.push({ type: 'endless', group, isFirst: isFirst && i === 0 });
+        });
+      }
+
+      if (queue.length > 0) {
+        if (queue.some(q => q.type === 'custom')) setPendingCustomReveal(true);
+        if (queue.some(q => q.type === 'endless' && q.isFirst)) setPendingEndlessReveal(true);
+        setIsUnlockAnimating(true);
+
+        const processQueue = (q) => {
+          if (q.length === 0) { setIsUnlockAnimating(false); return; }
+          const [current, ...rest] = q;
+          if (current.type === 'custom') {
+            setCustomNewUnlockNotif(true);
+            setTimeout(() => {
+              setCustomNewUnlockNotif(false);
+              setPendingCustomReveal(false);
+              setNewlyUnlockedMode('custom');
+              setTimeout(() => { setNewlyUnlockedMode(null); processQueue(rest); }, 1000);
+            }, 3000);
+          } else {
+            setEndlessNewUnlockNotif(current.group);
+            setTimeout(() => {
+              setEndlessNewUnlockNotif('');
+              if (current.isFirst) {
+                setPendingEndlessReveal(false);
+                setNewlyUnlockedMode('endless');
+                setTimeout(() => { setNewlyUnlockedMode(null); processQueue(rest); }, 1000);
+              } else {
+                processQueue(rest);
+              }
+            }, 3000);
+          }
+        };
+        processQueue(queue);
       }
     }
   }, [screen]);
@@ -1243,19 +1307,23 @@ function App() {
             <span className="mode-btn-name">検定モード</span>
             <span className="mode-btn-desc">1問60秒！めざせ10点満点！</span>
           </button>
-          {(debugMode || customUnlocked) && (
-            <button className="mode-btn mode-btn-custom" onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
-              <span className="mode-btn-icon">🎵</span>
-              <span className="mode-btn-name">カスタムモード</span>
-              <span className="mode-btn-desc">好きな曲を選んで練習！</span>
-            </button>
+          {(!pendingCustomReveal && !debugForceHideCustom && (debugMode || customUnlocked)) && (
+            <div className={`mode-btn-unlock-wrapper${newlyUnlockedMode === 'custom' ? ' mode-btn-reveal-anim' : ''}`}>
+              <button className={`mode-btn mode-btn-custom${newlyUnlockedMode === 'custom' ? ' mode-btn--new' : ''}`} onClick={() => { setGameMode('custom'); setScreen('custom-select-group'); }}>
+                <span className="mode-btn-icon">🎵</span>
+                <span className="mode-btn-name">カスタムモード</span>
+                <span className="mode-btn-desc">好きな曲を選んで練習！</span>
+              </button>
+            </div>
           )}
-          {(debugMode || endlessUnlockedGroups.size > 0) && (
-            <button className="mode-btn mode-btn-endless" onClick={() => { setGameMode('endless'); setScreen('group'); }}>
-              <span className="mode-btn-icon">🏃‍♀️🏃‍♂️🏃</span>
-              <span className="mode-btn-name">エンドレスモード</span>
-              <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
-            </button>
+          {(!pendingEndlessReveal && !debugForceHideEndless && (debugMode || endlessUnlockedGroups.size > 0)) && (
+            <div className={`mode-btn-unlock-wrapper${newlyUnlockedMode === 'endless' ? ' mode-btn-reveal-anim' : ''}`}>
+              <button className={`mode-btn mode-btn-endless${newlyUnlockedMode === 'endless' ? ' mode-btn--new' : ''}`} onClick={() => { setGameMode('endless'); setScreen('group'); }}>
+                <span className="mode-btn-icon">🏃‍♀️🏃‍♂️🏃</span>
+                <span className="mode-btn-name">エンドレスモード</span>
+                <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
+              </button>
+            </div>
           )}
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('top')}>トップに戻る</button>
         </div>
@@ -1510,7 +1578,10 @@ function App() {
 
           {gameMode === 'custom' && !answered && (
             <div className="custom-hint-buttons">
-              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={() => setCustomShowSurround(v => !v)}>
+              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={async () => {
+                if (!customShowSurround) await fetchCurrentCustomSurrounds();
+                setCustomShowSurround(v => !v);
+              }}>
                 {customShowSurround ? '前後の歌詞を隠す' : '前後の歌詞をみる'}
               </button>
               <button className={`custom-hint-btn${customShowSongName ? ' active' : ''}`} onClick={() => setCustomShowSongName(v => !v)}>
@@ -1580,6 +1651,11 @@ function App() {
             <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
           </div>
         </div>
+      )}
+
+      {/* --- 解放アニメーション中クリックブロック --- */}
+      {isUnlockAnimating && (
+        <div style={{position:'fixed',inset:0,zIndex:9998,pointerEvents:'all'}} />
       )}
 
       {/* --- エンドレスモード解放フラッシュ --- */}
@@ -2011,18 +2087,30 @@ function App() {
                     const next = new Set(prev);
                     next.add(g);
                     localStorage.setItem('kawaii_endless_unlocked_groups', JSON.stringify([...next]));
-                    localStorage.setItem('kawaii_endless_new_unlock', g);
+                    const pending = JSON.parse(localStorage.getItem('kawaii_endless_pending_unlocks') || '[]');
+                    if (!pending.includes(g)) {
+                      pending.push(g);
+                      localStorage.setItem('kawaii_endless_pending_unlocks', JSON.stringify(pending));
+                    }
+                    localStorage.setItem('kawaii_endless_first_unlock', 'true');
                     return next;
                   });
+                  setDebugForceHideEndless(false);
                   setScreen('mode');
                 }}>{g.split(' ')[0]}</button>
               ))}
             </div>
-            <button className="debug-jump-btn" style={{marginTop:'8px', background:'#555'}} onClick={() => {
+            <button className="debug-jump-btn" style={{marginTop:'8px'}} onClick={() => {
+              setEndlessUnlockedGroups(new Set());
+              setDebugForceHideEndless(true);
+              setScreen('mode');
+            }}>👁 ボタンを隠す（state のみ）</button>
+            <button className="debug-jump-btn" style={{marginTop:'6px', background:'#555'}} onClick={() => {
               setEndlessUnlockedGroups(new Set());
               localStorage.removeItem('kawaii_endless_unlocked_groups');
-              localStorage.removeItem('kawaii_endless_new_unlock');
-            }}>🗑 解放リセット</button>
+              localStorage.removeItem('kawaii_endless_pending_unlocks');
+              localStorage.removeItem('kawaii_endless_first_unlock');
+            }}>🗑 解放リセット（localStorage も）</button>
           </div>
 
           <div className="debug-section" style={{marginTop: '10px', borderTop: '1px solid #333', paddingTop: '8px'}}>
@@ -2034,14 +2122,21 @@ function App() {
               localStorage.setItem('kawaii_custom_unlocked', 'true');
               localStorage.setItem('kawaii_custom_new_unlock', 'true');
               setCustomUnlocked(true);
+              setDebugForceHideCustom(false);
+              setPendingCustomReveal(false);
               setScreen('mode');
             }}>🎵 カスタム解放 + 通知確認</button>
+            <button className="debug-jump-btn" style={{marginTop:'6px'}} onClick={() => {
+              setCustomUnlocked(false);
+              setDebugForceHideCustom(true);
+              setScreen('mode');
+            }}>👁 ボタンを隠す（state のみ）</button>
             <button className="debug-jump-btn" style={{marginTop:'6px', background:'#555'}} onClick={() => {
               setCustomUnlocked(false);
               localStorage.removeItem('kawaii_custom_unlocked');
               localStorage.removeItem('kawaii_custom_new_unlock');
               localStorage.removeItem('kawaii_normal_play_count');
-            }}>🗑 解放リセット</button>
+            }}>🗑 解放リセット（localStorage も）</button>
           </div>
           </>}
         </div>
