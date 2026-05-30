@@ -1823,6 +1823,12 @@ body {
   color: #ff5252;
   text-shadow: 0 0 28px rgba(255, 82, 82, 0.95), 0 2px 8px rgba(0,0,0,0.5);
 }
+.endless-diffup-desc {
+  margin-top: 8px;
+  font-size: clamp(0.85rem, 4vw, 1.1rem);
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+}
 .endless-diffup-tier {
   margin-top: 10px;
   font-family: 'Mochiy Pop One', sans-serif;

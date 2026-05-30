@@ -193,26 +193,14 @@ function App() {
     if (qNum <= 35)
       return try_(q => q.normal > 0) || try_(q => q.easy > 0) || try_(q => q.hard > 0) || pool;
     if (qNum <= 50)
-      return try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
+      return try_(q => (q.normal > 0 || q.hard > 0) && !/回目/.test(q.lyrics)) || try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
     if (qNum <= 70)
       return try_(q => q.hard > 0) || try_(q => q.normal > 0) || try_(q => q.expert > 0) || pool;
     return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || pool;
   };
 
-  const selectEndlessWeighted = (eligible, qNum) => {
-    const w = (q) => {
-      if (qNum <= 10) return q.easy || 0;
-      if (qNum <= 20) return (q.easy || 0) + (q.normal || 0);
-      if (qNum <= 35) return q.normal || 0;
-      if (qNum <= 50) return (q.normal || 0) + (q.hard || 0);
-      if (qNum <= 70) return q.hard || 0;
-      return (q.hard || 0) + (q.expert || 0);
-    };
-    const total = eligible.reduce((s, q) => s + w(q), 0);
-    if (total === 0) return eligible[Math.floor(Math.random() * eligible.length)];
-    let r = Math.random() * total;
-    for (const q of eligible) { r -= w(q); if (r <= 0) return q; }
-    return eligible[eligible.length - 1];
+  const selectEndlessWeighted = (eligible) => {
+    return eligible[Math.floor(Math.random() * eligible.length)];
   };
 
   const prefetchEndlessNext = (pool, nextQNum) => {
@@ -343,63 +331,87 @@ function App() {
     expert: { zero: "へんじがない。ただのしかばねのようだ。<br>0点でも泣かないで。当てる方がおかしいレベルですから。", low: "相手が悪すぎた…。<br>一筋縄ではいかないね。ドンマイドンマイ！", mid: "素晴らしい！<br>この難問揃いで半分解けるとは、なかなかやるな？", high: "素晴らしすぎて鳥肌ものです。<br>もしかしたら本人よりも詳しいかも…！？", perfect: "👼⛩️✨神、降臨✨⛩️👼。<br>あなたは一体何者…？まさか本人？？" }
   };
 
-  // --- セッション復元チェック（マウント時） ---
+  // --- セッション復元チェック（マウント時）: エンドレスのみ対象 ---
   useEffect(() => {
     const sid = localStorage.getItem('quiz_session_id');
     if (!sid) return;
     supabase.from('sessions').select('*').eq('session_id', sid).maybeSingle()
       .then(({ data }) => {
-        if (data) setPendingResume(data);
-        else localStorage.removeItem('quiz_session_id');
+        if (data && data.difficulty === 'endless') setPendingResume(data);
+        else {
+          localStorage.removeItem('quiz_session_id');
+          if (data) supabase.from('sessions').delete().eq('session_id', data.session_id).then(() => {});
+        }
       });
   }, []);
 
-  // --- クイズ開始（セッション作成） ---
+  // --- クイズ開始 ---
   const startQuiz = async () => {
-    // エンドレスはセッション不要
     if (gameMode === 'endless') {
+      // 既存セッションがあれば削除してから新規作成
+      if (sessionId) {
+        await supabase.from('sessions').delete().eq('session_id', sessionId);
+        localStorage.removeItem('quiz_session_id');
+        setSessionId(null);
+      }
+      setSelectedMembers(new Set());
+      const currentQ = quizState.quizzes[0];
+      const poolIds = endlessPoolRef.current.map(q => q.id);
+      const { data } = await supabase.from('sessions').insert({
+        group_name: quizState.group,
+        difficulty: 'endless',
+        current_step: 1,
+        quiz_ids: { current: currentQ?.id, pool: poolIds, lives: 3, consecutive: 0 },
+        correct_count: 0
+      }).select('session_id').single();
+      if (data?.session_id) {
+        localStorage.setItem('quiz_session_id', data.session_id);
+        setSessionId(data.session_id);
+      }
       setScreen('quiz');
       return;
     }
-    const oldId = sessionId || pendingResume?.session_id;
-    if (oldId) {
-      await supabase.from('sessions').delete().eq('session_id', oldId);
-      localStorage.removeItem('quiz_session_id');
-    }
-    setSessionId(null);
-    setPendingResume(null);
+    // 検定モード・カスタムモード: セッション不要
     setSelectedMembers(new Set());
-    const ids = quizState.quizzes.map(q => q.id);
-    const { data } = await supabase.from('sessions').insert({
-      group_name: quizState.group,
-      difficulty: quizState.difficulty,
-      current_step: 1,
-      quiz_ids: ids,
-      correct_count: 0
-    }).select('session_id').single();
-    if (data?.session_id) {
-      localStorage.setItem('quiz_session_id', data.session_id);
-      setSessionId(data.session_id);
-    }
+    setPendingResume(null);
     setScreen('quiz');
   };
 
-  // --- セッション復元 ---
+  // --- エンドレスセッション復元 ---
   const resumeQuiz = async () => {
     setIsResumingSession(true);
     const s = pendingResume;
-    const ids = s.quiz_ids;
-    const { data: qData } = await supabase.from('quiz_full').select('*').in('id', ids);
-    const sorted = ids.map(id => (qData || []).find(q => q.id === id)).filter(Boolean);
+    const saved = s.quiz_ids; // { current, pool, lives, consecutive }
+
+    // 現在の問題と残プールを取得
+    const { data: qData } = await supabase.from('quiz_full').select('*').eq('id', saved.current).single();
     const { data: mData } = await supabase.from('members').select('*').eq('group_name', s.group_name).order('sort_order');
-    const quizzesWithSurrounds = await fetchSurrounds(sorted);
+    let poolData = [];
+    if (saved.pool?.length > 0) {
+      const { data: pData } = await supabase.from('quiz_full').select('*').in('id', saved.pool);
+      poolData = pData || [];
+    }
+    const [q1] = await fetchSurrounds([qData]);
+
+    const lives = saved.lives ?? 3;
+    const consecutive = saved.consecutive ?? 0;
+    const qNum = s.current_step ?? 1;
+
+    endlessPoolRef.current = poolData;
+    endlessPendingNotifRef.current = null;
+    setEndlessQNum(qNum);
+    setEndlessLives(lives);
+    setEndlessConsecutive(consecutive);
+    setEndlessIsOver(false);
+    setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
+    setEndlessDiffNotif({ text: '', tier: '', key: 0 });
     setMembers(mData || []);
     setQuizState({
       group: s.group_name,
-      difficulty: s.difficulty,
-      currentIndex: s.current_step - 1,
+      difficulty: null,
+      currentIndex: 0,
       correctCount: s.correct_count,
-      quizzes: quizzesWithSurrounds
+      quizzes: [q1]
     });
     setSessionId(s.session_id);
     setPendingResume(null);
@@ -407,7 +419,9 @@ function App() {
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
+    setGameMode('endless');
     setScreen('quiz');
+    prefetchEndlessNext(poolData, qNum + 1);
   };
 
   // --- セッション破棄 ---
@@ -620,7 +634,6 @@ function App() {
       .map(normalizeMemberName)
       .sort((a, b) => a.localeCompare(b, 'ja'));
     const isCorrect = JSON.stringify(correctArray) === JSON.stringify(selectedArray);
-    const newCorrectCount = isCorrect ? quizState.correctCount + 1 : quizState.correctCount;
 
     const formatCorrectLabel = (members, allFlag) => {
       if (String(allFlag) === '1') return '全員';
@@ -687,19 +700,6 @@ function App() {
       setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！😫</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "incorrect" });
     }
     setAnswered(true);
-    if (sessionId) {
-      const isLast = quizState.currentIndex + 1 === quizState.quizzes.length;
-      if (isLast) {
-        supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
-        localStorage.removeItem('quiz_session_id');
-        setSessionId(null);
-      } else {
-        supabase.from('sessions').update({
-          correct_count: newCorrectCount,
-          current_step: quizState.currentIndex + 2
-        }).eq('session_id', sessionId).then(() => {});
-      }
-    }
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
   };
 
@@ -721,28 +721,37 @@ function App() {
   };
 
   const advanceEndlessQuestion = () => {
-    // プール枯渇 or ゲームオーバー → リザルトへ
-    if (!endlessNextQ && !endlessNextQLoading) { setScreen('result'); return; }
+    // プール枯渇 → セッション削除してリザルトへ
+    if (!endlessNextQ && !endlessNextQLoading) {
+      if (sessionId) {
+        supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
+        localStorage.removeItem('quiz_session_id');
+        setSessionId(null);
+      }
+      setScreen('result');
+      return;
+    }
     if (!endlessNextQ) return; // まだ先読み中（ボタンはdisabledのため通常ここには来ない）
     // 予約済みの通知とライフ増減を次の問題画面で適用
     const pending = endlessPendingNotifRef.current;
     endlessPendingNotifRef.current = null;
+    const newLives = (pending?.lifeDelta) ? endlessLives + pending.lifeDelta : endlessLives;
     if (pending) {
-      if (pending.lifeDelta) setEndlessLives(prev => prev + pending.lifeDelta);
+      setEndlessLives(newLives);
       setEndlessLifeBonus({ type: pending.type, amount: pending.amount, key: Date.now() });
     } else {
       setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
     }
     const newQNum = endlessQNum + 1;
     const DIFF_THRESHOLDS = {
-      11: { text: '難易度UP！',   tier: 'やさしい × ふつう' },
-      21: { text: '難易度UP！',   tier: 'ふつうのみ' },
-      36: { text: '難易度UP！',   tier: 'ふつう × むずかしい' },
-      51: { text: '難易度UP！',   tier: 'むずかしいのみ' },
-      71: { text: '難易度MAX！！', tier: 'むずかしい × げきむず' },
+      11: { text: '難易度UP！',   desc: '問題が難しくなります！' },
+      21: { text: '難易度UP！',   desc: '曲名が隠れます！' },
+      36: { text: '難易度UP！',   desc: '問題が難しくなります！' },
+      51: { text: '難易度UP！',   desc: '前後の歌詞が隠れます！' },
+      71: { text: '難易度MAX！！', desc: '問題が難しくなります！' },
     };
     if (DIFF_THRESHOLDS[newQNum]) setEndlessDiffNotif({ ...DIFF_THRESHOLDS[newQNum], key: Date.now() });
-    else setEndlessDiffNotif({ text: '', tier: '', key: 0 });
+    else setEndlessDiffNotif({ text: '', desc: '', key: 0 });
     setEndlessQNum(newQNum);
     setQuizState(prev => ({ ...prev, quizzes: [endlessNextQ], currentIndex: 0 }));
     setEndlessNextQ(null);
@@ -750,6 +759,19 @@ function App() {
     setSelectedMembers(new Set());
     setResultMsg({ text: "", type: "" });
     window.scrollTo({ top: 0, behavior: "smooth" });
+    // セッション更新（次の問題・残プール・ライフ等を保存）
+    if (sessionId) {
+      supabase.from('sessions').update({
+        current_step: newQNum,
+        correct_count: quizState.correctCount,
+        quiz_ids: {
+          current: endlessNextQ.id,
+          pool: endlessPoolRef.current.map(q => q.id),
+          lives: newLives,
+          consecutive: endlessConsecutive
+        }
+      }).eq('session_id', sessionId).then(() => {});
+    }
     // 次の次を先読み
     prefetchEndlessNext(endlessPoolRef.current, newQNum + 1);
   };
@@ -780,19 +802,6 @@ function App() {
         type: "incorrect"
       });
       setAnswered(true);
-      if (sessionId) {
-        const isLast = quizState.currentIndex + 1 === quizState.quizzes.length;
-        if (isLast) {
-          supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
-          localStorage.removeItem('quiz_session_id');
-          setSessionId(null);
-        } else {
-          supabase.from('sessions').update({
-            correct_count: quizState.correctCount,
-            current_step: quizState.currentIndex + 2
-          }).eq('session_id', sessionId).then(() => {});
-        }
-      }
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
     }
   }, [questionTimer, gameMode, screen, answered]);
@@ -1223,7 +1232,8 @@ function App() {
         {screen !== 'top' && screen !== 'result' && screen !== 'custom-review' && (
           <span onClick={async () => {
             clearInterval(questionTimerIntervalRef.current);
-            if (sessionId) {
+            // エンドレスモードはセッションが既に保存済み → 再フェッチしてpendingResumeに反映
+            if (gameMode === 'endless' && sessionId) {
               const { data } = await supabase.from('sessions').select('*').eq('session_id', sessionId).maybeSingle();
               if (data) setPendingResume(data);
             }
@@ -1257,7 +1267,10 @@ function App() {
             <button className="start-btn-sparkle" onClick={() => setScreen('mode')}>
               <span className="btn-inner">検定開始！</span>
             </button>
-            <button className="start-btn-list" onClick={() => pendingResume ? (setResumeModalSource('songlist'), setShowResumeModal(true)) : fetchSongList()}>
+            <button className="start-btn-list" onClick={() => {
+              if (pendingResume) { setResumeModalSource('songlist'); setShowResumeModal(true); }
+              else fetchSongList();
+            }}>
               <span className="btn-inner">♫楽曲リスト♫</span>
             </button>
           </div>
@@ -1300,8 +1313,7 @@ function App() {
           <h2 className="title">モードを選んでね！</h2>
           <button className="mode-btn mode-btn-normal" onClick={() => {
             setGameMode('normal');
-            if (pendingResume) { setResumeModalSource('group'); setShowResumeModal(true); }
-            else { setScreen('group'); }
+            setScreen('group');
           }}>
             <span className="mode-btn-icon">📝</span>
             <span className="mode-btn-name">検定モード</span>
@@ -1318,7 +1330,11 @@ function App() {
           )}
           {(!pendingEndlessReveal && !debugForceHideEndless && (debugMode || endlessUnlockedGroups.size > 0)) && (
             <div className={`mode-btn-unlock-wrapper${newlyUnlockedMode === 'endless' ? ' mode-btn-reveal-anim' : ''}`}>
-              <button className={`mode-btn mode-btn-endless${newlyUnlockedMode === 'endless' ? ' mode-btn--new' : ''}`} onClick={() => { setGameMode('endless'); setScreen('group'); }}>
+              <button className={`mode-btn mode-btn-endless${newlyUnlockedMode === 'endless' ? ' mode-btn--new' : ''}`} onClick={() => {
+                setGameMode('endless');
+                if (pendingResume) { setShowResumeModal(true); }
+                else { setScreen('group'); }
+              }}>
                 <span className="mode-btn-icon">🏃‍♀️🏃‍♂️🏃</span>
                 <span className="mode-btn-name">エンドレスモード</span>
                 <span className="mode-btn-desc">問題が尽きるまで挑戦！</span>
@@ -1637,7 +1653,14 @@ function App() {
         <div className="endless-gameover-overlay">
           <div className="endless-gameover-box">
             <p className="endless-go-title">💔 ゲームオーバー！</p>
-            <button className="endless-go-btn" onClick={() => setScreen('result')}>
+            <button className="endless-go-btn" onClick={() => {
+              if (sessionId) {
+                supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
+                localStorage.removeItem('quiz_session_id');
+                setSessionId(null);
+              }
+              setScreen('result');
+            }}>
               リザルトへ進む →
             </button>
           </div>
@@ -1649,6 +1672,7 @@ function App() {
         <div key={endlessDiffNotif.key} className="endless-diffup-overlay">
           <div className={`endless-diffup-card${endlessDiffNotif.text === '難易度MAX！！' ? ' endless-diffup-max' : ''}`}>
             <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
+            {endlessDiffNotif.desc && <div className="endless-diffup-desc">{endlessDiffNotif.desc}</div>}
           </div>
         </div>
       )}
@@ -1815,6 +1839,11 @@ function App() {
             </button>
             <div className="result-btn-row">
               <button className="retry-btn" onClick={() => {
+                if (sessionId) {
+                  supabase.from('sessions').delete().eq('session_id', sessionId).then(() => {});
+                  localStorage.removeItem('quiz_session_id');
+                  setSessionId(null);
+                }
                 setScreen('confirm');
                 prepareEndlessMode(quizState.group);
               }}>もう一回！</button>
@@ -1919,14 +1948,14 @@ function App() {
       {(showResumeModal || closingResumeModal) && pendingResume && (
         <div className={`modal-overlay${closingResumeModal ? ' closing' : ''}`} onClick={closeResumeModal}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
-            <h2>📖 途中のクイズが見つかりました</h2>
-            <p style={{marginBottom: '6px'}}>{pendingResume.group_name}・{difficultyLabel[pendingResume.difficulty]}</p>
+            <h2>📖 途中のエンドレスが見つかりました</h2>
+            <p style={{marginBottom: '6px'}}>{pendingResume.group_name}・エンドレスモード</p>
             <p style={{marginBottom: '20px'}}>{pendingResume.current_step}問目から再開できます</p>
             <button className="resume-continue-btn" onClick={() => { closeResumeModal(); resumeQuiz(); }} disabled={isResumingSession}>
               {isResumingSession ? '読み込み中…' : '▶ 続きから始める'}
             </button>
             <br />
-            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => { closeResumeModal(); discardSession(); if (resumeModalSource === 'songlist') { fetchSongList(); } else { setScreen('group'); } }}>
+            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => { closeResumeModal(); discardSession(); if (resumeModalSource === 'songlist') fetchSongList(); else setScreen('group'); }}>
               クイズのセッションをリセットする
             </button>
           </div>
@@ -2025,6 +2054,8 @@ function App() {
                   onClick={() => setEndlessQNum(v)}>{v}</button>
               ))}
             </div>
+            <div className="debug-label" style={{marginTop:'6px'}}>ライフ <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {endlessLives})</span></div>
+            <button className="debug-jump-btn" style={{marginTop:'4px'}} onClick={() => setEndlessLives(v => v + 100)}>♥ +100</button>
             <div className="debug-label" style={{marginTop:'6px'}}>連続正解セット <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {endlessConsecutive})</span></div>
             <div className="debug-btn-group">
               {[4, 9, 14, 19, 24].map(v => (
