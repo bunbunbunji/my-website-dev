@@ -138,6 +138,7 @@ function App() {
   const [isResumingSession, setIsResumingSession] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [resumeModalSource, setResumeModalSource] = useState('group');
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
 
   const openSongModal = async (title, groupName) => {
     setSongModal({ title, groupName });
@@ -1231,6 +1232,10 @@ function App() {
       <div className="global-footer-link">
         {screen !== 'top' && screen !== 'result' && screen !== 'custom-review' && (
           <span onClick={async () => {
+            if (gameMode === 'normal' && screen === 'quiz') {
+              setShowBackConfirm(true);
+              return;
+            }
             clearInterval(questionTimerIntervalRef.current);
             // エンドレスモードはセッションが既に保存済み → 再フェッチしてpendingResumeに反映
             if (gameMode === 'endless' && sessionId) {
@@ -1943,6 +1948,25 @@ function App() {
           </div>
         );
       })()}
+
+      {/* --- 検定モード トップ戻り確認モーダル --- */}
+      {showBackConfirm && (
+        <div className="modal-overlay" onClick={() => setShowBackConfirm(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
+            <h2>⚠️ トップに戻りますか？</h2>
+            <p style={{marginBottom: '20px'}}>検定モードはセッションが残りません！<br />本当に戻りますか？</p>
+            <button className="resume-continue-btn" onClick={() => {
+              setShowBackConfirm(false);
+              clearInterval(questionTimerIntervalRef.current);
+              setScreen('top');
+            }}>トップに戻る</button>
+            <br />
+            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => setShowBackConfirm(false)}>
+              キャンセル
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* --- セッション再開モーダル --- */}
       {(showResumeModal || closingResumeModal) && pendingResume && (
