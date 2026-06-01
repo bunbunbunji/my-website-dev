@@ -1015,6 +1015,17 @@ function App() {
     }
   }, [screen]);
 
+  useEffect(() => {
+    const NO_SCROLL_SCREENS = ['top', 'lyrics', 'mode', 'group', 'difficulty', 'confirm', 'custom-select-group', 'custom-select-song'];
+    const html = document.documentElement;
+    if (NO_SCROLL_SCREENS.includes(screen)) {
+      html.classList.add('no-scroll');
+    } else {
+      html.classList.remove('no-scroll');
+    }
+    return () => html.classList.remove('no-scroll');
+  }, [screen]);
+
   useLayoutEffect(() => {
     if (screen !== 'top') return;
     const fitEl = (el, startRem, minPx) => {
@@ -1062,8 +1073,12 @@ function App() {
     };
     const fitAll = () => {
       fitText(lyricsRef.current, 1.4, 10);
-      fitText(hintPrevRef.current, 0.62, 7);
-      fitText(hintNextRef.current, 0.62, 7);
+      if (lyricsRef.current && window.innerWidth <= 540) {
+        const cur = parseFloat(window.getComputedStyle(lyricsRef.current).fontSize);
+        if (cur > 16) lyricsRef.current.style.fontSize = '16px';
+      }
+      fitText(hintPrevRef.current, 0.62, 3);
+      fitText(hintNextRef.current, 0.62, 3);
     };
     fitAll();
     document.fonts.ready.then(fitAll);
@@ -1583,7 +1598,7 @@ function App() {
 
           {quizPrevLines.length > 0 && (
             <div className="hint-lyrics">
-              <span className="hint-label">-直前の歌詞-</span>
+              <span className="hint-label">直前の歌詞：</span>
               <div className="hint-text" ref={hintPrevRef}>{quizPrevLines.join('\n')}</div>
             </div>
           )}
@@ -1592,7 +1607,7 @@ function App() {
 
           {quizNextLines.length > 0 && (
             <div className="hint-lyrics">
-              <span className="hint-label">-直後の歌詞-</span>
+              <span className="hint-label">直後の歌詞：</span>
               <div className="hint-text" ref={hintNextRef}>{quizNextLines.join('\n')}</div>
             </div>
           )}
@@ -2024,10 +2039,6 @@ function App() {
       {/* --- デバッグパネル (URL: ?debug) --- */}
       {debugMode && (
         <div className="debug-panel">
-          <button className="debug-toggle-btn" onClick={() => setDebugPanelOpen(p => !p)}>
-            {debugPanelOpen ? '▲ パネルを隠す' : '▼ デバッグパネル'}
-          </button>
-
           {debugPanelOpen && <><div className="debug-header">🛠 Debug Mode</div>
 
           <div className="debug-section">
@@ -2194,6 +2205,9 @@ function App() {
             }}>🗑 解放リセット（localStorage も）</button>
           </div>
           </>}
+          <button className="debug-toggle-btn" onClick={() => setDebugPanelOpen(p => !p)}>
+            {debugPanelOpen ? '▼ パネルを隠す' : '▲ デバッグパネル'}
+          </button>
         </div>
       )}
     </div>

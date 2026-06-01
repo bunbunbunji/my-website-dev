@@ -17,6 +17,9 @@ html {
   background-repeat: repeat;
   background-size: 683px 384px;
 }
+html.no-scroll {
+  overflow: hidden;
+}
 
 @media print {
   html, body { visibility: hidden; }
@@ -639,6 +642,30 @@ body {
 }
 
 .hint-label { font-weight: bold; color: #ffb6c1; font-size: 0.75rem; }
+
+@media (max-width: 540px) {
+  #lyrics {
+    font-size: clamp(12px, min(4vw, 3.5svh), 16px);
+  }
+  .hint-lyrics {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: clamp(3px, 0.5svh, 5px) 10px;
+    margin: clamp(2px, 0.4svh, 4px) 0;
+    text-align: left;
+  }
+  .hint-text {
+    white-space: pre;
+    overflow: hidden;
+    flex: 1;
+    text-align: left;
+  }
+  .hint-label {
+    font-size: 0.65rem;
+    flex-shrink: 0;
+  }
+}
 
 .members {
   display: grid;
@@ -1658,35 +1685,40 @@ body {
 
 /* ===== 検定モード：問題タイマー ===== */
 .quiz-qtimer-wrap {
+  position: relative;
   width: 100%;
-  margin: 8px 0 10px;
+  margin: 8px 0 4px;
 }
 .quiz-qtimer-track {
   position: relative;
   width: 100%;
-  height: 18px;
+  height: 26px;
   background: #e0e0e0;
-  border-radius: 9px;
+  border-radius: 13px;
   overflow: hidden;
 }
 .quiz-qtimer-bar {
   height: 100%;
   background: linear-gradient(90deg, #ff69b2, #ff8a65);
-  border-radius: 9px;
+  border-radius: 13px;
   transition: width 1s linear;
 }
 .quiz-qtimer-bar.danger { background: linear-gradient(90deg, #f44336, #ff5722); }
 .quiz-qtimer-num {
-  display: block;
-  text-align: right;
-  margin-top: 3px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   font-size: 0.78rem;
   font-weight: bold;
-  color: #555;
+  color: #fff;
   font-family: 'Mochiy Pop One', sans-serif;
+  text-shadow: 0 0 6px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
+  pointer-events: none;
+  white-space: nowrap;
 }
 .quiz-qtimer-num.danger {
-  color: #c62828;
+  color: #fff;
 }
 
 /* ===== エンドレスリザルト ===== */
