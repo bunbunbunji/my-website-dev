@@ -27,21 +27,13 @@ const superNormalize = (str) => {
 };
 
 function App() {
-  const [accessGranted, setAccessGranted] = useState(() =>
-    localStorage.getItem('kawaii_access') === import.meta.env.VITE_ACCESS_CODE
+  const [termsAgreed, setTermsAgreed] = useState(() =>
+    localStorage.getItem('kawaii_terms_agreed') === 'true'
   );
-  const [accessInput, setAccessInput] = useState('');
-  const [accessError, setAccessError] = useState(false);
 
-  const handleAccessSubmit = () => {
-    if (accessInput === import.meta.env.VITE_ACCESS_CODE) {
-      localStorage.setItem('kawaii_access', import.meta.env.VITE_ACCESS_CODE);
-      setAccessGranted(true);
-    } else {
-      setAccessError(true);
-      setAccessInput('');
-      setTimeout(() => setAccessError(false), 1800);
-    }
+  const handleTermsAgree = () => {
+    localStorage.setItem('kawaii_terms_agreed', 'true');
+    setTermsAgreed(true);
   };
 
   const [screen, setScreen] = useState('top');
@@ -1220,23 +1212,23 @@ function App() {
     ? (customMembersByGroup[quizCurr?.group_name] || [])
     : members;
 
-  if (!accessGranted) {
+  if (!termsAgreed) {
     return (
       <div className="app-root">
-        <div className="box access-gate-box fade-in">
-          <img src={logo} alt="KAWAII LAB検定" className="site-logo" style={{marginBottom: '16px'}} />
-          <p className="access-gate-title">アクセスコードを入力してください</p>
-          <input
-            className="access-gate-input"
-            type="password"
-            value={accessInput}
-            onChange={e => setAccessInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleAccessSubmit()}
-            placeholder="アクセスコード"
-            autoFocus
-          />
-          <button className="access-gate-btn" onClick={handleAccessSubmit}>確認</button>
-          {accessError && <p className="access-gate-error">コードが違います</p>}
+        <div className="box terms-box fade-in">
+          <img src={logo} alt="KAWAII LAB検定" className="site-logo" style={{marginBottom: '12px'}} />
+          <p className="terms-title">利用規約</p>
+          <div className="terms-scroll">
+            <p>本サービスは、KAWAII LABおよび所属グループに関する非公式のファンサイトです。</p>
+            <p><strong>歌詞・歌割りについて</strong><br />
+            掲載している歌詞および歌割りは、運営者が独自に調査・作成したものであり、公式情報ではありません。内容の正確性は保証できず、実際と異なる場合があります。</p>
+            <p><strong>著作権について</strong><br />
+            掲載している歌詞の著作権は、各作詞者および権利者に帰属します。本サービスはファンによる非営利目的で運営しており、権利者よりご要請があった場合は速やかに対応いたします。</p>
+            <p><strong>免責事項</strong><br />
+            本サービスの利用により生じたいかなる損害についても、運営者は責任を負いません。予告なくサービスの変更・中断・終了を行う場合があります。</p>
+          </div>
+          <p className="terms-note">上記の利用規約に同意の上、ご利用ください。</p>
+          <button className="terms-agree-btn" onClick={handleTermsAgree}>同意して始める</button>
         </div>
       </div>
     );
