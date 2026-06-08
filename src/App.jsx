@@ -44,12 +44,34 @@ function App() {
 
   const closePolicy = () => { setClosingPolicy(true); setTimeout(() => { setShowPolicy(false); setClosingPolicy(false); }, 220); };
   const closeProfile = () => { setClosingProfile(true); setTimeout(() => { setShowProfile(false); setClosingProfile(false); }, 220); };
-  const [infoLevel, setInfoLevel] = useState(null);
-  const [closingInfo, setClosingInfo] = useState(false);
+  const [tooltipLevel, setTooltipLevel] = useState(null);
+  const [tooltipClosing, setTooltipClosing] = useState(false);
+  const [timerLevel, setTimerLevel] = useState(null);
+  const [timerKey, setTimerKey] = useState(0);
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
 
-  const closeInfo = () => { setClosingInfo(true); setTimeout(() => { setInfoLevel(null); setClosingInfo(false); }, 220); };
+  const tooltipHoverTimerRef = useRef(null);
+  const tooltipCloseTimerRef = useRef(null);
+  const longPressTimerRef = useRef(null);
+  const longPressTriggeredRef = useRef(false);
+  const touchEndedRef = useRef(false);
+  const touchEndTimerRef = useRef(null);
+
+  const openTooltip = (level) => {
+    clearTimeout(tooltipCloseTimerRef.current);
+    setTooltipClosing(false);
+    setTooltipLevel(level);
+    setTimerLevel(null);
+  };
+  const closeTooltip = () => {
+    setTooltipClosing(true);
+    tooltipCloseTimerRef.current = setTimeout(() => {
+      setTooltipLevel(null);
+      setTooltipClosing(false);
+    }, 200);
+  };
+
   const closeResumeModal = () => { setClosingResumeModal(true); setTimeout(() => { setShowResumeModal(false); setClosingResumeModal(false); }, 220); };
   const closeSongModal = () => { setClosingSongModal(true); setTimeout(() => { setSongModal(null); setClosingSongModal(false); }, 220); };
 
@@ -1235,7 +1257,7 @@ function App() {
   }
 
   return (
-    <div className="app-root" onClick={() => setInfoLevel(null)}>
+    <div className="app-root">
       <div className="global-footer-link">
         {screen !== 'top' && screen !== 'result' && screen !== 'custom-review' && (
           <span onClick={async () => {
@@ -1362,25 +1384,31 @@ function App() {
         <div className="box custom-select-card zoom-in">
           <h2 className="title">グループを選択しましょう！</h2>
           <p className="custom-select-hint">1つ以上選択してください</p>
-          <div className="custom-group-list">
+          <div className="group-grid">
             {[
-              { name: 'FRUITS ZIPPER', label: '🍎 FRUITS ZIPPER 🍎', cls: 'fz' },
-              { name: 'CANDY TUNE',    label: '🍬 CANDY TUNE 🍬',    cls: 'cd' },
-              { name: 'SWEET STEADY',  label: '💐 SWEET STEADY 💐',  cls: 'ss' },
-              { name: 'CUTIE STREET',  label: '💎 CUTIE STREET 💎',  cls: 'cs' },
-              { name: 'MORE STAR',     label: '🌟 MORE STAR 🌟',     cls: 'ms' },
-            ].map(g => (
-              <button key={g.name} className={`custom-group-item custom-group-item--${g.cls}${customSelectedGroups.has(g.name) ? ' selected' : ''}`} onClick={() => {
-                setCustomSelectedGroups(prev => {
-                  const next = new Set(prev);
-                  next.has(g.name) ? next.delete(g.name) : next.add(g.name);
-                  return next;
-                });
-              }}>
-                <span className="custom-group-checkbox">{customSelectedGroups.has(g.name) ? '✓' : ''}</span>
-                {g.label}
-              </button>
-            ))}
+              { name: 'FRUITS ZIPPER', label: '🍎FRUITS ZIPPER🍎', cls: 'fz' },
+              { name: 'CANDY TUNE',    label: '🍬CANDY TUNE🍬',    cls: 'cd' },
+              { name: 'SWEET STEADY',  label: '💐SWEET STEADY💐',  cls: 'ss' },
+              { name: 'CUTIE STREET',  label: '💎CUTIE STREET💎',  cls: 'cs' },
+              { name: 'MORE STAR',     label: '🌟MORE STAR🌟',     cls: 'ms' },
+            ].map(g => {
+              const sel = customSelectedGroups.has(g.name);
+              return (
+                <button key={g.name}
+                  className={`group-card-btn group-btn-${g.cls} custom-group-card-btn${sel ? ' selected' : ''}`}
+                  onClick={() => {
+                    setCustomSelectedGroups(prev => {
+                      const next = new Set(prev);
+                      next.has(g.name) ? next.delete(g.name) : next.add(g.name);
+                      return next;
+                    });
+                  }}
+                >
+                  {sel && <span className="custom-group-check">✓</span>}
+                  {g.label}
+                </button>
+              );
+            })}
           </div>
           <button className="start-btn" disabled={customSelectedGroups.size === 0 || customIsLoadingSongs} onClick={loadCustomSongs}>
             {customIsLoadingSongs ? '読み込み中…' : '曲を選ぶ →'}
@@ -1431,6 +1459,7 @@ function App() {
       {screen === 'group' && (
         <div className="box group-card zoom-in">
           <h2 className="title">グループを選択しましょう！</h2>
+          <div className="group-grid">
           {[
             { name: 'FRUITS ZIPPER', label: '🍎FRUITS ZIPPER🍎', cls: 'fz' },
             { name: 'CANDY TUNE',    label: '🍬CANDY TUNE🍬',    cls: 'cd' },
@@ -1439,12 +1468,13 @@ function App() {
             { name: 'MORE STAR',     label: '🌟MORE STAR🌟',     cls: 'ms' },
           ].filter(g => gameMode !== 'endless' || debugMode || endlessUnlockedGroups.has(g.name))
            .map(g => (
-            <button key={g.name} className={`group-choice-btn group-btn-${g.cls}`} onClick={() => {
+            <button key={g.name} className={`group-card-btn group-btn-${g.cls}`} onClick={() => {
               setQuizState(prev => ({ ...prev, group: g.name }));
               if (gameMode === 'endless') { setScreen('confirm'); prepareEndlessMode(g.name); }
               else setScreen('difficulty');
             }}>{g.label}</button>
           ))}
+          </div>
           <button className="back-btn-group back-btn-top" onClick={() => setScreen('mode')}>モード選択に戻る</button>
         </div>
       )}
@@ -1454,44 +1484,88 @@ function App() {
         <div className="box difficulty-card zoom-in">
           <div className={`selected-group-badge selected-group-badge--${{ 'FRUITS ZIPPER': 'fz', 'CANDY TUNE': 'cd', 'SWEET STEADY': 'ss', 'CUTIE STREET': 'cs', 'MORE STAR': 'ms' }[quizState.group] || 'fz'}`}>{quizState.group}</div>
           <h2 className="title">難易度を選択しましょう！</h2>
-          <div className="button-row">
+          <div className="difficulty-grid">
             {['easy', 'normal', 'hard', 'expert'].map(level => (
               <div key={level} className="difficulty-item">
-                <button className={`diff-btn diff-btn-${level}`} onClick={() => {
-                  if (infoLevel) return;
-                  setQuizState(prev => ({...prev, difficulty: level}));
-                  setScreen('confirm');
-                  prepareQuiz(quizState.group, level);
-                }}>
+                <button
+                  className={`diff-btn diff-btn-${level}`}
+                  onClick={() => {
+                    if (longPressTriggeredRef.current) { longPressTriggeredRef.current = false; return; }
+                    if (tooltipLevel) return;
+                    setQuizState(prev => ({...prev, difficulty: level}));
+                    setScreen('confirm');
+                    prepareQuiz(quizState.group, level);
+                  }}
+                  onMouseEnter={() => {
+                    if (touchEndedRef.current) return; // タッチ後の合成mouseenterを無視
+                    clearTimeout(tooltipHoverTimerRef.current);
+                    if (tooltipLevel === level && tooltipClosing) {
+                      clearTimeout(tooltipCloseTimerRef.current);
+                      setTooltipClosing(false);
+                    } else if (tooltipLevel !== level) {
+                      setTimerLevel(level);
+                      setTimerKey(k => k + 1);
+                      tooltipHoverTimerRef.current = setTimeout(() => openTooltip(level), 1000);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (touchEndedRef.current) return;
+                    clearTimeout(tooltipHoverTimerRef.current);
+                    setTimerLevel(null);
+                    if (tooltipLevel === level && !tooltipClosing) closeTooltip();
+                  }}
+                  onTouchStart={() => {
+                    touchEndedRef.current = false;
+                    clearTimeout(touchEndTimerRef.current);
+                    longPressTriggeredRef.current = false;
+                    setTimerLevel(level);
+                    setTimerKey(k => k + 1);
+                    longPressTimerRef.current = setTimeout(() => {
+                      longPressTriggeredRef.current = true;
+                      openTooltip(level);
+                    }, 1000);
+                  }}
+                  onTouchEnd={() => {
+                    touchEndedRef.current = true;
+                    clearTimeout(touchEndTimerRef.current);
+                    touchEndTimerRef.current = setTimeout(() => { touchEndedRef.current = false; }, 600);
+                    clearTimeout(longPressTimerRef.current);
+                    setTimerLevel(null);
+                    if (tooltipLevel === level) closeTooltip();
+                  }}
+                  onTouchCancel={() => {
+                    touchEndedRef.current = true;
+                    clearTimeout(touchEndTimerRef.current);
+                    touchEndTimerRef.current = setTimeout(() => { touchEndedRef.current = false; }, 600);
+                    clearTimeout(longPressTimerRef.current);
+                    setTimerLevel(null);
+                    if (tooltipLevel === level) closeTooltip();
+                  }}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
                   {difficultyLabel[level]}
+                  <span className="diff-btn-hint">長押しで説明</span>
+                  {timerLevel === level && (
+                    <span key={timerKey} className="diff-btn-timer" />
+                  )}
                 </button>
-                <img src="/info.png" className="info-icon" onClick={(e) => { 
-                  e.stopPropagation(); 
-                  if (infoLevel === level) {
-                    closeInfo();
-                  } else {
-                    // infoLevel と同時に difficulty もセットして、閉じるときのテキストを確保する
-                    setQuizState(prev => ({ ...prev, difficulty: level }));
-                    setInfoLevel(level);
-                  }
-                }} alt="info" />
+                {tooltipLevel === level && (
+                  <div
+                    className={`diff-tooltip${tooltipClosing ? ' closing' : ''}`}
+                    onMouseEnter={() => {
+                      clearTimeout(tooltipCloseTimerRef.current);
+                      setTooltipClosing(false);
+                    }}
+                    onMouseLeave={() => closeTooltip()}
+                  >
+                    {descriptions[level].map((item, i) => (
+                      <div key={i} className="diff-tooltip-item">・{item}</div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
-          {/* infoLevel または closingInfo のどちらかが true なら表示を維持 */}
-          {(infoLevel || closingInfo) && (
-            <div className={`info-modal-overlay${closingInfo ? ' closing' : ''}`} onClick={closeInfo}>
-              <div className={`info-pop${closingInfo ? ' closing' : ''}`} onClick={e => e.stopPropagation()}>
-                {/* infoLevel が null になった瞬間のために、quizState.difficulty を予備として表示 */}
-                {(descriptions[infoLevel] || descriptions[quizState.difficulty]).map((item, i) => (
-                  <div key={i} className="info-pop-item">
-                    <span className="info-pop-bullet-char">・</span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <button className="back-btn-group" onClick={() => setScreen('group')}>グループ選択に戻る</button>
         </div>
       )}
