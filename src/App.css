@@ -665,6 +665,7 @@ body {
   #lyrics {
     font-size: clamp(12px, min(4vw, 3.5svh), 16px);
   }
+
   .hint-lyrics {
     display: flex;
     align-items: center;
@@ -1328,7 +1329,7 @@ body {
   padding: clamp(20px, 3.5svh, 32px) 8px;
   border: 1.5px solid rgba(255,255,255,0.4);
   border-radius: 18px;
-  font-size: clamp(11px, 3vw, 15px);
+  font-size: clamp(14px, 3.5vw, 19px);
   color: white;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1357,13 +1358,27 @@ body {
   to   { width: 100%; }
 }
 
-.diff-btn:hover  { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3); }
-.diff-btn:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+@media (max-width: 540px) {
+  .diff-btn { font-size: clamp(18px, 4.8vw, 22px); }
+}
+@media (hover: hover) {
+  .diff-btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3); }
+}
+.diff-btn.is-pressing { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+@media (pointer: fine) {
+  .diff-btn:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+}
 
 .diff-btn-easy   { background: linear-gradient(145deg, #81c784, #43a047); }
 .diff-btn-normal { background: linear-gradient(145deg, #ffd54f, #ffb300); color: #5d4037; text-shadow: none; }
 .diff-btn-hard   { background: linear-gradient(145deg, #ef5350, #c62828); }
 .diff-btn-expert { background: linear-gradient(145deg, #ce93d8, #8e24aa); }
+
+.diff-longpress-hint {
+  font-size: clamp(10px, 2.5vw, 12px);
+  color: #999;
+  margin: -12px 0 8px;
+}
 
 /* --- 難易度説明ツールチップ --- */
 .difficulty-card { overflow: visible; }
@@ -1386,7 +1401,7 @@ body {
   bottom: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  width: 190px;
+  width: max-content;
   background: rgba(38, 20, 55, 0.96);
   color: #f5e6ff;
   padding: 11px 14px;
@@ -1397,7 +1412,6 @@ body {
   pointer-events: all;
   box-shadow: 0 6px 24px rgba(0,0,0,0.35);
   white-space: pre-wrap;
-  word-break: break-all;
   animation: tooltipIn 0.18s ease-out forwards;
 }
 .diff-tooltip.closing {
@@ -1413,10 +1427,20 @@ body {
   border: 7px solid transparent;
   border-top-color: rgba(38, 20, 55, 0.96);
 }
+@media (max-width: 540px) {
+  .diff-tooltip {
+    position: fixed;
+    bottom: auto;
+    top: 22vh;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 85vw;
+    width: max-content;
+  }
+  .diff-tooltip::after { display: none; }
+}
 .diff-tooltip-item {
   margin-bottom: 5px;
-  word-break: normal;
-  overflow-wrap: anywhere;
 }
 .diff-tooltip-item:last-child { margin-bottom: 0; }
 

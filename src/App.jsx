@@ -62,7 +62,6 @@ function App() {
     clearTimeout(tooltipCloseTimerRef.current);
     setTooltipClosing(false);
     setTooltipLevel(level);
-    setTimerLevel(null);
   };
   const closeTooltip = () => {
     setTooltipClosing(true);
@@ -1484,11 +1483,16 @@ function App() {
         <div className="box difficulty-card zoom-in">
           <div className={`selected-group-badge selected-group-badge--${{ 'FRUITS ZIPPER': 'fz', 'CANDY TUNE': 'cd', 'SWEET STEADY': 'ss', 'CUTIE STREET': 'cs', 'MORE STAR': 'ms' }[quizState.group] || 'fz'}`}>{quizState.group}</div>
           <h2 className="title">難易度を選択しましょう！</h2>
+          <p className="diff-longpress-hint">
+            {window.matchMedia('(pointer: coarse)').matches
+              ? 'ボタンの長押しで難易度の説明を確認してね'
+              : 'ボタンにカーソルを乗せて難易度の説明を確認してね'}
+          </p>
           <div className="difficulty-grid">
             {['easy', 'normal', 'hard', 'expert'].map(level => (
               <div key={level} className="difficulty-item">
                 <button
-                  className={`diff-btn diff-btn-${level}`}
+                  className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}
                   onClick={() => {
                     if (longPressTriggeredRef.current) { longPressTriggeredRef.current = false; return; }
                     if (tooltipLevel) return;
@@ -1525,7 +1529,8 @@ function App() {
                       openTooltip(level);
                     }, 1000);
                   }}
-                  onTouchEnd={() => {
+                  onTouchEnd={(e) => {
+                    e.currentTarget.blur();
                     touchEndedRef.current = true;
                     clearTimeout(touchEndTimerRef.current);
                     touchEndTimerRef.current = setTimeout(() => { touchEndedRef.current = false; }, 600);
@@ -1544,7 +1549,6 @@ function App() {
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   {difficultyLabel[level]}
-                  <span className="diff-btn-hint">長押しで説明</span>
                   {timerLevel === level && (
                     <span key={timerKey} className="diff-btn-timer" />
                   )}
