@@ -173,6 +173,7 @@ function App() {
     setIsLoadingSongModal(false);
   };
 
+  const diffTooltipRef = useRef(null);
   const lyricsRef = useRef(null);
   const hintPrevRef = useRef(null);
   const hintNextRef = useRef(null);
@@ -332,10 +333,10 @@ function App() {
 
 
   const descriptions = {
-    easy:   ["有名な曲から、1人で歌う特徴的な歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
-    normal: ["MVが存在する曲から、1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
-    hard:   ["すべての曲から、1人または全員で歌う歌詞が選出されます", "繰り返し使われる歌詞も選出されます\n(「◯回目」と表示されます)", "ヒントはありません"],
-    expert: ["すべての曲から、2人以上で歌う歌詞が選出されます", "ヒントはありません"],
+    easy:   ["有名な曲の特徴的な歌詞が選出されます","1人で歌う歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
+    normal: ["MVがある曲の歌詞が選出されます","1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
+    hard:   ["すべての曲の歌詞から選出されます","1人または全員で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します", "ヒントはありません"],
+    expert: ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します","ヒントはありません"],
   };
 
   const resultMessages = {
@@ -1097,6 +1098,19 @@ function App() {
     document.fonts.ready.then(fitAll);
   }, [screen, quizState.currentIndex, quizState.quizzes]);
 
+  // ツールチップのテキストがはみ出る場合にフォントを縮小
+  useLayoutEffect(() => {
+    const el = diffTooltipRef.current;
+    if (!el) return;
+    el.style.fontSize = '';
+    const minPx = 9;
+    let size = parseFloat(window.getComputedStyle(el).fontSize);
+    const items = el.querySelectorAll('.diff-tooltip-item');
+    while (size > minPx && Array.from(items).some(item => item.scrollWidth > item.clientWidth)) {
+      size -= 0.5;
+      el.style.fontSize = `${size}px`;
+    }
+  }, [tooltipLevel]);
 
   useEffect(() => {
     if (!songModalData.length) return;
@@ -1489,7 +1503,7 @@ function App() {
               : 'ボタンにカーソルを乗せて難易度の説明を確認してね'}
           </p>
           <div className="difficulty-grid">
-            {['easy', 'normal', 'hard', 'expert'].map(level => (
+            {['easy', 'normal', 'hard', 'expert'].map((level, idx) => (
               <div key={level} className="difficulty-item">
                 <button
                   className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}
@@ -1555,7 +1569,8 @@ function App() {
                 </button>
                 {tooltipLevel === level && (
                   <div
-                    className={`diff-tooltip${tooltipClosing ? ' closing' : ''}`}
+                    ref={diffTooltipRef}
+                    className={`diff-tooltip diff-tooltip--${idx % 2 === 0 ? 'left' : 'right'}${tooltipClosing ? ' closing' : ''}`}
                     onMouseEnter={() => {
                       clearTimeout(tooltipCloseTimerRef.current);
                       setTooltipClosing(false);

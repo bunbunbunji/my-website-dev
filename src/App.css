@@ -1412,6 +1412,7 @@ body {
   pointer-events: all;
   box-shadow: 0 6px 24px rgba(0,0,0,0.35);
   white-space: pre-wrap;
+  text-align: left;
   animation: tooltipIn 0.18s ease-out forwards;
 }
 .diff-tooltip.closing {
@@ -1427,18 +1428,41 @@ body {
   border: 7px solid transparent;
   border-top-color: rgba(38, 20, 55, 0.96);
 }
+/* スマホ：左列は左端揃え、右列は右端揃え・幅はグリッド全幅で画面はみ出し防止 */
 @media (max-width: 540px) {
   .diff-tooltip {
-    position: fixed;
-    bottom: auto;
-    top: 22vh;
-    left: 50%;
-    transform: translateX(-50%);
-    max-width: 85vw;
+    position: absolute;
+    bottom: calc(100% + 10px);
+    /* 最大幅 = 左列左端〜右列右端 = グリッド全幅。幅は内容に合わせて可変 */
     width: max-content;
+    max-width: calc(100vw - 70px);
+    animation: tooltipInFlat 0.18s ease-out forwards;
   }
-  .diff-tooltip::after { display: none; }
+  .diff-tooltip.closing {
+    animation: tooltipOutFlat 0.18s ease-in forwards;
+  }
+  .diff-tooltip--left {
+    left: 0;
+    right: auto;
+    transform: none;
+  }
+  .diff-tooltip--right {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+  /* 矢印：ボタン中央に正確に合わせる = (100vw - 82px) / 4 */
+  .diff-tooltip--left::after {
+    left: calc((100vw - 82px) / 4);
+    transform: none;
+  }
+  .diff-tooltip--right::after {
+    left: auto;
+    right: calc((100vw - 82px) / 4);
+    transform: none;
+  }
 }
+
 .diff-tooltip-item {
   margin-bottom: 5px;
 }
@@ -1451,6 +1475,14 @@ body {
 @keyframes tooltipOut {
   from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
   to   { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.88); }
+}
+@keyframes tooltipInFlat {
+  from { opacity: 0; transform: translateY(6px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes tooltipOutFlat {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(6px) scale(0.88); }
 }
 
 /* --- モーダル共通 --- */
