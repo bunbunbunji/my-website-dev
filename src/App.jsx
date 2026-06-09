@@ -95,6 +95,7 @@ function App() {
   const [gameMode, setGameMode] = useState('normal'); // 'normal' | 'endless'
   const [questionTimer, setQuestionTimer] = useState(60);
   const questionTimerIntervalRef = useRef(null);
+  const timerStartRef = useRef(null);
 
   // --- エンドレスモード ---
   const endlessPoolRef = useRef([]);
@@ -792,18 +793,35 @@ function App() {
   };
 
   // --- 検定モード：問題タイマー（60秒・問題が変わるたびリセット） ---
+  // Date.now() ベースで計算することで、バックグラウンド時の throttle に対応
   useEffect(() => {
     if (screen !== 'quiz' || gameMode !== 'normal') return;
     setQuestionTimer(60);
+    timerStartRef.current = Date.now();
     const id = setInterval(() => {
-      setQuestionTimer(prev => {
-        if (prev <= 1) { clearInterval(id); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
+      const elapsed = Math.floor((Date.now() - timerStartRef.current) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setQuestionTimer(remaining);
+      if (remaining <= 0) clearInterval(id);
+    }, 500);
     questionTimerIntervalRef.current = id;
     return () => clearInterval(id);
   }, [quizState.currentIndex, screen, gameMode]);
+
+  // --- タブ復帰時にタイマーを即時補正 ---
+  useEffect(() => {
+    if (screen !== 'quiz' || gameMode !== 'normal' || answered) return;
+    const handleVisibilityChange = () => {
+      if (!document.hidden && timerStartRef.current) {
+        const elapsed = Math.floor((Date.now() - timerStartRef.current) / 1000);
+        const remaining = Math.max(0, 60 - elapsed);
+        setQuestionTimer(remaining);
+        if (remaining <= 0) clearInterval(questionTimerIntervalRef.current);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [screen, gameMode, answered]);
 
   // --- 検定モード：タイムアップ → 強制不正解 ---
   useEffect(() => {
