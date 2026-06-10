@@ -127,6 +127,8 @@ function App() {
   const [customWrongAnswers, setCustomWrongAnswers] = useState([]);
   const [customMembersByGroup, setCustomMembersByGroup] = useState({});
   const [customIsLoading, setCustomIsLoading] = useState(false);
+  const [customDifficulties, setCustomDifficulties] = useState(new Set(['easy', 'normal', 'hard', 'expert']));
+  const [customDiffError, setCustomDiffError] = useState(false);
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
   const [customUnlocked, setCustomUnlocked] = useState(() => localStorage.getItem('kawaii_custom_unlocked') === 'true');
@@ -279,8 +281,16 @@ function App() {
       if (!data || data.length === 0) { hasMore = false; }
       else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
     }
-    const filtered = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
-    if (filtered.length === 0) { setCustomIsLoading(false); return; }
+    const filtered = qData.filter(q =>
+      customSelectedSongs.has(`${q.group_name}::${q.song_name}`) &&
+      [...customDifficulties].some(diff => (q[diff] || 0) > 0)
+    );
+    if (filtered.length === 0) {
+      setCustomIsLoading(false);
+      setCustomDiffError(true);
+      setTimeout(() => setCustomDiffError(false), 3500);
+      return;
+    }
     const shuffled = shuffle(filtered);
     const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
     const memberMap = {};
@@ -1270,17 +1280,21 @@ function App() {
       <div className="app-root">
         <div className="box terms-box fade-in">
           <img src={logo} alt="KAWAII LAB検定" className="site-logo" style={{marginBottom: '12px'}} />
-          <p className="terms-title">利用規約</p>
+          <p className="terms-title">注意事項<br />
+            是非お読みください</p>
           <div className="terms-scroll">
-            <p>本サービスは、KAWAII LABおよび所属グループに関する非公式のファンサイトです。</p>
-            <p><strong>歌詞・歌割りについて</strong><br />
-            掲載している歌詞および歌割りは、運営者が独自に調査・作成したものであり、公式情報ではありません。内容の正確性は保証できず、実際と異なる場合があります。</p>
-            <p><strong>著作権について</strong><br />
-            掲載している歌詞の著作権は、各作詞者および権利者に帰属します。本サービスはファンによる非営利目的で運営しており、権利者よりご要請があった場合は速やかに対応いたします。</p>
-            <p><strong>免責事項</strong><br />
-            本サービスの利用により生じたいかなる損害についても、運営者は責任を負いません。予告なくサービスの変更・中断・終了を行う場合があります。</p>
+            <p><strong>本サイトについて</strong><br />
+            本サイトは、KAWAII LAB所属グループに関する非公式のファンサイトです。</p>
+            <p><strong>歌詞と歌割りについて</strong><br />
+            掲載している歌詞と歌割りは、KAWAII LAB公式から正式に歌詞・歌割りが発表されている曲を除き、運営者が独自調査したものです。実際と異なる可能性は往々にしてございますので、ご了承ください。</p>
+            <p><strong>難易度設定について</strong><br />
+            主に運営者の<strong>匙加減</strong>で決めています。価値観が異なる場合もあると思いますがこれもご了承ください。</p>
+            <p><strong>楽曲構成の定義について</strong><br />
+            回答の際に公開される、いわゆる「Aメロ」「サビ」のことですが、運営者の<strong>匙加減</strong>で決めています。作曲者様の意図しない構成になっている可能性がありますのでご理解ください。</p>
+            <p><strong>匙加減について</strong><br />
+            そんな感じでこのサイトの全てが私の<strong>匙加減</strong>で設計されていますので、とりあえず全部ご了承ください。</p>
           </div>
-          <p className="terms-note">上記の利用規約に同意の上、ご利用ください。</p>
+          <p className="terms-note">上記の注意事項に同意の上、お楽しみください。</p>
           <button className="terms-agree-btn" onClick={handleTermsAgree}>同意して始める</button>
         </div>
       </div>
@@ -1479,6 +1493,31 @@ function App() {
               </div>
             ))}
           </div>
+          <div className="custom-diff-row">
+            <span className="custom-diff-label">難易度</span>
+            <div className="custom-diff-toggles">
+              {['easy', 'normal', 'hard', 'expert'].map(level => (
+                <button
+                  key={level}
+                  className={`custom-diff-toggle custom-diff-toggle--${level}${customDifficulties.has(level) ? ' on' : ''}`}
+                  onClick={() => {
+                    setCustomDiffError(false);
+                    setCustomDifficulties(prev => {
+                      if (prev.has(level) && prev.size === 1) return prev;
+                      const next = new Set(prev);
+                      next.has(level) ? next.delete(level) : next.add(level);
+                      return next;
+                    });
+                  }}
+                >
+                  {difficultyLabel[level]}
+                </button>
+              ))}
+            </div>
+          </div>
+          {customDiffError && (
+            <p className="custom-diff-error">選択した難易度に該当する歌詞がありません！</p>
+          )}
           <button className="start-btn" disabled={customSelectedSongs.size === 0 || customIsLoading} onClick={startCustomMode}>
             {customIsLoading ? '問題を準備中…' : `スタート！（${customSelectedSongs.size}曲）`}
           </button>
