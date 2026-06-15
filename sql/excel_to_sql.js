@@ -138,6 +138,28 @@ function generateUpdateLyricAndOccurrence(xlsmPath) {
   return lines.join('\n');
 }
 
+function generateUpdateNeedsHint(xlsmPath) {
+  const wb     = XLSX.readFile(xlsmPath);
+  const wsName = wb.SheetNames.includes('quiz_full') ? 'quiz_full' : wb.SheetNames[0];
+  const ws     = wb.Sheets[wsName];
+  const rows   = XLSX.utils.sheet_to_json(ws, { defval: null });
+  if (rows.length === 0) { console.error('ERROR: シートにデータがありません。'); process.exit(1); }
+
+  const lines = [];
+  let count = 0;
+  const seen = new Set();
+  for (const row of rows) {
+    if (row['needs_hint'] != 1) continue;
+    const lyricsId = parseInt(row.lyrics_id);
+    if (seen.has(lyricsId)) continue;
+    seen.add(lyricsId);
+    lines.push(`UPDATE lyrics SET needs_hint = true WHERE id = ${lyricsId};`);
+    count++;
+  }
+  console.log(`対象行数: ${count} 件`);
+  return lines.join('\n');
+}
+
 function generateUpdateMembers(xlsmPath) {
   const lines = [];
   for (const row of loadRows(xlsmPath)) {
@@ -173,6 +195,7 @@ const modeMap = {
   'u-d':  { fn: generateUpdateDifficulty,           suffix: '_update_difficulty' },
   'u-dl': { fn: generateUpdateLyricAndDifficulty,   suffix: '_update_lyric_difficulty' },
   'u-lo': { fn: generateUpdateLyricAndOccurrence,   suffix: '_update_lyric_occurrence' },
+  'u-nh': { fn: generateUpdateNeedsHint,            suffix: '_update_needs_hint' },
   'u-m':  { fn: generateUpdateMembers,              suffix: '_update_members' },
 };
 
@@ -189,6 +212,6 @@ if (mode && modeMap[mode]) {
   console.log(`完了: ${inputFile} → ${outputFile} (${sql.split('\n').length}行のSQL)`);
 } else {
   console.error(`ERROR: 不明なモード "${mode}"`);
-  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-dl | u-lo | u-m]');
+  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-dl | u-lo | u-nh | u-m]');
   process.exit(1);
 }

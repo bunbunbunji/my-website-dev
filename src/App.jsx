@@ -1283,8 +1283,12 @@ function App() {
   const showSurroundHint = gameMode === 'custom'
     ? customShowSurround
     : gameMode === 'endless' ? endlessQNum <= 50 : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
-  const quizPrevLines = showSurroundHint ? sp.slice(-1) : [];
-  const quizNextLines = showSurroundHint ? sn.slice(0, 1) : [];
+  const needsHintActive = quizCurr?.needs_hint && !showSurroundHint;
+  const quizPrevLines = (showSurroundHint || needsHintActive) ? sp.slice(-1) : [];
+  const quizNextLines = showSurroundHint
+    ? sn.slice(0, 1)
+    : (needsHintActive && quizPrevLines.length === 0) ? sn.slice(0, 1)
+    : [];
   const quizExplanation = (quizCurr?.song_name && quizCurr?.section_name)
     ? `この歌詞は「${quizCurr.song_name}」の\n${quizCurr.section_name}部分でした！` : "";
   const displayMembers = gameMode === 'custom'
