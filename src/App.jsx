@@ -26,6 +26,22 @@ const superNormalize = (str) => {
     .trim();
 };
 
+const renderLyricsWithOccurrence = (lyrics, occurrence) => {
+  if (!lyrics) return null;
+  const lines = lyrics.split('\n');
+  if (!occurrence || !Array.isArray(occurrence) || occurrence.every(o => o == null)) {
+    return lyrics;
+  }
+  const result = [];
+  lines.forEach((line, i) => {
+    if (i > 0) result.push('\n');
+    result.push(line);
+    const occ = occurrence[i];
+    if (occ != null) result.push(<span key={i} className="occurrence-badge">（{occ}回目）</span>);
+  });
+  return result;
+};
+
 function App() {
   const [termsAgreed, setTermsAgreed] = useState(() =>
     localStorage.getItem('kawaii_terms_agreed') === 'true'
@@ -1745,7 +1761,7 @@ function App() {
             </div>
           )}
 
-          <p id="lyrics" ref={lyricsRef}>{quizCurr?.lyrics}</p>
+          <p id="lyrics" ref={lyricsRef}>{renderLyricsWithOccurrence(quizCurr?.lyrics, quizCurr?.occurrence)}</p>
 
           {quizNextLines.length > 0 && (
             <div className="hint-lyrics">

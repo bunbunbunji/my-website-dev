@@ -612,6 +612,14 @@ body {
   overflow: hidden;
 }
 
+.occurrence-badge {
+  font-size: 0.65em;
+  color: #b07ab0;
+  letter-spacing: 0;
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
 .song-name-hint {
   display: flex;
   align-items: center;

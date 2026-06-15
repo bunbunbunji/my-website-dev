@@ -9,7 +9,7 @@ function escape(val) {
 
 function escapeLyric(val) {
   if (val === null || val === undefined) return '';
-  return String(val).replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/'/g, "''");
+  return String(val).replace(/\r/g, '').replace(/'/g, "''");
 }
 
 function generateSql(xlsmPath) {
@@ -95,6 +95,49 @@ function generateUpdateDifficulty(xlsmPath) {
   return lines.join('\n');
 }
 
+function generateUpdateLyricAndDifficulty(xlsmPath) {
+  const lines = [];
+  for (const row of loadRows(xlsmPath)) {
+    const groupName = escape(row.group_name);
+    const songName  = escape(row.song_name);
+    const lyric     = escapeLyric(row.lyric);
+    const seq       = parseInt(row.seq);
+    const easy      = row.easy   ?? 0;
+    const normal    = row.normal ?? 0;
+    const hard      = row.hard   ?? 0;
+    const expert    = row.expert ?? 0;
+    let block = `DO $$ DECLARE v_lyrics_id bigint; BEGIN `;
+    block += `SELECT l.id INTO v_lyrics_id FROM lyrics l JOIN sounds s ON l.sounds_id = s.id WHERE s.group_name = '${groupName}' AND s.song_name = '${songName}' AND l.seq = ${seq}; `;
+    block += `UPDATE lyrics SET lyric = '${lyric}' WHERE id = v_lyrics_id; `;
+    block += `UPDATE quizzes SET easy = ${easy}, normal = ${normal}, hard = ${hard}, expert = ${expert} WHERE lyrics_id = v_lyrics_id; `;
+    block += `END $$;`;
+    lines.push(block);
+  }
+  return lines.join('\n');
+}
+
+function generateUpdateLyricAndOccurrence(xlsmPath) {
+  const wb     = XLSX.readFile(xlsmPath);
+  const wsName = wb.SheetNames.includes('quiz_full') ? 'quiz_full' : wb.SheetNames[0];
+  const ws     = wb.Sheets[wsName];
+  const rows   = XLSX.utils.sheet_to_json(ws, { defval: null });
+  if (rows.length === 0) { console.error('ERROR: シートにデータがありません。'); process.exit(1); }
+
+  const lines = [];
+  let count = 0;
+  for (const row of rows) {
+    if (row['new'] != 1) continue;           // new=1 の行だけ対象
+    const lyricsId   = parseInt(row.lyrics_id);
+    const lyric      = escapeLyric(row.lyrics || row.lyric || '');
+    const occurrence = row.occurrence || null;
+    const occSql     = occurrence ? `'${occurrence}'::smallint[]` : 'NULL';
+    lines.push(`UPDATE lyrics SET lyric = '${lyric}', occurrence = ${occSql} WHERE id = ${lyricsId};`);
+    count++;
+  }
+  console.log(`対象行数: ${count} 件`);
+  return lines.join('\n');
+}
+
 function generateUpdateMembers(xlsmPath) {
   const lines = [];
   for (const row of loadRows(xlsmPath)) {
@@ -126,9 +169,11 @@ const inputFile = xlsmFiles[0];
 const baseName  = path.basename(inputFile, path.extname(inputFile));
 
 const modeMap = {
-  'u-l': { fn: generateUpdateLyric,      suffix: '_update_lyric' },
-  'u-d': { fn: generateUpdateDifficulty, suffix: '_update_difficulty' },
-  'u-m': { fn: generateUpdateMembers,    suffix: '_update_members' },
+  'u-l':  { fn: generateUpdateLyric,                suffix: '_update_lyric' },
+  'u-d':  { fn: generateUpdateDifficulty,           suffix: '_update_difficulty' },
+  'u-dl': { fn: generateUpdateLyricAndDifficulty,   suffix: '_update_lyric_difficulty' },
+  'u-lo': { fn: generateUpdateLyricAndOccurrence,   suffix: '_update_lyric_occurrence' },
+  'u-m':  { fn: generateUpdateMembers,              suffix: '_update_members' },
 };
 
 if (mode && modeMap[mode]) {
@@ -144,6 +189,6 @@ if (mode && modeMap[mode]) {
   console.log(`完了: ${inputFile} → ${outputFile} (${sql.split('\n').length}行のSQL)`);
 } else {
   console.error(`ERROR: 不明なモード "${mode}"`);
-  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-m]');
+  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-dl | u-lo | u-m]');
   process.exit(1);
 }
