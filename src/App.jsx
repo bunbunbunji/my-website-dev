@@ -2168,12 +2168,9 @@ function App() {
         <div className={`modal-overlay${closingPolicy ? ' closing' : ''}`} onClick={closePolicy}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>プライバシーポリシー</h2>
-            <h3>広告の配信について</h3>
-            <p>当サイトでは、第三者配信の広告サービス「Google アドセンス」を利用しています。</p>
-            <p>広告配信事業者は、ユーザーの興味に応じた広告を表示するためにCookie（クッキー）を使用することがあります。これにより、当サイトや他サイトへの過去のアクセス情報に基づいた広告が配信されます。</p>
-            <p>ユーザーは、Googleの<a href="https://adssettings.google.com/authenticated" target="_blank" style={{color: '#ff69b2'}}>広告設定</a>で、パーソナライズ広告を無効にすることができます。</p>
             <h3>アクセス解析ツールについて</h3>
-            <p>当サイトでは、サイトの利用状況を把握するために「Google アナリティクス」を利用する可能性があります。Google アナリティクスはデータの収集のためにCookieを使用しますが、このデータは匿名で収集されており、個人を特定するものではありません。</p>
+            <p>当サイトでは、サイトの利用状況を把握するために「Google アナリティクス」を利用しています。Google アナリティクスはデータの収集のためにCookie（クッキー）を使用しますが、このデータは匿名で収集されており、個人を特定するものではありません。</p>
+            <p>Google アナリティクスのデータ収集・利用については、<a href="https://policies.google.com/privacy" target="_blank" style={{color: '#ff69b2'}}>Googleのプライバシーポリシー</a>をご確認ください。また、<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" style={{color: '#ff69b2'}}>Google アナリティクス オプトアウト アドオン</a>を使用することでデータ収集を無効にすることができます。</p>
             <h3>免責事項</h3>
             <p>当サイトのクイズ内容や歌割り情報は、可能な限り正確を期しておりますが、その正確性や安全性を保証するものではありません。当サイトの利用により生じた損害等の一切の責任を負いかねますのでご了承ください。</p>
             <h3>著作権・肖像権</h3>
