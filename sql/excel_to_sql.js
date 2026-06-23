@@ -27,7 +27,7 @@ function generateSql(xlsmPath) {
   for (const row of rows) {
     const groupName      = escape(row.group_name);
     const songName       = escape(row.song_name);
-    const lyric          = escapeLyric(row.lyric);
+    const lyric          = escapeLyric(row.lyrics);
     const correctMembers = escape(row.correct_members);
     const seq            = parseInt(row.seq);
     const sectionName    = escape(row.section_name);
@@ -35,13 +35,16 @@ function generateSql(xlsmPath) {
     const normal         = row.normal ?? 0;
     const hard           = row.hard   ?? 0;
     const expert         = row.expert ?? 0;
+    const occurrence     = row.occurrence || null;
+    const occSql         = occurrence ? `'${occurrence}'::smallint[]` : 'NULL';
+    const needsHint      = (row.needs_hint === true || row.needs_hint == 1 || row.needs_hint === 'true' || row.needs_hint === 't') ? 'true' : 'false';
 
     let block = `DO $$ DECLARE v_sounds_id bigint; v_lyrics_id bigint; BEGIN `;
     block += `SELECT id INTO v_sounds_id FROM sounds WHERE group_name = '${groupName}' AND song_name = '${songName}'; `;
     block += `IF v_sounds_id IS NULL THEN `;
     block += `INSERT INTO sounds (group_name, song_name, is_active) VALUES ('${groupName}', '${songName}', true) RETURNING id INTO v_sounds_id; `;
     block += `END IF; `;
-    block += `INSERT INTO lyrics (sounds_id, lyric, section_name, seq, is_active) VALUES (v_sounds_id, '${lyric}', '${sectionName}', ${seq}, true) RETURNING id INTO v_lyrics_id; `;
+    block += `INSERT INTO lyrics (sounds_id, lyric, section_name, seq, is_active, occurrence, needs_hint) VALUES (v_sounds_id, '${lyric}', '${sectionName}', ${seq}, true, ${occSql}, ${needsHint}) RETURNING id INTO v_lyrics_id; `;
     if (correctMembers) {
       block += `INSERT INTO lyric_members (lyric_id, member_id) SELECT v_lyrics_id, id FROM members WHERE name = ANY(string_to_array('${correctMembers}', ',')); `;
     }

@@ -1339,14 +1339,16 @@ function App() {
             setScreen('top');
           }}>🏠 トップにもどる</span>
         )}
-        {(screen === 'top' || screen === 'result' || screen === 'custom-review') && (
+        {(screen === 'top' || screen === 'custom-review' || (screen === 'result' && resultPhase === 'reveal')) && (
           <a href="https://forms.gle/EguRX6uWZYmJJLZx5" target="_blank" rel="noreferrer" className="survey-corner-link">アンケートにご協力ください</a>
         )}
       </div>
-      <div className="legal-links">
-        <span onClick={() => setShowPolicy(true)}>プライバシーポリシー</span>
-        <span onClick={() => setShowProfile(true)}>運営者情報</span>
-      </div>
+      {!(screen === 'result' && resultPhase !== 'reveal') && (
+        <div className="legal-links">
+          <span onClick={() => setShowPolicy(true)}>プライバシーポリシー</span>
+          <span onClick={() => setShowProfile(true)}>運営者情報</span>
+        </div>
+      )}
 
       {/* --- トップ画面 --- */}
       {screen === 'top' && (
@@ -2168,13 +2170,22 @@ function App() {
         <div className={`modal-overlay${closingPolicy ? ' closing' : ''}`} onClick={closePolicy}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>プライバシーポリシー</h2>
-            <h3>アクセス解析ツールについて</h3>
-            <p>当サイトでは、サイトの利用状況を把握するために「Google アナリティクス」を利用しています。Google アナリティクスはデータの収集のためにCookie（クッキー）を使用しますが、このデータは匿名で収集されており、個人を特定するものではありません。</p>
-            <p>Google アナリティクスのデータ収集・利用については、<a href="https://policies.google.com/privacy" target="_blank" style={{color: '#ff69b2'}}>Googleのプライバシーポリシー</a>をご確認ください。また、<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" style={{color: '#ff69b2'}}>Google アナリティクス オプトアウト アドオン</a>を使用することでデータ収集を無効にすることができます。</p>
-            <h3>免責事項</h3>
-            <p>当サイトのクイズ内容や歌割り情報は、可能な限り正確を期しておりますが、その正確性や安全性を保証するものではありません。当サイトの利用により生じた損害等の一切の責任を負いかねますのでご了承ください。</p>
-            <h3>著作権・肖像権</h3>
-            <p>当サイトはファン活動の一環として運営されており、使用している歌詞やグループに関する権利は各権利所有者に帰属します。著作権の侵害を目的としたものではありません。万が一問題がある場合は、お手数ですがアンケートフォーム等よりご連絡ください。速やかに対応いたします。</p>
+            <div className="modal-body">
+              <h3>個人情報の収集について</h3>
+              <p>当サイトでは、ユーザーの氏名・メールアドレス・住所等の個人情報を一切収集しておりません。</p>
+              <h3>セッションデータについて</h3>
+              <p>クイズの進行状況を保存するため、匿名のセッションID（ランダムに生成された識別子）をサーバーに一時保存しています。このデータに個人を特定できる情報は含まれておらず、ゲーム終了時に自動的に削除されます。</p>
+              <h3>アクセス解析ツールについて</h3>
+              <p>当サイトでは、サイトの利用状況を把握するために「Google アナリティクス」を利用しています。Google アナリティクスはデータの収集のためにCookie（クッキー）を使用しますが、このデータは匿名で収集されており、個人を特定するものではありません。Google アナリティクスのデータ収集・利用については、<a href="https://policies.google.com/privacy" target="_blank" style={{color: '#ff69b2'}}>Googleのプライバシーポリシー</a>をご確認ください。</p>
+              <h3>外部リンクについて</h3>
+              <p>当サイトには外部サイトへのリンクが含まれています。リンク先のサイトのプライバシーポリシーや内容については、当サイトでは責任を負いかねます。</p>
+              <h3>免責事項</h3>
+              <p>当サイトのクイズ内容や歌割り情報は、可能な限り正確を期しておりますが、その正確性や安全性を保証するものではありません。当サイトの利用により生じた損害等の一切の責任を負いかねますのでご了承ください。</p>
+              <h3>著作権・肖像権</h3>
+              <p>当サイトはファン活動の一環として運営されており、使用している歌詞やグループに関する権利は各権利所有者に帰属します。著作権の侵害を目的としたものではありません。万が一問題がある場合は、お手数ですがアンケートフォーム等よりご連絡ください。速やかに対応いたします。</p>
+              <h3>プライバシーポリシーの変更について</h3>
+              <p>本ポリシーの内容は、必要に応じて変更する場合があります。変更後のポリシーは、当サイト上に掲載した時点で効力を生じるものとします。</p>
+            </div>
             <button className="modal-close-btn" onClick={closePolicy}>とじる</button>
           </div>
         </div>
@@ -2183,13 +2194,15 @@ function App() {
         <div className={`modal-overlay${closingProfile ? ' closing' : ''}`} onClick={closeProfile}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>運営者情報</h2>
-            <h3>運営者</h3>
-            <p>むちゅむちゅおゆい</p>
-            <h3>サイトの目的</h3>
-            <p>KAWAII LAB.のグループの楽曲や歌割りをより深く楽しむためのファンサイトです。</p>
-            <h3>お問い合わせ</h3>
-            <p>ご意見・ご感想、掲載情報の誤り等は、以下のアンケートフォームよりご連絡ください。</p>
-            <p><a href="https://forms.gle/EguRX6uWZYmJJLZx5" target="_blank" style={{color: '#ff69b2'}}>アンケートフォーム</a></p>
+            <div className="modal-body">
+              <h3>運営者</h3>
+              <p>むちゅむちゅおゆい</p>
+              <h3>サイトの目的</h3>
+              <p>KAWAII LAB.のグループの楽曲や歌割りをより深く楽しむためのファンサイトです。</p>
+              <h3>お問い合わせ</h3>
+              <p>ご意見・ご感想、掲載情報の誤り等は、以下のアンケートフォームよりご連絡ください。</p>
+              <p><a href="https://forms.gle/EguRX6uWZYmJJLZx5" target="_blank" style={{color: '#ff69b2'}}>アンケートフォーム</a></p>
+            </div>
             <button className="modal-close-btn" onClick={closeProfile}>とじる</button>
           </div>
         </div>
