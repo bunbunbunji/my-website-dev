@@ -10,6 +10,7 @@
 
 html {
   overflow-y: scroll;
+  scrollbar-gutter: stable;
   -webkit-user-select: none;
   user-select: none;
   background-color: var(--bg);
@@ -522,6 +523,12 @@ body {
   word-break: break-word;
 }
 
+.song-modal-occurrence {
+  font-size: 0.7rem;
+  color: #999;
+  margin-left: 4px;
+}
+
 .song-modal-members {
   font-size: 0.75rem;
   font-weight: normal;
@@ -785,15 +792,15 @@ body {
 }
 
 /* --- アニメーション・補助 --- */
-.fade-in { animation: fadeIn 0.6s ease-out; }
-.slide-up { animation: slideUp 0.5s ease-out; }
-.zoom-in { animation: zoomIn 0.4s ease-out; }
+.fade-in { animation: fadeIn 0.6s ease-out; backface-visibility: hidden; }
+.slide-up { animation: slideUp 0.5s ease-out; backface-visibility: hidden; }
+.zoom-in { animation: zoomIn 0.4s ease-out; backface-visibility: hidden; }
 
 @keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeOut   { from { opacity: 1; } to { opacity: 0; } }
 @keyframes slideUp   { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(20px); opacity: 0; } }
-@keyframes zoomIn    { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes zoomIn    { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes zoomInCentered { from { transform: translate(-50%, -50%) scale(0.9); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
 /* --- リザルト画面 --- */
@@ -1629,8 +1636,10 @@ body {
 
 .resume-continue-btn {
   font-family: 'Mochiy Pop One', sans-serif;
+  display: block;
   width: 80%;
   max-width: 240px;
+  margin: 0 auto;
   padding: 11px 0;
   background: linear-gradient(135deg, #ff69b2, #ff8a65);
   color: #fff;

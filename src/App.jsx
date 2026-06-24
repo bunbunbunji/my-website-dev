@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, Fragment } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import confetti from 'canvas-confetti'
 import './App.css'
@@ -179,7 +179,7 @@ function App() {
     setIsLoadingSongModal(true);
     const { data } = await supabase
       .from('quiz_full')
-      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert')
+      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence')
       .eq('group_name', groupName)
       .eq('song_name', title)
       .order('seq');
@@ -726,7 +726,7 @@ function App() {
         setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
         setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "correct" });
       } else {
-        setCustomWrongAnswers(prev => [...prev, { lyrics: current.lyrics, song_name: current.song_name, correct_members: current.correct_members, group_name: current.group_name }]);
+        setCustomWrongAnswers(prev => [...prev, { lyrics: current.lyrics, song_name: current.song_name, correct_members: current.correct_members, group_name: current.group_name, occurrence: current.occurrence }]);
         setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！😫</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "incorrect" });
       }
       setAnswered(true);
@@ -1081,6 +1081,11 @@ function App() {
     } else {
       html.classList.remove('no-scroll');
     }
+    clearTimeout(tooltipHoverTimerRef.current);
+    clearTimeout(tooltipCloseTimerRef.current);
+    setTooltipLevel(null);
+    setTooltipClosing(false);
+    setTimerLevel(null);
     return () => html.classList.remove('no-scroll');
   }, [screen]);
 
@@ -1588,7 +1593,6 @@ function App() {
                   className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}
                   onClick={() => {
                     if (longPressTriggeredRef.current) { longPressTriggeredRef.current = false; return; }
-                    if (tooltipLevel) return;
                     setQuizState(prev => ({...prev, difficulty: level}));
                     setScreen('confirm');
                     prepareQuiz(quizState.group, level);
@@ -1951,10 +1955,9 @@ function App() {
         <div className="modal-overlay" onClick={() => setCustomQuitModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
             <h2>クイズを終了しますか？</h2>
-            <p style={{color: '#888', fontSize: '0.85rem', marginBottom: '20px'}}>現在の正解数でリザルトを表示します</p>
+            <p style={{color: '#888', fontSize: '0.85rem', marginBottom: '10px'}}>現在の正解数でリザルトを表示します</p>
             <button className="resume-continue-btn" onClick={() => { setCustomQuitModal(false); customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ - customRemaining); setScreen('result'); }}>はい</button>
-            <br />
-            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => setCustomQuitModal(false)}>いいえ</button>
+            <button className="resume-discard-btn" style={{marginTop: '6px'}} onClick={() => setCustomQuitModal(false)}>いいえ</button>
           </div>
         </div>
       )}
@@ -1982,7 +1985,18 @@ function App() {
                       ♪ {w.song_name}
                       <span className="custom-review-group">（{w.group_name}）</span>
                     </div>
-                    <div className="custom-review-lyrics">{w.lyrics}</div>
+                    <div className="custom-review-lyrics">
+                      {w.lyrics ? w.lyrics.split('\n').map((line, li) => {
+                        const occ = w.occurrence && w.occurrence[li];
+                        return (
+                          <Fragment key={li}>
+                            {li > 0 && '\n'}
+                            {line}
+                            {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
+                          </Fragment>
+                        );
+                      }) : ''}
+                    </div>
                     <div className="custom-review-answer">
                       🎤 {correctArr.map((name, ni) => (
                         <span key={ni}>
@@ -2107,9 +2121,21 @@ function App() {
                             {memberLookup[n]?.lastName || n}
                           </span>
                         ));
+                    const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
                     return (
                       <div key={i} className="song-modal-row">
-                        <div className="song-modal-lyrics" style={{ color: lyricsColor, whiteSpace: 'pre-wrap' }}>{row.lyrics}</div>
+                        <div className="song-modal-lyrics" style={{ color: lyricsColor, whiteSpace: 'pre-wrap' }}>
+                          {lyricLines.map((line, li) => {
+                            const occ = row.occurrence && row.occurrence[li];
+                            return (
+                              <Fragment key={li}>
+                                {li > 0 && '\n'}
+                                {line}
+                                {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
+                              </Fragment>
+                            );
+                          })}
+                        </div>
                         <div className="song-modal-members">🎤 {memberNameNodes}</div>
                         <div className="diff-dots">
                           {Number(row.easy)   > 0 && <span className="diff-dot diff-dot-easy"   title="やさしい" />}
@@ -2133,14 +2159,13 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowBackConfirm(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
             <h2>⚠️ トップに戻りますか？</h2>
-            <p style={{marginBottom: '20px'}}>検定モードはセッションが残りません！<br />本当に戻りますか？</p>
+            <p style={{marginBottom: '10px'}}>検定モードはセッションが残りません！<br />本当に戻りますか？</p>
             <button className="resume-continue-btn" onClick={() => {
               setShowBackConfirm(false);
               clearInterval(questionTimerIntervalRef.current);
               setScreen('top');
             }}>トップに戻る</button>
-            <br />
-            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => setShowBackConfirm(false)}>
+            <button className="resume-discard-btn" style={{marginTop: '6px'}} onClick={() => setShowBackConfirm(false)}>
               キャンセル
             </button>
           </div>
@@ -2153,12 +2178,11 @@ function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
             <h2>📖 途中のエンドレスが見つかりました</h2>
             <p style={{marginBottom: '6px'}}>{pendingResume.group_name}・エンドレスモード</p>
-            <p style={{marginBottom: '20px'}}>{pendingResume.current_step}問目から再開できます</p>
+            <p style={{marginBottom: '10px'}}>{pendingResume.current_step}問目から再開できます</p>
             <button className="resume-continue-btn" onClick={() => { closeResumeModal(); resumeQuiz(); }} disabled={isResumingSession}>
               {isResumingSession ? '読み込み中…' : '▶ 続きから始める'}
             </button>
-            <br />
-            <button className="resume-discard-btn" style={{marginTop: '12px'}} onClick={() => { closeResumeModal(); discardSession(); if (resumeModalSource === 'songlist') fetchSongList(); else setScreen('group'); }}>
+            <button className="resume-discard-btn" style={{marginTop: '6px'}} onClick={() => { closeResumeModal(); discardSession(); if (resumeModalSource === 'songlist') fetchSongList(); else setScreen('group'); }}>
               クイズのセッションをリセットする
             </button>
           </div>
