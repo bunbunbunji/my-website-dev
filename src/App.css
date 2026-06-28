@@ -619,6 +619,11 @@ body {
   overflow: hidden;
 }
 
+.aite {
+  font-size: 0.8em;
+  color: #aaa;
+}
+
 .occurrence-badge {
   font-size: 0.65em;
   color: #b07ab0;

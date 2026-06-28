@@ -26,18 +26,30 @@ const superNormalize = (str) => {
     .trim();
 };
 
+const renderLineWithAite = (line, keyPrefix = 'a') => {
+  if (!/\([^)]+\)/.test(line)) return line;
+  return line.split(/(\([^)]+\))/).map((part, i) =>
+    /^\([^)]+\)$/.test(part)
+      ? <span key={`${keyPrefix}-${i}`} className="aite">{part}</span>
+      : part
+  );
+};
+
 const renderLyricsWithOccurrence = (lyrics, occurrence) => {
   if (!lyrics) return null;
   const lines = lyrics.split('\n');
-  if (!occurrence || !Array.isArray(occurrence) || occurrence.every(o => o == null)) {
-    return lyrics;
-  }
+  const hasOccurrence = occurrence && Array.isArray(occurrence) && !occurrence.every(o => o == null);
+  const hasAite = /\([^)]+\)/.test(lyrics);
+  if (!hasOccurrence && !hasAite) return lyrics;
   const result = [];
   lines.forEach((line, i) => {
     if (i > 0) result.push('\n');
-    result.push(line);
-    const occ = occurrence[i];
-    if (occ != null) result.push(<span key={i} className="occurrence-badge">（{occ}回目）</span>);
+    const rendered = renderLineWithAite(line, `lo-${i}`);
+    Array.isArray(rendered) ? result.push(...rendered) : result.push(rendered);
+    if (hasOccurrence) {
+      const occ = occurrence[i];
+      if (occ != null) result.push(<span key={`occ-${i}`} className="occurrence-badge">（{occ}回目）</span>);
+    }
   });
   return result;
 };
@@ -1991,7 +2003,7 @@ function App() {
                         return (
                           <Fragment key={li}>
                             {li > 0 && '\n'}
-                            {line}
+                            {renderLineWithAite(line, `cr-${li}`)}
                             {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
                           </Fragment>
                         );
@@ -2130,7 +2142,7 @@ function App() {
                             return (
                               <Fragment key={li}>
                                 {li > 0 && '\n'}
-                                {line}
+                                {renderLineWithAite(line, `sm-${li}`)}
                                 {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
                               </Fragment>
                             );
