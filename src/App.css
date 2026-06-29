@@ -1103,6 +1103,34 @@ body {
 
 .confirm-item { margin: 8px 0; }
 
+.confirm-rules {
+  background: #f7f7f7;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin: 14px 0 4px;
+  text-align: center;
+}
+.confirm-rules-title {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #888;
+  margin-bottom: 6px;
+}
+.confirm-rules ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.confirm-rules li {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 1px;
+  line-height: 1.3;
+}
+.confirm-rules strong {
+  color: #ff1493;
+}
+
 .confirm-label {
   font-size: 0.75rem;
   color: #ff8ab4;

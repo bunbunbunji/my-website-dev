@@ -242,7 +242,7 @@ function App() {
       return try_(q => (q.normal > 0 || q.hard > 0) && !/回目/.test(q.lyrics)) || try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
     if (qNum <= 70)
       return try_(q => q.hard > 0) || try_(q => q.normal > 0) || try_(q => q.expert > 0) || pool;
-    return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || pool;
+    return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || try_(q => q.easy > 0) || pool;
   };
 
   const selectEndlessWeighted = (eligible) => {
@@ -1284,11 +1284,23 @@ function App() {
     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
   };
 
+  const isSingleSelectMode =
+    (gameMode === 'normal' && (quizState.difficulty === 'easy' || quizState.difficulty === 'normal')) ||
+    (gameMode === 'endless' && endlessQNum <= 35);
+
   const toggleMember = (name) => {
     if (answered) return;
-    const newSet = new Set(selectedMembers);
-    newSet.has(name) ? newSet.delete(name) : newSet.add(name);
-    setSelectedMembers(newSet);
+    if (selectedMembers.size === displayMembers.length && displayMembers.length > 0) {
+      setSelectedMembers(new Set([name]));
+      return;
+    }
+    if (isSingleSelectMode) {
+      setSelectedMembers(selectedMembers.has(name) ? new Set() : new Set([name]));
+    } else {
+      const newSet = new Set(selectedMembers);
+      newSet.has(name) ? newSet.delete(name) : newSet.add(name);
+      setSelectedMembers(newSet);
+    }
   };
 
   const quizCurr = quizState.quizzes[quizState.currentIndex];
@@ -1692,6 +1704,23 @@ function App() {
             <div className="confirm-item"><span className="confirm-label">グループ</span><span className="confirm-value">{quizState.group}</span></div>
             <div className="confirm-item"><span className="confirm-label">難易度</span><span className="confirm-value">{gameMode === 'endless' ? '全難易度' : difficultyLabel[quizState.difficulty]}</span></div>
             <p className="preparing-status">{statusMsg}</p>
+          </div>
+          <div className="confirm-rules">
+            {gameMode === 'normal' ? (<>
+              <p className="confirm-rules-title">📋 ルール　📋</p>
+              <ul>
+                <li>1問につき<strong>60秒</strong>以内に回答してください</li>
+                <li>途中でやめることはできません</li>
+              </ul>
+            </>) : (<>
+              <p className="confirm-rules-title">📋 ルール　📋</p>
+              <ul>
+                <li>時間制限なし、じっくり考えてください</li>
+                <li>難易度が段階的に上がります</li>
+                <li><span style={{color:'#e53935'}}>♥</span> がなくると終了、連続正解で <span style={{color:'#e53935'}}>♥</span> を獲得</li>
+                <li>いつでも中断OK、続きから再開できます</li>
+              </ul>
+            </>)}
           </div>
           <button className="start-btn" disabled={isPreparing || quizState.quizzes.length === 0} onClick={startQuiz}>クイズを始める！</button>
           <button className="back-btn" onClick={() => setScreen(gameMode === 'endless' ? 'group' : 'difficulty')}>
