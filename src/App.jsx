@@ -1709,7 +1709,7 @@ function App() {
             {gameMode === 'normal' ? (<>
               <p className="confirm-rules-title">📋 ルール　📋</p>
               <ul>
-                <li>1問につき<strong>60秒</strong>以内に回答してください</li>
+                <li><strong>60秒</strong>以内に回答してください</li>
                 <li>途中でやめることはできません</li>
               </ul>
             </>) : (<>
