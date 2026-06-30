@@ -14,12 +14,13 @@ html {
   -webkit-user-select: none;
   user-select: none;
   background-color: var(--bg);
-  background-image: url('./assets/Wallpaper.png');
-  background-repeat: repeat;
-  background-size: 683px 384px;
 }
 html.no-scroll {
   overflow: hidden;
+}
+html.no-scroll body {
+  overflow: hidden;
+  touch-action: none;
 }
 
 @media print {
@@ -34,12 +35,19 @@ html.no-scroll {
 body {
   margin: 0;
   font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+  background: transparent;
+  color: #333;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
   background-color: var(--bg);
   background-image: url('./assets/Wallpaper.png');
   background-repeat: repeat;
   background-size: 683px 384px;
   animation: bgScroll 60s linear infinite;
-  color: #333;
 }
 
 .app-root {

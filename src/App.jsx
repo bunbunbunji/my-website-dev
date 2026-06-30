@@ -1097,7 +1097,7 @@ function App() {
   }, [screen]);
 
   useEffect(() => {
-    const NO_SCROLL_SCREENS = ['top', 'lyrics', 'mode', 'group', 'difficulty', 'confirm', 'custom-select-group', 'custom-select-song'];
+    const NO_SCROLL_SCREENS = ['top', 'lyrics', 'mode', 'group', 'difficulty', 'confirm', 'custom-select-group', 'custom-select-song', 'result'];
     const html = document.documentElement;
     if (NO_SCROLL_SCREENS.includes(screen)) {
       html.classList.add('no-scroll');
@@ -1836,7 +1836,7 @@ function App() {
             </div>
           )}
 
-          {gameMode === 'custom' && !answered && (
+          {gameMode === 'custom' && (
             <div className="custom-hint-buttons">
               <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={() => {
                 setCustomShowSurround(v => !v);
