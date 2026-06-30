@@ -255,8 +255,8 @@ function App() {
     const selected = selectEndlessWeighted(eligible, nextQNum);
     const newPool = pool.filter(q => q.id !== selected.id);
     endlessPoolRef.current = newPool;
-    setEndlessNextQLoading(true);
-    fetchSurrounds([selected]).then(([q]) => { setEndlessNextQ(q); setEndlessNextQLoading(false); });
+    setEndlessNextQ(addSurrounds(selected));
+    setEndlessNextQLoading(false);
   };
 
   // --- カスタムモード補助関数 ---
@@ -302,12 +302,20 @@ function App() {
     setCustomIsLoading(true);
     const groups = [...customSelectedGroups];
     let qData = [];
-    let from = 0;
-    let hasMore = true;
-    while (hasMore) {
-      const { data } = await supabase.from('quiz_full').select('*').in('group_name', groups).range(from, from + 999);
-      if (!data || data.length === 0) { hasMore = false; }
-      else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+    for (const group of groups) {
+      let groupData = getGroupCache(group);
+      if (!groupData) {
+        groupData = [];
+        let from = 0;
+        let hasMore = true;
+        while (hasMore) {
+          const { data } = await supabase.from('quiz_full').select('*').eq('group_name', group).range(from, from + 999);
+          if (!data || data.length === 0) { hasMore = false; }
+          else { groupData = [...groupData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+        }
+        if (groupData.length > 0) setGroupCache(group, groupData);
+      }
+      qData = [...qData, ...groupData];
     }
     const filtered = qData.filter(q =>
       customSelectedSongs.has(`${q.group_name}::${q.song_name}`) &&
@@ -319,7 +327,7 @@ function App() {
       setTimeout(() => setCustomDiffError(false), 3500);
       return;
     }
-    const shuffled = shuffle(filtered);
+    const shuffled = shuffle(filtered).map(addSurrounds);
     const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
     const memberMap = {};
     (mData || []).forEach(m => {
@@ -438,14 +446,15 @@ function App() {
     const saved = s.quiz_ids; // { current, pool, lives, consecutive }
 
     // 現在の問題と残プールを取得
-    const { data: qData } = await supabase.from('quiz_full').select('*').eq('id', saved.current).single();
-    const { data: mData } = await supabase.from('members').select('*').eq('group_name', s.group_name).order('sort_order');
-    let poolData = [];
-    if (saved.pool?.length > 0) {
-      const { data: pData } = await supabase.from('quiz_full').select('*').in('id', saved.pool);
-      poolData = pData || [];
-    }
-    const [q1] = await fetchSurrounds([qData]);
+    const [{ data: qData }, { data: mData }, { data: pData }] = await Promise.all([
+      supabase.from('quiz_full').select('*').eq('id', saved.current).single(),
+      supabase.from('members').select('*').eq('group_name', s.group_name).order('sort_order'),
+      saved.pool?.length > 0
+        ? supabase.from('quiz_full').select('*').in('id', saved.pool)
+        : Promise.resolve({ data: [] }),
+    ]);
+    const poolData = pData || [];
+    const q1 = addSurrounds(qData);
 
     const lives = saved.lives ?? 3;
     const consecutive = saved.consecutive ?? 0;
@@ -485,48 +494,45 @@ function App() {
     setPendingResume(null);
   };
 
-  // --- 前後歌詞をクイズオブジェクトに埋め込む ---
-  const fetchSurrounds = async (quizzes) => {
-    return Promise.all(quizzes.map(async (quiz) => {
-      const [prevRes, nextRes] = await Promise.all([
-        supabase.from('lyrics').select('lyric')
-          .eq('sounds_id', quiz.sounds_id)
-          .lt('seq', quiz.seq).order('seq', { ascending: false }).limit(2),
-        supabase.from('lyrics').select('lyric')
-          .eq('sounds_id', quiz.sounds_id)
-          .gt('seq', quiz.seq).order('seq', { ascending: true }).limit(2)
-      ]);
-      return {
-        ...quiz,
-        surroundPrev: ((prevRes.data || []).reverse()).map(r => r.lyric),
-        surroundNext: (nextRes.data || []).map(r => r.lyric)
-      };
-    }));
-  };
+  const addSurrounds = (quiz) => ({
+    ...quiz,
+    surroundPrev: [quiz.surround_prev_2, quiz.surround_prev_1].filter(v => v != null),
+    surroundNext: [quiz.surround_next_1, quiz.surround_next_2].filter(v => v != null),
+  });
 
-  // --- カスタムモード: 現在の問題の前後歌詞をオンデマンドでフェッチ ---
-  const fetchCurrentCustomSurrounds = async () => {
-    const curr = quizState.quizzes[quizState.currentIndex];
-    if (!curr || curr.surroundPrev !== undefined) return;
-    const [withSurrounds] = await fetchSurrounds([curr]);
-    setQuizState(prev => {
-      const quizzes = [...prev.quizzes];
-      quizzes[prev.currentIndex] = withSurrounds;
-      return { ...prev, quizzes };
-    });
+  const QUIZ_CACHE_TTL = 5 * 60 * 1000;
+  const getGroupCache = (groupName) => {
+    try {
+      const cached = sessionStorage.getItem(`quiz_cache_${groupName}`);
+      if (!cached) return null;
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp > QUIZ_CACHE_TTL) { sessionStorage.removeItem(`quiz_cache_${groupName}`); return null; }
+      return data;
+    } catch { return null; }
+  };
+  const setGroupCache = (groupName, data) => {
+    try { sessionStorage.setItem(`quiz_cache_${groupName}`, JSON.stringify({ data, timestamp: Date.now() })); } catch {}
   };
 
   // --- クイズ準備 ---
   const prepareQuiz = async (selectedGroup, selectedDiff) => {
     setIsPreparing(true);
     setStatusMsg("問題を準備しています…");
-    const { data: qData } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).gt(selectedDiff, 0);
-    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    const cachedData = getGroupCache(selectedGroup);
+    const [quizRes, { data: mData }] = await Promise.all([
+      cachedData
+        ? Promise.resolve({ data: cachedData })
+        : supabase.from("quiz_full").select("*").eq("group_name", selectedGroup),
+      supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order"),
+    ]);
+    const allData = quizRes.data || [];
+    if (!cachedData && allData.length > 0) setGroupCache(selectedGroup, allData);
+    const qData = allData.filter(q => (q[selectedDiff] || 0) > 0);
 
     if (!qData || qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
       setIsPreparing(false);
-      return;
+      return false;
     }
 
     const selectedQuizzes = [];
@@ -543,11 +549,11 @@ function App() {
         }
       }
     }
-    const quizzesWithSurrounds = await fetchSurrounds(selectedQuizzes);
+    const quizzesWithSurrounds = selectedQuizzes.map(addSurrounds);
     setQuizState(prev => ({ ...prev, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
     setMembers(mData || []);
-    setStatusMsg(`${quizzesWithSurrounds.length}問のクイズを用意しました！`);
     setIsPreparing(false);
+    return true;
   };
 
   // --- エンドレスモード準備（全問メタデータ取得 + Q1先読み） ---
@@ -556,15 +562,20 @@ function App() {
     setEndlessNextQ(null);
     setEndlessNextQLoading(false);
     setStatusMsg("問題を準備しています…");
-    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
-    let qData = [];
-    let from = 0;
-    let hasMore = true;
-    while (hasMore) {
-      const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
-      if (!data || data.length === 0) { hasMore = false; }
-      else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+    const membersPromise = supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    let qData = getGroupCache(selectedGroup);
+    if (!qData) {
+      qData = [];
+      let from = 0;
+      let hasMore = true;
+      while (hasMore) {
+        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
+        if (!data || data.length === 0) { hasMore = false; }
+        else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
+      }
+      if (qData.length > 0) setGroupCache(selectedGroup, qData);
     }
+    const { data: mData } = await membersPromise;
     if (qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
       setIsPreparing(false);
@@ -577,7 +588,7 @@ function App() {
     const eligible1 = getEndlessEligiblePool(pool, 1);
     const q1Meta = selectEndlessWeighted(eligible1, 1);
     pool = pool.filter(q => q.id !== q1Meta.id);
-    const [q1] = await fetchSurrounds([q1Meta]);
+    const q1 = addSurrounds(q1Meta);
     // 状態を初期化
     endlessPoolRef.current = pool;
     endlessPendingNotifRef.current = null;
@@ -1617,9 +1628,9 @@ function App() {
                   className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}
                   onClick={() => {
                     if (longPressTriggeredRef.current) { longPressTriggeredRef.current = false; return; }
-                    setQuizState(prev => ({...prev, difficulty: level}));
+                    setQuizState(prev => ({...prev, difficulty: level, quizzes: []}));
+                    setStatusMsg('');
                     setScreen('confirm');
-                    prepareQuiz(quizState.group, level);
                   }}
                   onMouseEnter={() => {
                     if (touchEndedRef.current) return; // タッチ後の合成mouseenterを無視
@@ -1722,7 +1733,11 @@ function App() {
               </ul>
             </>)}
           </div>
-          <button className="start-btn" disabled={isPreparing || quizState.quizzes.length === 0} onClick={startQuiz}>クイズを始める！</button>
+          <button className="start-btn" disabled={isPreparing} onClick={async () => {
+            if (gameMode === 'endless') { startQuiz(); return; }
+            const ok = await prepareQuiz(quizState.group, quizState.difficulty);
+            if (ok) startQuiz();
+          }}>クイズを始める！</button>
           <button className="back-btn" onClick={() => setScreen(gameMode === 'endless' ? 'group' : 'difficulty')}>
             {gameMode === 'endless' ? 'グループ選択に戻る' : '難易度選択に戻る'}
           </button>
@@ -1823,8 +1838,7 @@ function App() {
 
           {gameMode === 'custom' && !answered && (
             <div className="custom-hint-buttons">
-              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={async () => {
-                if (!customShowSurround) await fetchCurrentCustomSurrounds();
+              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={() => {
                 setCustomShowSurround(v => !v);
               }}>
                 {customShowSurround ? '前後の歌詞を隠す' : '前後の歌詞をみる'}
@@ -2122,7 +2136,7 @@ function App() {
               結果をXでつぶやく
             </button>
             <div className="result-btn-row">
-              <button className="retry-btn" onClick={() => { setScreen('confirm'); prepareQuiz(quizState.group, quizState.difficulty); setAnswered(false); setQuizState(p=>({...p, correctCount:0, currentIndex:0})); setSelectedMembers(new Set()); }}>もう一回！</button>
+              <button className="retry-btn" onClick={() => { setScreen('confirm'); setAnswered(false); setStatusMsg(''); setQuizState(p=>({...p, correctCount:0, currentIndex:0, quizzes:[]})); setSelectedMembers(new Set()); }}>もう一回！</button>
               <button className="mode-back-btn" onClick={() => setScreen('mode')}>モード選択へ</button>
             </div>
             <button className="result-back-link" onClick={() => setScreen('top')}>トップに戻る</button>
@@ -2368,9 +2382,8 @@ function App() {
               const { data: qData, error } = await supabase.from('quiz_full').select('*').eq('id', Number(debugQuizId)).single();
               if (error || !qData) { setDebugQuizStatus('❌ 見つかりません'); return; }
               const { data: mData } = await supabase.from('members').select('*').eq('group_name', qData.group_name).order('sort_order');
-              const quizzesWithSurrounds = await fetchSurrounds([qData]);
               setMembers(mData || []);
-              setQuizState(p => ({ ...p, group: qData.group_name, difficulty: debugDiff, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
+              setQuizState(p => ({ ...p, group: qData.group_name, difficulty: debugDiff, quizzes: [addSurrounds(qData)], currentIndex: 0, correctCount: 0 }));
               setSelectedMembers(new Set());
               setAnswered(false);
               setResultMsg({ text: '', type: '' });
