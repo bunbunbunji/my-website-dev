@@ -1725,6 +1725,8 @@ body::before {
   font-size: 0.72rem;
   z-index: 9999;
   width: 260px;
+  max-height: 80vh;
+  overflow-y: auto;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
   border: 1px solid #333;
 }
@@ -1742,6 +1744,8 @@ body::before {
   cursor: pointer;
   margin-bottom: 8px;
   text-align: center;
+  position: sticky;
+  bottom: 0;
 }
 .debug-toggle-btn:hover { background: #444; }
 
