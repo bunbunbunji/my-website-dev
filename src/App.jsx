@@ -1353,6 +1353,10 @@ function App() {
             回答の際に公開される、いわゆる「Aメロ」「サビ」のことですが、運営者の<strong>匙加減</strong>で決めています。作曲者様の意図しない構成になっている可能性がありますのでご理解ください。</p>
             <p><strong>匙加減について</strong><br />
             そんな感じでこのサイトの全てが私の<strong>匙加減</strong>で設計されていますので、とりあえず全部ご了承ください。</p>
+            <p><strong>個人制作について</strong><br />
+            本サイトは、ITエンジニアではない個人が趣味の範囲で制作・運営しています。内容の正確性については最善を尽くしていますが、すべてが正しいとは限りません。また、動作が不安定になったり、予期しない不具合が発生する場合もあります。「あれ、これ違くない？」「なんか変。」と思う箇所があっても、温かい目で見ていただけると幸いです。不具合や誤りを発見した場合は、<a href="https://docs.google.com/forms/d/e/1FAIpQLSe6iTD1ky8LKFzE5_G_aAe2NwLo7OegGcRTm5mwVp3i6lZJ8Q/viewform" target="_blank" rel="noreferrer" style={{color:'#ff69b2'}}>アンケートフォーム</a>からご連絡いただけると大変助かります。</p>
+            <p><strong>ブラウザのデータについて</strong><br />
+            本サイトでは、プレイ履歴や解放状況などをブラウザのローカルストレージに保存しています。ブラウザを変更したり、キャッシュ・サイトデータをクリアすると、これらのデータがリセットされますのでご注意ください。</p>
           </div>
           <p className="terms-note">上記の注意事項に同意の上、お楽しみください。</p>
           <button className="terms-agree-btn" onClick={handleTermsAgree}>同意して始める</button>
