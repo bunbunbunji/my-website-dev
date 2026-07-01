@@ -135,7 +135,7 @@ function App() {
   const [endlessNextQ, setEndlessNextQ] = useState(null);
   const [endlessNextQLoading, setEndlessNextQLoading] = useState(false);
   const [endlessLifeBonus, setEndlessLifeBonus] = useState({ type: 'none', amount: 0, key: 0 });
-  const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', tier: '', key: 0 });
+  const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', key: 0 });
   const [endlessUnlockedGroups, setEndlessUnlockedGroups] = useState(() => {
     const saved = localStorage.getItem('kawaii_endless_unlocked_groups');
     return new Set(saved ? JSON.parse(saved) : []);
@@ -239,7 +239,7 @@ function App() {
     if (qNum <= 35)
       return try_(q => q.normal > 0) || try_(q => q.easy > 0) || try_(q => q.hard > 0) || pool;
     if (qNum <= 50)
-      return try_(q => (q.normal > 0 || q.hard > 0) && !/回目/.test(q.lyrics)) || try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
+      return try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
     if (qNum <= 70)
       return try_(q => q.hard > 0) || try_(q => q.normal > 0) || try_(q => q.expert > 0) || pool;
     return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || try_(q => q.easy > 0) || pool;
@@ -252,7 +252,7 @@ function App() {
   const prefetchEndlessNext = (pool, nextQNum) => {
     const eligible = getEndlessEligiblePool(pool, nextQNum);
     if (!eligible || eligible.length === 0) { setEndlessNextQ(null); setEndlessNextQLoading(false); return; }
-    const selected = selectEndlessWeighted(eligible, nextQNum);
+    const selected = selectEndlessWeighted(eligible);
     const newPool = pool.filter(q => q.id !== selected.id);
     endlessPoolRef.current = newPool;
     setEndlessNextQ(addSurrounds(selected));
@@ -467,7 +467,7 @@ function App() {
     setEndlessConsecutive(consecutive);
     setEndlessIsOver(false);
     setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
-    setEndlessDiffNotif({ text: '', tier: '', key: 0 });
+    setEndlessDiffNotif({ text: '', key: 0 });
     setMembers(mData || []);
     setQuizState({
       group: s.group_name,
@@ -586,7 +586,7 @@ function App() {
     if (qData.length > 999) qData = shuffle(qData).slice(0, 999);
     let pool = [...qData];
     const eligible1 = getEndlessEligiblePool(pool, 1);
-    const q1Meta = selectEndlessWeighted(eligible1, 1);
+    const q1Meta = selectEndlessWeighted(eligible1);
     pool = pool.filter(q => q.id !== q1Meta.id);
     const q1 = addSurrounds(q1Meta);
     // 状態を初期化
@@ -597,7 +597,7 @@ function App() {
     setEndlessConsecutive(0);
     setEndlessIsOver(false);
     setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
-    setEndlessDiffNotif({ text: '', tier: '', key: 0 });
+    setEndlessDiffNotif({ text: '', key: 0 });
     setQuizState(prev => ({ ...prev, group: selectedGroup, quizzes: [q1], currentIndex: 0, correctCount: 0 }));
     setAnswered(false);
     setSelectedMembers(new Set());
@@ -628,7 +628,7 @@ function App() {
       while (hasMore) {
         const { data, error } = await supabase
           .from('quiz_full')
-          .select('group_name, song_name, easy, normal')
+          .select('group_name, song_name')
           .range(from, from + 999);
 
         if (error) throw error;
@@ -642,16 +642,9 @@ function App() {
       }
 
       const activeSongsSet = new Set();
-      const easySongsSet = new Set();
-      const normalSongsSet = new Set();
 
       allQuizData.forEach(q => {
-        if (q.song_name) {
-          const norm = superNormalize(q.song_name);
-          activeSongsSet.add(norm);
-          if (Number(q.easy) >= 0.1) easySongsSet.add(norm);
-          if (Number(q.normal) >= 0.1) normalSongsSet.add(norm);
-        }
+        if (q.song_name) activeSongsSet.add(superNormalize(q.song_name));
       });
 
       const finalData = [];
@@ -662,15 +655,10 @@ function App() {
           .eq('group_name', group.name)
           .order('song_name', { ascending: true });
         if (songs) {
-          const processedSongs = songs.map(s => {
-            const norm = superNormalize(s.song_name);
-            return {
-              title: s.song_name,
-              hasQuiz: activeSongsSet.has(norm),
-              isEasy: easySongsSet.has(norm),
-              isNormal: normalSongsSet.has(norm)
-            };
-          });
+          const processedSongs = songs.map(s => ({
+            title: s.song_name,
+            hasQuiz: activeSongsSet.has(superNormalize(s.song_name)),
+          }));
           finalData.push({ groupName: group.name, songs: processedSongs });
         }
       }
@@ -816,7 +804,7 @@ function App() {
       71: { text: '難易度MAX！！', desc: '問題が難しくなります！' },
     };
     if (DIFF_THRESHOLDS[newQNum]) setEndlessDiffNotif({ ...DIFF_THRESHOLDS[newQNum], key: Date.now() });
-    else setEndlessDiffNotif({ text: '', desc: '', key: 0 });
+    else setEndlessDiffNotif({ text: '', key: 0 });
     setEndlessQNum(newQNum);
     setQuizState(prev => ({ ...prev, quizzes: [endlessNextQ], currentIndex: 0 }));
     setEndlessNextQ(null);

@@ -559,17 +559,6 @@ body::before {
 
 .status-tag-unreleased { font-size: 0.6rem; color: #bbb; font-weight: normal; white-space: nowrap; }
 
-.diff-badge-inline {
-  font-size: 0.6rem;
-  padding: 2px 6px;
-  border-radius: 6px;
-  color: white;
-  margin-left: 4px;
-  white-space: nowrap;
-}
-
-.easy-badge-color { background: #81c784; }
-.normal-badge-color { background: #ffd54f; color: #555; }
 
 /* --- クイズ画面 --- */
 .quiz-counter {
@@ -1012,14 +1001,6 @@ body::before {
   box-shadow: none !important;
 }
 
-.back-btn-minimal {
-  background: none;
-  border: none;
-  color: #999;
-  text-decoration: underline;
-  margin-top: 15px;
-  cursor: pointer;
-}
 
 /* --- 利用規約画面 --- */
 .terms-box {
@@ -2054,13 +2035,6 @@ body::before {
   color: #fff;
   text-shadow: 0 1px 6px rgba(0,0,0,0.6);
 }
-.endless-diffup-tier {
-  margin-top: 10px;
-  font-family: 'Mochiy Pop One', sans-serif;
-  font-size: clamp(0.95rem, 4.5vw, 1.3rem);
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-}
 
 /* ===== エンドレスゲームオーバーオーバーレイ ===== */
 .endless-gameover-overlay {
@@ -2089,16 +2063,6 @@ body::before {
   margin-bottom: 12px;
   text-shadow: 0 0 20px rgba(229,57,53,0.8);
 }
-.endless-go-score {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 6px;
-}
-.endless-go-num  { font-size: clamp(3rem, 14vw, 5rem); font-weight: 900; color: #ff69b2; text-shadow: 0 0 20px rgba(255,105,180,0.7); }
-.endless-go-unit { font-size: clamp(1rem, 4vw, 1.4rem); color: #fff; font-family: 'Mochiy Pop One', sans-serif; }
-.endless-go-correct { color: #aaa; font-size: 0.9rem; margin-bottom: 24px; }
 .endless-go-btn {
   margin-top: 28px;
   font-family: 'Mochiy Pop One', sans-serif;
@@ -2319,26 +2283,8 @@ body::before {
   animation: fadeIn 0.2s ease-out;
 }
 
-/* スキップボタン */
-.skip-btn {
-  display: block;
-  margin: 6px auto 0;
-  background: none;
-  border: 2px dashed #ccc;
-  border-radius: 50px;
-  padding: 8px 24px;
-  font-size: 0.82rem;
-  color: #aaa;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.skip-btn:hover { border-color: #ff69b2; color: #ff69b2; }
 
 /* カスタムリザルト */
-.badge-custom {
-  background: linear-gradient(135deg, #7b1fa2, #e91e63);
-  color: #fff;
-}
 .review-btn {
   display: block;
   margin: 14px auto;
