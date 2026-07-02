@@ -519,14 +519,20 @@ function App() {
     setIsPreparing(true);
     setStatusMsg("問題を準備しています…");
     const cachedData = getGroupCache(selectedGroup);
-    const [quizRes, { data: mData }] = await Promise.all([
-      cachedData
-        ? Promise.resolve({ data: cachedData })
-        : supabase.from("quiz_full").select("*").eq("group_name", selectedGroup),
-      supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order"),
-    ]);
-    const allData = quizRes.data || [];
-    if (!cachedData && allData.length > 0) setGroupCache(selectedGroup, allData);
+    const { data: mData } = await supabase.from("members").select("*").eq("group_name", selectedGroup).order("sort_order");
+    let allData = cachedData;
+    if (!allData) {
+      allData = [];
+      let from = 0;
+      while (true) {
+        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data);
+        if (data.length < 1000) break;
+        from += 1000;
+      }
+      if (allData.length > 0) setGroupCache(selectedGroup, allData);
+    }
     const qData = allData.filter(q => (q[selectedDiff] || 0) > 0);
 
     if (!qData || qData.length === 0) {
