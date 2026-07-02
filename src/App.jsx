@@ -549,6 +549,16 @@ function App() {
         }
       }
     }
+    localStorage.setItem('debug_selected_quizzes', JSON.stringify(
+      selectedQuizzes.map((q, i) => ({
+        no: i + 1,
+        id: q.id,
+        song_name: q.song_name,
+        seq: q.seq,
+        lyric: q.lyrics,
+        easy: q.easy, normal: q.normal, hard: q.hard, expert: q.expert,
+      }))
+    ));
     const quizzesWithSurrounds = selectedQuizzes.map(addSurrounds);
     setQuizState(prev => ({ ...prev, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
     setMembers(mData || []);
