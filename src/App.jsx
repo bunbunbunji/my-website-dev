@@ -184,6 +184,12 @@ function App() {
   const [resumeModalSource, setResumeModalSource] = useState('group');
   const [showBackConfirm, setShowBackConfirm] = useState(false);
 
+  // --- 検定モード 新クイズフロー ---
+  const [quizPhase, setQuizPhase] = useState(null); // 'announce' | 'scrolling' | 'question'
+  const [fullSongLyrics, setFullSongLyrics] = useState([]);
+  const [showFullLyrics, setShowFullLyrics] = useState(false);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+
   const openSongModal = async (title, groupName) => {
     setSongModal({ title, groupName });
     setSongModalData([]);
@@ -209,6 +215,8 @@ function App() {
   const hintPrevRef = useRef(null);
   const hintNextRef = useRef(null);
   const commentRef = useRef(null);
+  const questionLyricScrollRef = useRef(null);
+  const fullLyricsHighlightRef = useRef(null);
   const rankRef = useRef(null);
   const descTextRef = useRef(null);
   const catchText1Ref = useRef(null);
@@ -436,6 +444,11 @@ function App() {
     // 検定モード・カスタムモード: セッション不要
     setSelectedMembers(new Set());
     setPendingResume(null);
+    if (gameMode === 'normal') {
+      setFullSongLyrics([]);
+      setShowFullLyrics(false);
+      setQuizPhase('announce');
+    }
     setScreen('quiz');
   };
 
@@ -499,6 +512,13 @@ function App() {
     surroundPrev: [quiz.surround_prev_2, quiz.surround_prev_1].filter(v => v != null),
     surroundNext: [quiz.surround_next_1, quiz.surround_next_2].filter(v => v != null),
   });
+
+  const fetchSongLyrics = async (soundsId) => {
+    setIsLoadingLyrics(true);
+    const { data } = await supabase.from('song_lyrics').select('*').eq('sounds_id', soundsId).order('seq');
+    setFullSongLyrics(data || []);
+    setIsLoadingLyrics(false);
+  };
 
   const QUIZ_CACHE_TTL = 5 * 60 * 1000;
   const getGroupCache = (groupName) => {
@@ -775,17 +795,19 @@ function App() {
   const nextQuestion = () => {
     if (gameMode === 'endless') { advanceEndlessQuestion(); return; }
     if (gameMode === 'custom') { nextCustomQuestion(); return; }
-    setQuestionTimer(60);
-    setQuizState(prev => {
-      if (prev.currentIndex + 1 < prev.quizzes.length) {
-        return { ...prev, currentIndex: prev.currentIndex + 1 };
-      }
+    // 検定モード
+    const nextIndex = quizState.currentIndex + 1;
+    if (nextIndex >= quizState.quizzes.length) {
       setScreen('result');
-      return prev;
-    });
+      return;
+    }
+    setQuestionTimer(60);
+    setQuizState(prev => ({ ...prev, currentIndex: nextIndex }));
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: "", type: "" });
+    setShowFullLyrics(false);
+    setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -848,7 +870,7 @@ function App() {
   // --- 検定モード：問題タイマー（60秒・問題が変わるたびリセット） ---
   // Date.now() ベースで計算することで、バックグラウンド時の throttle に対応
   useEffect(() => {
-    if (screen !== 'quiz' || gameMode !== 'normal') return;
+    if (screen !== 'quiz' || gameMode !== 'normal' || quizPhase !== 'question') return;
     setQuestionTimer(60);
     timerStartRef.current = Date.now();
     const id = setInterval(() => {
@@ -859,11 +881,11 @@ function App() {
     }, 500);
     questionTimerIntervalRef.current = id;
     return () => clearInterval(id);
-  }, [quizState.currentIndex, screen, gameMode]);
+  }, [quizState.currentIndex, screen, gameMode, quizPhase]);
 
   // --- タブ復帰時にタイマーを即時補正 ---
   useEffect(() => {
-    if (screen !== 'quiz' || gameMode !== 'normal' || answered) return;
+    if (screen !== 'quiz' || gameMode !== 'normal' || quizPhase !== 'question' || answered) return;
     const handleVisibilityChange = () => {
       if (!document.hidden && timerStartRef.current) {
         const elapsed = Math.floor((Date.now() - timerStartRef.current) / 1000);
@@ -874,11 +896,11 @@ function App() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [screen, gameMode, answered]);
+  }, [screen, gameMode, answered, quizPhase]);
 
   // --- 検定モード：タイムアップ → 強制不正解 ---
   useEffect(() => {
-    if (gameMode !== 'normal' || screen !== 'quiz' || answered) return;
+    if (gameMode !== 'normal' || screen !== 'quiz' || quizPhase !== 'question' || answered) return;
     if (questionTimer === 0) {
       clearInterval(questionTimerIntervalRef.current);
       const curr = quizState.quizzes[quizState.currentIndex];
@@ -891,6 +913,31 @@ function App() {
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
     }
   }, [questionTimer, gameMode, screen, answered]);
+
+  // --- 検定モード：アナウンス時に song_lyrics を取得 ---
+  useEffect(() => {
+    if (quizPhase !== 'announce' || gameMode !== 'normal') return;
+    const curr = quizState.quizzes[quizState.currentIndex];
+    if (curr?.sounds_id) fetchSongLyrics(curr.sounds_id);
+  }, [quizPhase, quizState.currentIndex, gameMode]);
+
+  // --- 検定モード：全歌詞スクロール時に問題箇所へ自動スクロール ---
+  useEffect(() => {
+    if (quizPhase !== 'scrolling') return;
+    const t = setTimeout(() => {
+      questionLyricScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 600);
+    return () => clearTimeout(t);
+  }, [quizPhase]);
+
+  // --- 検定モード：全歌詞オーバーレイ表示時に問題箇所へスクロール ---
+  useEffect(() => {
+    if (!showFullLyrics) return;
+    const t = setTimeout(() => {
+      fullLyricsHighlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [showFullLyrics]);
 
   useEffect(() => {
     if (screen === 'result') {
@@ -1746,8 +1793,56 @@ function App() {
         </div>
       )}
 
+      {/* --- 検定モード：アナウンス画面 --- */}
+      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'announce' && (
+        <div className="box quiz-announce-card zoom-in">
+          <div className="progress-container">
+            <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
+          </div>
+          <div className="announce-main">
+            <p className="announce-question-num">第{quizState.currentIndex + 1}問</p>
+            <p className="announce-from-text">
+              <span className="announce-song-name">{quizCurr?.song_name}</span>
+              <br />
+              <span className="announce-from-suffix">からの出題です！</span>
+            </p>
+          </div>
+          <button className="submit" onClick={() => setQuizPhase('scrolling')} disabled={isLoadingLyrics}>
+            {isLoadingLyrics ? '読み込み中...' : '歌詞を確認する'}
+          </button>
+          <button className="back-btn announce-skip-btn" onClick={() => setQuizPhase('question')}>スキップして問題へ</button>
+        </div>
+      )}
+
+      {/* --- 検定モード：全歌詞スクロール画面 --- */}
+      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'scrolling' && (
+        <div className="box quiz-scrolling-card">
+          <div className="scrolling-topbar">
+            <p className="scrolling-song-name">{quizCurr?.song_name}</p>
+            <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
+          </div>
+          <div className="scrolling-lyrics-body">
+            {isLoadingLyrics ? (
+              <p className="scrolling-loading">読み込み中...</p>
+            ) : fullSongLyrics.map(row => {
+              const isQ = row.lyrics_id === quizCurr?.lyrics_id;
+              return (
+                <div key={row.lyrics_id}
+                     ref={isQ ? questionLyricScrollRef : null}
+                     className={`scrolling-lyric-row${isQ ? ' scrolling-lyric-target' : ''}`}>
+                  {row.lyrics}
+                </div>
+              );
+            })}
+          </div>
+          <div className="scrolling-bottom-bar">
+            <button className="submit" onClick={() => setQuizPhase('question')}>問題へ →</button>
+          </div>
+        </div>
+      )}
+
       {/* --- クイズ画面 --- */}
-      {screen === 'quiz' && (
+      {screen === 'quiz' && (gameMode !== 'normal' || quizPhase === 'question') && (
         <div className="box quiz-card zoom-in">
           {/* カスタムモード：上部ボタン行 */}
           {gameMode === 'custom' && (
@@ -1812,6 +1907,12 @@ function App() {
               </div>
               <span className={`quiz-qtimer-num${questionTimer <= 10 ? ' danger' : ''}`}>{questionTimer}秒</span>
             </div>
+          )}
+          {/* 検定モード：歌詞全体確認ボタン */}
+          {gameMode === 'normal' && (
+            <button className="lyrics-toggle-btn" onClick={() => setShowFullLyrics(v => !v)}>
+              {showFullLyrics ? '問題の歌詞に戻る' : '歌詞全体を確認する'}
+            </button>
           )}
           <h2 className="title quiz-title">だれが歌ってる？</h2>
 
@@ -1890,6 +1991,28 @@ function App() {
               {gameMode === 'endless' && endlessNextQLoading ? '読み込み中…' : '次の問題へ'}
             </button>
           )}
+        </div>
+      )}
+
+      {/* --- 検定モード：全歌詞オーバーレイ --- */}
+      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'question' && showFullLyrics && (
+        <div className="full-lyrics-overlay">
+          <div className="full-lyrics-overlay-header">
+            <p className="full-lyrics-song-name">{quizCurr?.song_name}</p>
+            <button className="full-lyrics-close-btn" onClick={() => setShowFullLyrics(false)}>問題に戻る</button>
+          </div>
+          <div className="full-lyrics-overlay-body">
+            {fullSongLyrics.map(row => {
+              const isQ = row.lyrics_id === quizCurr?.lyrics_id;
+              return (
+                <div key={row.lyrics_id}
+                     ref={isQ ? fullLyricsHighlightRef : null}
+                     className={`full-lyrics-row${isQ ? ' full-lyrics-highlight' : ''}`}>
+                  {row.lyrics}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
