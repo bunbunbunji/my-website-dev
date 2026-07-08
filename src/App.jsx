@@ -224,7 +224,8 @@ function App() {
   const listBtnRef = useRef(null);
 
 
-  const debugMode = new URLSearchParams(window.location.search).has('debug');
+  const DEBUG_ENABLED = true; // ?debug によるデバッグモードを有効にする (本番マージ時は false に)
+  const debugMode = DEBUG_ENABLED && new URLSearchParams(window.location.search).has('debug');
   const [debugScore, setDebugScore] = useState(0);
   const [debugGroup, setDebugGroup] = useState('FRUITS ZIPPER');
   const [debugDiff, setDebugDiff] = useState('easy');
