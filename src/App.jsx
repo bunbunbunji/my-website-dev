@@ -54,6 +54,64 @@ const renderLyricsWithOccurrence = (lyrics, occurrence) => {
   return result;
 };
 
+// lyric_col に基づいて歌詞行をグループ化する
+// col=null → 単独行, col=1 → グループ開始, col=2以上 → 直前グループの末尾に追記
+const groupLyricRows = (rows) => {
+  const groups = [];
+  let cur = null;
+  rows.forEach(row => {
+    if (!row.lyric_col || row.lyric_col === 1) {
+      if (cur) groups.push(cur);
+      if (!row.lyric_col) {
+        groups.push({ type: 'single', row });
+        cur = null;
+      } else {
+        cur = { type: 'group', base: row, appends: [] };
+      }
+    } else {
+      if (cur) cur.appends.push(row);
+      else groups.push({ type: 'single', row }); // fallback
+    }
+  });
+  if (cur) groups.push(cur);
+  return groups;
+};
+
+// グループ化済み歌詞をJSXに変換する
+// baseClass: 通常行のクラス名, targetClass: 問題行のクラス名
+const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-lyric-row', targetClass = 'scrolling-lyric-target') => {
+  const spaceChar = (sp) => sp === 'half' ? ' ' : sp === 'full' ? '　' : '';
+  const cls = `${baseClass}${isTarget ? ` ${targetClass}` : ''}`;
+
+  if (group.type === 'single') {
+    return (
+      <div {...refProp} className={cls}>
+        {group.row.lyrics}
+      </div>
+    );
+  }
+
+  // col=1 のテキストを行分割し、最終行に col=2以降をインラインで追記
+  const lines = (group.base.lyrics || '').split('\n');
+  const lastLine = lines[lines.length - 1];
+  const prevLines = lines.slice(0, -1);
+
+  return (
+    <div {...refProp} className={cls}>
+      {prevLines.map((line, i) => <Fragment key={i}>{line}<br /></Fragment>)}
+      <span>{lastLine}</span>
+      {group.appends.map((ap, ai) => {
+        const prevRow = ai === 0 ? group.base : group.appends[ai - 1];
+        return (
+          <span key={ai} className="lyric-inline-append">
+            {spaceChar(prevRow.col_space)}{ap.lyrics}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
 function App() {
   const [termsAgreed, setTermsAgreed] = useState(() =>
     localStorage.getItem('kawaii_terms_agreed') === 'true'
@@ -217,6 +275,8 @@ function App() {
   const commentRef = useRef(null);
   const questionLyricScrollRef = useRef(null);
   const fullLyricsHighlightRef = useRef(null);
+  const lyricBodyRef = useRef(null);
+  const [scrollAnimPhase, setScrollAnimPhase] = useState('scrolling'); // 'scrolling' | 'zooming'
   const rankRef = useRef(null);
   const descTextRef = useRef(null);
   const catchText1Ref = useRef(null);
@@ -226,6 +286,8 @@ function App() {
 
   const DEBUG_ENABLED = true; // ?debug によるデバッグモードを有効にする (本番マージ時は false に)
   const debugMode = DEBUG_ENABLED && new URLSearchParams(window.location.search).has('debug');
+  // 開発中のみ: lyric_col/col_space 整備済みの曲に限定 (本番マージ時は null に)
+  const DEV_SOUNDS_IDS = [10, 60, 88];
   const [debugScore, setDebugScore] = useState(0);
   const [debugGroup, setDebugGroup] = useState('FRUITS ZIPPER');
   const [debugDiff, setDebugDiff] = useState('easy');
@@ -285,7 +347,7 @@ function App() {
     let from = 0;
     let hasMore = true;
     while (hasMore) {
-      const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups).range(from, from + 999);
+      const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
       if (!data || data.length === 0) { hasMore = false; }
       else { allData = [...allData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
     }
@@ -318,7 +380,7 @@ function App() {
         let from = 0;
         let hasMore = true;
         while (hasMore) {
-          const { data } = await supabase.from('quiz_full').select('*').eq('group_name', group).range(from, from + 999);
+          const { data } = await supabase.from('quiz_full').select('*').eq('group_name', group).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
           if (!data || data.length === 0) { hasMore = false; }
           else { groupData = [...groupData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
         }
@@ -546,7 +608,7 @@ function App() {
       allData = [];
       let from = 0;
       while (true) {
-        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
         if (!data || data.length === 0) break;
         allData = allData.concat(data);
         if (data.length < 1000) break;
@@ -606,7 +668,7 @@ function App() {
       let from = 0;
       let hasMore = true;
       while (hasMore) {
-        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
         if (!data || data.length === 0) { hasMore = false; }
         else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
       }
@@ -666,6 +728,7 @@ function App() {
         const { data, error } = await supabase
           .from('quiz_full')
           .select('group_name, song_name')
+          .in('sounds_id', DEV_SOUNDS_IDS)
           .range(from, from + 999);
 
         if (error) throw error;
@@ -920,16 +983,46 @@ function App() {
     if (quizPhase !== 'announce' || gameMode !== 'normal') return;
     const curr = quizState.quizzes[quizState.currentIndex];
     if (curr?.sounds_id) fetchSongLyrics(curr.sounds_id);
+    // 2秒後に自動でスクロール画面へ
+    const t = setTimeout(() => setQuizPhase('scrolling'), 2000);
+    return () => clearTimeout(t);
   }, [quizPhase, quizState.currentIndex, gameMode]);
 
-  // --- 検定モード：全歌詞スクロール時に問題箇所へ自動スクロール ---
+  // --- 検定モード：全歌詞スクロールアニメーション ---
   useEffect(() => {
     if (quizPhase !== 'scrolling') return;
-    const t = setTimeout(() => {
-      questionLyricScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 600);
-    return () => clearTimeout(t);
-  }, [quizPhase]);
+    setScrollAnimPhase('scrolling');
+    const container = lyricBodyRef.current;
+    if (!container || isLoadingLyrics) return;
+
+    container.scrollTop = 0;
+    const totalHeight = container.scrollHeight - container.clientHeight;
+    if (totalHeight <= 0) { setQuizPhase('question'); return; }
+
+    const scrollDuration = Math.min(Math.max(fullSongLyrics.length * 60, 1500), 3000);
+    const startTime = performance.now();
+    let rafId;
+
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / scrollDuration, 1);
+      container.scrollTop = progress * totalHeight;
+      if (progress < 1) {
+        rafId = requestAnimationFrame(step);
+      } else {
+        // 下端に到達→ズームフェーズへ
+        setTimeout(() => {
+          setScrollAnimPhase('zooming');
+          questionLyricScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // ズームアニメーション完了後にクイズ画面へ
+          setTimeout(() => setQuizPhase('question'), 1400);
+        }, 400);
+      }
+    };
+
+    const startDelay = setTimeout(() => { rafId = requestAnimationFrame(step); }, 300);
+    return () => { clearTimeout(startDelay); cancelAnimationFrame(rafId); };
+  }, [quizPhase, isLoadingLyrics]);
 
   // --- 検定モード：全歌詞オーバーレイ表示時に問題箇所へスクロール ---
   useEffect(() => {
@@ -1796,10 +1889,7 @@ function App() {
 
       {/* --- 検定モード：アナウンス画面 --- */}
       {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'announce' && (
-        <div className="box quiz-announce-card zoom-in">
-          <div className="progress-container">
-            <div className="progress-bar" style={{width: `${(quizState.currentIndex + 1) / quizState.quizzes.length * 100}%`}}></div>
-          </div>
+        <div className="quiz-announce-overlay">
           <div className="announce-main">
             <p className="announce-question-num">第{quizState.currentIndex + 1}問</p>
             <p className="announce-from-text">
@@ -1808,10 +1898,7 @@ function App() {
               <span className="announce-from-suffix">からの出題です！</span>
             </p>
           </div>
-          <button className="submit" onClick={() => setQuizPhase('scrolling')} disabled={isLoadingLyrics}>
-            {isLoadingLyrics ? '読み込み中...' : '歌詞を確認する'}
-          </button>
-          <button className="back-btn announce-skip-btn" onClick={() => setQuizPhase('question')}>スキップして問題へ</button>
+          <button className="announce-skip-btn-overlay" onClick={() => setQuizPhase('question')}>スキップ →</button>
         </div>
       )}
 
@@ -1822,22 +1909,17 @@ function App() {
             <p className="scrolling-song-name">{quizCurr?.song_name}</p>
             <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
           </div>
-          <div className="scrolling-lyrics-body">
+          <div ref={lyricBodyRef} className={`scrolling-lyrics-body${scrollAnimPhase === 'zooming' ? ' is-zooming' : ''}`}>
             {isLoadingLyrics ? (
               <p className="scrolling-loading">読み込み中...</p>
-            ) : fullSongLyrics.map(row => {
-              const isQ = row.lyrics_id === quizCurr?.lyrics_id;
-              return (
-                <div key={row.lyrics_id}
-                     ref={isQ ? questionLyricScrollRef : null}
-                     className={`scrolling-lyric-row${isQ ? ' scrolling-lyric-target' : ''}`}>
-                  {row.lyrics}
-                </div>
-              );
+            ) : groupLyricRows(fullSongLyrics).map((group) => {
+              const ids = group.type === 'single'
+                ? [group.row.lyrics_id]
+                : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
+              const isQ = ids.includes(quizCurr?.lyrics_id);
+              const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
+              return renderLyricGroup(group, isQ, { key, ref: isQ ? questionLyricScrollRef : null });
             })}
-          </div>
-          <div className="scrolling-bottom-bar">
-            <button className="submit" onClick={() => setQuizPhase('question')}>問題へ →</button>
           </div>
         </div>
       )}
@@ -2003,14 +2085,16 @@ function App() {
             <button className="full-lyrics-close-btn" onClick={() => setShowFullLyrics(false)}>問題に戻る</button>
           </div>
           <div className="full-lyrics-overlay-body">
-            {fullSongLyrics.map(row => {
-              const isQ = row.lyrics_id === quizCurr?.lyrics_id;
-              return (
-                <div key={row.lyrics_id}
-                     ref={isQ ? fullLyricsHighlightRef : null}
-                     className={`full-lyrics-row${isQ ? ' full-lyrics-highlight' : ''}`}>
-                  {row.lyrics}
-                </div>
+            {groupLyricRows(fullSongLyrics).map((group) => {
+              const ids = group.type === 'single'
+                ? [group.row.lyrics_id]
+                : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
+              const isQ = ids.includes(quizCurr?.lyrics_id);
+              const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
+              return renderLyricGroup(
+                group, isQ,
+                { key, ref: isQ ? fullLyricsHighlightRef : null },
+                'full-lyrics-row', 'full-lyrics-highlight'
               );
             })}
           </div>
