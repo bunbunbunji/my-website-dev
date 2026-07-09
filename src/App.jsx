@@ -79,14 +79,17 @@ const groupLyricRows = (rows) => {
 
 // グループ化済み歌詞をJSXに変換する
 // baseClass: 通常行のクラス名, targetClass: 問題行のクラス名
-const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-lyric-row', targetClass = 'scrolling-lyric-target') => {
+// targetLyricsId: グループ内のどの歌詞を点滅させるかを指定するID
+const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-lyric-row', targetClass = 'scrolling-lyric-target', targetLyricsId = null) => {
   const spaceChar = (sp) => sp === 'half' ? ' ' : sp === 'full' ? '　' : '';
   const cls = `${baseClass}${isTarget ? ` ${targetClass}` : ''}`;
 
   if (group.type === 'single') {
     return (
       <div {...refProp} className={cls}>
-        {group.row.lyrics}
+        {isTarget
+          ? <span className="lyric-blink-text">{group.row.lyrics}</span>
+          : group.row.lyrics}
       </div>
     );
   }
@@ -96,18 +99,41 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
   const lastLine = lines[lines.length - 1];
   const prevLines = lines.slice(0, -1);
 
-  return (
-    <div {...refProp} className={cls}>
-      {prevLines.map((line, i) => <Fragment key={i}>{line}<br /></Fragment>)}
-      <span>{lastLine}</span>
+  // targetLyricsId が指定されていれば、対象の歌詞だけに lyric-blink-text を適用
+  const baseIsTarget = isTarget && targetLyricsId != null && group.base.lyrics_id === targetLyricsId;
+  const shouldDimOthers = isTarget && targetLyricsId != null;
+
+  const groupContent = (
+    <>
+      {prevLines.map((line, i) => (
+        <Fragment key={i}>
+          {baseIsTarget
+            ? <span className="lyric-blink-text">{line}</span>
+            : shouldDimOthers ? <span className="lyric-group-dim">{line}</span> : line}
+          <br />
+        </Fragment>
+      ))}
+      {baseIsTarget
+        ? <span className="lyric-blink-text">{lastLine}</span>
+        : <span className={shouldDimOthers ? 'lyric-group-dim' : undefined}>{lastLine}</span>}
       {group.appends.map((ap, ai) => {
         const prevRow = ai === 0 ? group.base : group.appends[ai - 1];
+        const apIsTarget = isTarget && targetLyricsId != null && ap.lyrics_id === targetLyricsId;
         return (
-          <span key={ai} className="lyric-inline-append">
-            {spaceChar(prevRow.col_space)}{ap.lyrics}
+          <span key={ai} className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
+            {spaceChar(prevRow.col_space)}
+            {apIsTarget
+              ? <span className="lyric-blink-text">{ap.lyrics}</span>
+              : ap.lyrics}
           </span>
         );
       })}
+    </>
+  );
+
+  return (
+    <div {...refProp} className={cls}>
+      {groupContent}
     </div>
   );
 };
@@ -1918,7 +1944,7 @@ function App() {
                 : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
               const isQ = ids.includes(quizCurr?.lyrics_id);
               const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
-              return renderLyricGroup(group, isQ, { key, ref: isQ ? questionLyricScrollRef : null });
+              return renderLyricGroup(group, isQ, { key, ref: isQ ? questionLyricScrollRef : null }, 'scrolling-lyric-row', 'scrolling-lyric-target', quizCurr?.lyrics_id);
             })}
           </div>
         </div>
@@ -2077,26 +2103,27 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定モード：全歌詞オーバーレイ --- */}
+      {/* --- 検定モード：全歌詞モーダル --- */}
       {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'question' && showFullLyrics && (
-        <div className="full-lyrics-overlay">
-          <div className="full-lyrics-overlay-header">
-            <p className="full-lyrics-song-name">{quizCurr?.song_name}</p>
-            <button className="full-lyrics-close-btn" onClick={() => setShowFullLyrics(false)}>問題に戻る</button>
-          </div>
-          <div className="full-lyrics-overlay-body">
-            {groupLyricRows(fullSongLyrics).map((group) => {
-              const ids = group.type === 'single'
-                ? [group.row.lyrics_id]
-                : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
-              const isQ = ids.includes(quizCurr?.lyrics_id);
-              const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
-              return renderLyricGroup(
-                group, isQ,
-                { key, ref: isQ ? fullLyricsHighlightRef : null },
-                'full-lyrics-row', 'full-lyrics-highlight'
-              );
-            })}
+        <div className="modal-overlay" onClick={() => setShowFullLyrics(false)}>
+          <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
+            <h2>{quizCurr?.song_name}</h2>
+            <div className="song-modal-list">
+              {groupLyricRows(fullSongLyrics).map((group) => {
+                const ids = group.type === 'single'
+                  ? [group.row.lyrics_id]
+                  : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
+                const isQ = ids.includes(quizCurr?.lyrics_id);
+                const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
+                return renderLyricGroup(
+                  group, isQ,
+                  { key, ref: isQ ? fullLyricsHighlightRef : null },
+                  'full-lyrics-row', 'full-lyrics-highlight',
+                  quizCurr?.lyrics_id
+                );
+              })}
+            </div>
+            <button className="modal-close-btn" onClick={() => setShowFullLyrics(false)}>問題に戻る</button>
           </div>
         </div>
       )}

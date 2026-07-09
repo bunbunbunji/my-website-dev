@@ -2456,6 +2456,10 @@ body::before {
   opacity: 0.2;
   transition: opacity 0.6s ease;
 }
+/* ターゲット行は opacity を 1 に戻す（他の行だけ dimにする） */
+.scrolling-lyrics-body.is-zooming .scrolling-lyric-target {
+  opacity: 1;
+}
 .scrolling-loading {
   text-align: center;
   color: #aaa;
@@ -2476,12 +2480,17 @@ body::before {
 .scrolling-lyric-target {
   color: #333;
 }
-.scrolling-lyrics-body.is-zooming .scrolling-lyric-target {
+/* 同グループ内で選ばれなかった歌詞は他の行と同様に薄く表示 */
+.scrolling-lyrics-body.is-zooming .lyric-group-dim {
+  opacity: 0.2;
+}
+/* テキスト文字だけ点滅 — color:transparent で文字だけ消え、左ボーダーは常に残る */
+.scrolling-lyrics-body.is-zooming .lyric-blink-text {
   animation: lyric-blink 0.5s step-end infinite;
 }
 @keyframes lyric-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
+  0%, 100% { color: #333; }
+  50%       { color: transparent; }
 }
 .scrolling-bottom-bar {
   padding: 12px 16px;
@@ -2512,54 +2521,7 @@ body::before {
 }
 
 /* 全歌詞オーバーレイ */
-.full-lyrics-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--white);
-  z-index: 500;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.full-lyrics-overlay-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1.5px solid #ffb6c1;
-  background: #fff0f5;
-  flex-shrink: 0;
-}
-.full-lyrics-song-name {
-  font-family: 'Mochiy Pop One', sans-serif;
-  font-size: clamp(0.85rem, 4vw, 1.1rem);
-  color: #c2185b;
-  margin: 0;
-  flex: 1;
-  padding-right: 12px;
-  word-break: break-all;
-}
-.full-lyrics-close-btn {
-  background: #ff69b2;
-  color: #fff;
-  border: none;
-  border-radius: 50px;
-  padding: 8px 18px;
-  font-size: 0.85rem;
-  font-family: 'Mochiy Pop One', sans-serif;
-  cursor: pointer;
-  white-space: nowrap;
-  box-shadow: 0 3px 0 #d81b60;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.full-lyrics-close-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 0 #d81b60; }
-.full-lyrics-overlay-body {
-  overflow-y: auto;
-  flex: 1;
-  padding: 16px 24px;
-  text-align: left;
-}
+/* 全歌詞モーダル内の各行 */
 .full-lyrics-row {
   font-size: 0.9rem;
   line-height: 1.9;
