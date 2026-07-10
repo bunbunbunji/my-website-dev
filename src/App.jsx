@@ -138,6 +138,25 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
   );
 };
 
+const SLOT_ITEM_H = 72;  // リール1行の高さ(px) — CSS --slot-h と合わせること
+const SLOT_CYCLES  = 3;  // スロットが何周してから止まるか
+const SLOT_COPIES  = SLOT_CYCLES + 2;
+
+// リール描画・アニメーションに必要な絶対座標を計算
+const getSlotParams = (n, target) => ({
+  startAbsIdx: 2 * n + target,            // アニメーション開始位置
+  endAbsIdx:   SLOT_COPIES * n + target,  // ターゲット着地位置
+  trackItems:  SLOT_COPIES * n + target + 2,
+});
+
+// 速度が連続なイージング: 等速(70%) → cubic ease-out(30%)
+// 速度の不連続ゼロ: v(0.7-) = 0.875/0.7 = 1.25 / v(0.7+) = 0.125/0.3*3 = 1.25
+const slotEase = (t) => {
+  if (t < 0.7) return (t / 0.7) * 0.875;
+  const t2 = (t - 0.7) / 0.3;
+  return 0.875 + 0.125 * (1 - Math.pow(1 - t2, 3));
+};
+
 function App() {
   const [termsAgreed, setTermsAgreed] = useState(() =>
     localStorage.getItem('kawaii_terms_agreed') === 'true'
@@ -301,8 +320,11 @@ function App() {
   const commentRef = useRef(null);
   const questionLyricScrollRef = useRef(null);
   const fullLyricsHighlightRef = useRef(null);
-  const lyricBodyRef = useRef(null);
+  const lyricBodyRef  = useRef(null);
+  const slotTrackRef  = useRef(null);
+  const slotDelayRef  = useRef(100);
   const [scrollAnimPhase, setScrollAnimPhase] = useState('scrolling'); // 'scrolling' | 'zooming'
+  const [slotIndex, setSlotIndex] = useState(0);
   const rankRef = useRef(null);
   const descTextRef = useRef(null);
   const catchText1Ref = useRef(null);
@@ -1014,41 +1036,60 @@ function App() {
     return () => clearTimeout(t);
   }, [quizPhase, quizState.currentIndex, gameMode]);
 
-  // --- 検定モード：全歌詞スクロールアニメーション ---
+  // --- 検定モード：スロットアニメーション (rAF 連続更新) ---
   useEffect(() => {
     if (quizPhase !== 'scrolling') return;
     setScrollAnimPhase('scrolling');
-    const container = lyricBodyRef.current;
-    if (!container || isLoadingLyrics) return;
+    if (!fullSongLyrics.length || isLoadingLyrics) return;
 
-    container.scrollTop = 0;
-    const totalHeight = container.scrollHeight - container.clientHeight;
-    if (totalHeight <= 0) { setQuizPhase('question'); return; }
+    const groups = groupLyricRows(fullSongLyrics);
+    const n = groups.length;
+    if (n === 0) { setQuizPhase('question'); return; }
 
-    const scrollDuration = Math.min(Math.max(fullSongLyrics.length * 60, 1500), 3000);
-    const startTime = performance.now();
+    const targetGroupIdx = groups.findIndex(g =>
+      g.type === 'single'
+        ? g.row.lyrics_id === quizCurr?.lyrics_id
+        : g.base.lyrics_id === quizCurr?.lyrics_id || g.appends.some(a => a.lyrics_id === quizCurr?.lyrics_id)
+    );
+    const target = targetGroupIdx >= 0 ? targetGroupIdx : 0;
+    const { startAbsIdx, endAbsIdx } = getSlotParams(n, target);
+
+    const TOTAL_DURATION = 3200; // ms
+    // センターに表示したい行のインデックスを translateY に変換: -(absIdx - 1) * H
+    const startY = (startAbsIdx - 1) * SLOT_ITEM_H;
+    const endY   = (endAbsIdx   - 1) * SLOT_ITEM_H;
+
+    const track = slotTrackRef.current;
+    if (!track) { setQuizPhase('question'); return; }
+
+    // CSS transition を無効化し rAF で直接制御
+    track.style.transition = 'none';
+    track.style.transform  = `translateY(${-startY}px)`;
+
+    let startTime = null;
     let rafId;
 
-    const step = (now) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / scrollDuration, 1);
-      container.scrollTop = progress * totalHeight;
-      if (progress < 1) {
-        rafId = requestAnimationFrame(step);
+    const animate = (ts) => {
+      if (!startTime) startTime = ts;
+      const t = Math.min((ts - startTime) / TOTAL_DURATION, 1);
+      const y = startY + (endY - startY) * slotEase(t);
+      track.style.transform = `translateY(${-y}px)`;
+
+      if (t < 1) {
+        rafId = requestAnimationFrame(animate);
       } else {
-        // 下端に到達→ズームフェーズへ
+        track.style.transform = `translateY(${-endY}px)`;
+        setSlotIndex(endAbsIdx);
         setTimeout(() => {
           setScrollAnimPhase('zooming');
-          questionLyricScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // ズームアニメーション完了後にクイズ画面へ
-          setTimeout(() => setQuizPhase('question'), 1400);
-        }, 400);
+          setTimeout(() => setQuizPhase('question'), 1600);
+        }, 200);
       }
     };
 
-    const startDelay = setTimeout(() => { rafId = requestAnimationFrame(step); }, 300);
-    return () => { clearTimeout(startDelay); cancelAnimationFrame(rafId); };
-  }, [quizPhase, isLoadingLyrics]);
+    rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
+  }, [quizPhase, isLoadingLyrics, fullSongLyrics]);
 
   // --- 検定モード：全歌詞オーバーレイ表示時に問題箇所へスクロール ---
   useEffect(() => {
@@ -1928,27 +1969,49 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定モード：全歌詞スクロール画面 --- */}
-      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'scrolling' && (
-        <div className="box quiz-scrolling-card">
-          <div className="scrolling-topbar">
-            <p className="scrolling-song-name">{quizCurr?.song_name}</p>
-            <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
-          </div>
-          <div ref={lyricBodyRef} className={`scrolling-lyrics-body${scrollAnimPhase === 'zooming' ? ' is-zooming' : ''}`}>
+      {/* --- 検定モード：スロット演出画面 --- */}
+      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'scrolling' && (() => {
+        const groups = groupLyricRows(fullSongLyrics);
+        const n = groups.length;
+        const isZooming = scrollAnimPhase === 'zooming';
+        const targetGroupIdx = n > 0 ? groups.findIndex(g =>
+          g.type === 'single'
+            ? g.row.lyrics_id === quizCurr?.lyrics_id
+            : g.base.lyrics_id === quizCurr?.lyrics_id || g.appends.some(a => a.lyrics_id === quizCurr?.lyrics_id)
+        ) : -1;
+        const target = targetGroupIdx >= 0 ? targetGroupIdx : 0;
+        const { trackItems } = n > 0 ? getSlotParams(n, target) : { trackItems: 0 };
+        return (
+          <div className="box quiz-scrolling-card">
+            <div className="scrolling-topbar">
+              <p className="scrolling-song-name">{quizCurr?.song_name}</p>
+              <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
+            </div>
             {isLoadingLyrics ? (
               <p className="scrolling-loading">読み込み中...</p>
-            ) : groupLyricRows(fullSongLyrics).map((group) => {
-              const ids = group.type === 'single'
-                ? [group.row.lyrics_id]
-                : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
-              const isQ = ids.includes(quizCurr?.lyrics_id);
-              const key = group.type === 'single' ? group.row.lyrics_id : group.base.lyrics_id;
-              return renderLyricGroup(group, isQ, { key, ref: isQ ? questionLyricScrollRef : null }, 'scrolling-lyric-row', 'scrolling-lyric-target', quizCurr?.lyrics_id);
-            })}
+            ) : (
+              <div className={`slot-window${isZooming ? ' is-zooming' : ''}`}>
+                {/* 連続リール：trackItems 行を縦に並べ、translateY でスライドする */}
+                <div className="slot-viewport">
+                  <div ref={slotTrackRef} className="slot-track">
+                    {Array.from({ length: trackItems }, (_, i) => {
+                      const group = groups[i % n];
+                      const isTarget = isZooming && i === slotIndex;
+                      return (
+                        <div key={i} className={`slot-item${isTarget ? ' slot-item-target' : ''}`}>
+                          {group ? renderLyricGroup(group, false, {}, 'slot-lyric', '') : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="slot-fade-top" />
+                <div className="slot-fade-bottom" />
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* --- クイズ画面 --- */}
       {screen === 'quiz' && (gameMode !== 'normal' || quizPhase === 'question') && (

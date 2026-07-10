@@ -2503,6 +2503,93 @@ body::before {
   margin: 0 auto;
 }
 
+/* ===== スロットアニメーション ===== */
+:root { --slot-h: 72px; }
+
+.slot-window {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 3行分のビューポート（中央がセンター行） */
+.slot-viewport {
+  height: calc(var(--slot-h) * 3);
+  overflow: hidden;
+  position: relative;
+}
+
+/* センター行を囲むボーダー */
+.slot-viewport::before {
+  content: '';
+  position: absolute;
+  top: var(--slot-h);
+  left: 12px; right: 12px;
+  height: var(--slot-h);
+  border-top: 2px solid #ffb6c1;
+  border-bottom: 2px solid #ffb6c1;
+  z-index: 2;
+  pointer-events: none;
+}
+.slot-window.is-zooming .slot-viewport::before {
+  border-color: #ff69b2;
+  box-shadow: 0 0 12px rgba(255, 105, 180, 0.4);
+}
+
+/* リール本体：rAF が毎フレーム translateY を直接書き換える（transition 不要） */
+.slot-track {
+  width: 100%;
+  will-change: transform;
+}
+
+/* 各行（固定高さでリールが揃う） */
+.slot-item {
+  height: var(--slot-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #777;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: hidden;
+}
+
+/* 上下グラデーションでスロット窓の外側をフェード */
+.slot-fade-top,
+.slot-fade-bottom {
+  position: absolute;
+  left: 0; right: 0;
+  height: calc(var(--slot-h) + 8px);
+  pointer-events: none;
+  z-index: 3;
+}
+.slot-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, var(--white, #fff) 25%, transparent 100%);
+}
+.slot-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, var(--white, #fff) 25%, transparent 100%);
+}
+
+/* 停止後に中央アイテムが点滅 */
+.slot-item-target {
+  color: #e0005a !important;
+  font-weight: bold;
+  animation: slot-blink 0.42s step-end infinite;
+}
+@keyframes slot-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
 /* 歌詞全体確認ボタン（問題画面内） */
 .lyrics-toggle-btn {
   display: block;
