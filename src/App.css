@@ -2487,7 +2487,7 @@ body::before {
 }
 /* テキスト文字だけ点滅 — color:transparent で文字だけ消え、左ボーダーは常に残る */
 .scrolling-lyrics-body.is-zooming .lyric-blink-text {
-  animation: lyric-blink 0.5s step-end infinite;
+  animation: lyric-blink 1s step-end infinite;
 }
 @keyframes lyric-blink {
   0%, 100% { color: #333; }
