@@ -535,10 +535,10 @@ function App() {
     setSelectedMembers(new Set());
     setPendingResume(null);
     if (gameMode === 'normal') {
-      setFullSongLyrics([]);
       setShowFullLyrics(false);
+      setScrollAnimPhase('scrolling');
       const firstQuiz = quizState.quizzes[quizState.currentIndex];
-      if (firstQuiz?.sounds_id) fetchSongLyrics(firstQuiz.sounds_id);
+      if (firstQuiz?.sounds_id) await fetchSongLyrics(firstQuiz.sounds_id);
       setQuizPhase('announce');
     }
     setScreen('quiz');
@@ -885,7 +885,7 @@ function App() {
     setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
   };
 
-  const nextQuestion = () => {
+  const nextQuestion = async () => {
     if (gameMode === 'endless') { advanceEndlessQuestion(); return; }
     if (gameMode === 'custom') { nextCustomQuestion(); return; }
     // 検定モード
@@ -894,14 +894,16 @@ function App() {
       setScreen('result');
       return;
     }
+    // 先に歌詞を取得してからannounceへ（モーダル表示時に歌詞が確実に表示される）
+    const nextQuiz = quizState.quizzes[nextIndex];
+    if (nextQuiz?.sounds_id) await fetchSongLyrics(nextQuiz.sounds_id);
     setQuestionTimer(60);
     setQuizState(prev => ({ ...prev, currentIndex: nextIndex }));
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: "", type: "" });
     setShowFullLyrics(false);
-    const nextQuiz = quizState.quizzes[nextIndex];
-    if (nextQuiz?.sounds_id) fetchSongLyrics(nextQuiz.sounds_id);
+    setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1049,10 +1051,19 @@ function App() {
             rafId = requestAnimationFrame(animate);
           } else {
             body.scrollTop = endScroll;
+            // 3秒スクロール後、対象歌詞を中央に再スクロール
+            const targetEl = questionLyricScrollRef.current;
+            if (targetEl) {
+              const targetScrollTop = Math.max(0, Math.min(
+                targetEl.offsetTop - body.clientHeight / 2 + targetEl.clientHeight / 2,
+                body.scrollHeight - body.clientHeight
+              ));
+              body.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+            }
             setTimeout(() => {
               setScrollAnimPhase('zooming');
               setTimeout(() => setQuizPhase('question'), 1600);
-            }, 200);
+            }, 700);
           }
         };
 
