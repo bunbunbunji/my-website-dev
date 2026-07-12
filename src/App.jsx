@@ -537,8 +537,6 @@ function App() {
     if (gameMode === 'normal') {
       setShowFullLyrics(false);
       setScrollAnimPhase('scrolling');
-      const firstQuiz = quizState.quizzes[quizState.currentIndex];
-      if (firstQuiz?.sounds_id) await fetchSongLyrics(firstQuiz.sounds_id);
       setQuizPhase('announce');
     }
     setScreen('quiz');
@@ -678,6 +676,9 @@ function App() {
       }))
     ));
     const quizzesWithSurrounds = selectedQuizzes.map(addSurrounds);
+    // 1問目の歌詞をアナウンス前に取得（announce時に即座に表示するため）
+    const firstSoundsId = quizzesWithSurrounds[0]?.sounds_id;
+    if (firstSoundsId) await fetchSongLyrics(firstSoundsId);
     setQuizState(prev => ({ ...prev, quizzes: quizzesWithSurrounds, currentIndex: 0, correctCount: 0 }));
     setMembers(mData || []);
     setIsPreparing(false);
