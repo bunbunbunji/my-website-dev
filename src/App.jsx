@@ -537,6 +537,8 @@ function App() {
     if (gameMode === 'normal') {
       setFullSongLyrics([]);
       setShowFullLyrics(false);
+      const firstQuiz = quizState.quizzes[quizState.currentIndex];
+      if (firstQuiz?.sounds_id) fetchSongLyrics(firstQuiz.sounds_id);
       setQuizPhase('announce');
     }
     setScreen('quiz');
@@ -898,6 +900,8 @@ function App() {
     setAnswered(false);
     setResultMsg({ text: "", type: "" });
     setShowFullLyrics(false);
+    const nextQuiz = quizState.quizzes[nextIndex];
+    if (nextQuiz?.sounds_id) fetchSongLyrics(nextQuiz.sounds_id);
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1008,8 +1012,6 @@ function App() {
   // --- 検定モード：アナウンス時に song_lyrics を取得 ---
   useEffect(() => {
     if (quizPhase !== 'announce' || gameMode !== 'normal') return;
-    const curr = quizState.quizzes[quizState.currentIndex];
-    if (curr?.sounds_id) fetchSongLyrics(curr.sounds_id);
     // 2秒後に自動でスクロール画面へ
     const t = setTimeout(() => setQuizPhase('scrolling'), 2000);
     return () => clearTimeout(t);
@@ -1039,8 +1041,8 @@ function App() {
         const animate = (ts) => {
           if (!startTime) startTime = ts;
           const t = Math.min((ts - startTime) / TOTAL_DURATION, 1);
-          // 等速(70%) → ease-out(30%)
-          const ease = t < 0.7 ? (t / 0.7) * 0.875 : 0.875 + 0.125 * (1 - Math.pow(1 - (t - 0.7) / 0.3, 3));
+          // cubic ease-in-out（ゆっくり開始・速く中盤・ゆっくり終了）
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
           body.scrollTop = endScroll * ease;
 
           if (t < 1) {
@@ -1950,7 +1952,7 @@ function App() {
             <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
           </div>
           <div ref={lyricBodyRef} className={`scrolling-lyrics-body${scrollAnimPhase === 'zooming' ? ' is-zooming' : ''}`}>
-            {isLoadingLyrics ? (
+            {isLoadingLyrics && quizPhase === 'scrolling' ? (
               <p className="scrolling-loading">読み込み中...</p>
             ) : groupLyricRows(fullSongLyrics).map((group) => {
               const ids = group.type === 'single'
