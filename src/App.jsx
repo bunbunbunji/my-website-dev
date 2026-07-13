@@ -475,18 +475,22 @@ function App() {
     setScreen('quiz');
   };
 
-  const nextCustomQuestion = (isSkip = false) => {
+  const nextCustomQuestion = async (isSkip = false) => {
     const queue = customQueueRef.current;
     const newQueue = isSkip ? [...queue.slice(1), queue[0]] : queue.slice(1);
     customQueueRef.current = newQueue;
     if (newQueue.length === 0) { customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ); setScreen('result'); return; }
+    const nextQ = newQueue[0];
+    if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
     setCustomRemaining(newQueue.length);
-    setQuizState(prev => ({ ...prev, quizzes: [newQueue[0]], currentIndex: 0 }));
+    setQuizState(prev => ({ ...prev, quizzes: [nextQ], currentIndex: 0 }));
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
     setCustomShowSurround(false);
     setCustomShowSongName(false);
+    setScrollAnimPhase('scrolling');
+    setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -556,13 +560,16 @@ function App() {
         localStorage.setItem('quiz_session_id', data.session_id);
         setSessionId(data.session_id);
       }
+      setScrollAnimPhase('scrolling');
+      if (currentQ?.sounds_id) await fetchSongLyrics(currentQ.sounds_id);
+      setQuizPhase('announce');
       setScreen('quiz');
       return;
     }
     // 検定モード・カスタムモード: セッション不要
     setSelectedMembers(new Set());
     setPendingResume(null);
-    if (gameMode === 'normal') {
+    if (gameMode !== 'endless') {
       setShowFullLyrics(false);
       setScrollAnimPhase('scrolling');
       setQuizPhase('announce');
@@ -614,6 +621,9 @@ function App() {
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
     setGameMode('endless');
+    setScrollAnimPhase('scrolling');
+    if (q1?.sounds_id) await fetchSongLyrics(q1.sounds_id);
+    setQuizPhase('announce');
     setScreen('quiz');
     prefetchEndlessNext(poolData, qNum + 1);
   };
@@ -928,7 +938,7 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const advanceEndlessQuestion = () => {
+  const advanceEndlessQuestion = async () => {
     // プール枯渇 → セッション削除してリザルトへ
     if (!endlessNextQ && !endlessNextQLoading) {
       if (sessionId) {
@@ -951,21 +961,16 @@ function App() {
       setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
     }
     const newQNum = endlessQNum + 1;
-    const DIFF_THRESHOLDS = {
-      11: { text: '難易度UP！',   desc: '問題が難しくなります！' },
-      21: { text: '難易度UP！',   desc: '曲名が隠れます！' },
-      36: { text: '難易度UP！',   desc: '問題が難しくなります！' },
-      51: { text: '難易度UP！',   desc: '前後の歌詞が隠れます！' },
-      71: { text: '難易度MAX！！', desc: '問題が難しくなります！' },
-    };
-    if (DIFF_THRESHOLDS[newQNum]) setEndlessDiffNotif({ ...DIFF_THRESHOLDS[newQNum], key: Date.now() });
-    else setEndlessDiffNotif({ text: '', key: 0 });
     setEndlessQNum(newQNum);
-    setQuizState(prev => ({ ...prev, quizzes: [endlessNextQ], currentIndex: 0 }));
+    const nextQ = endlessNextQ;
+    if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
+    setQuizState(prev => ({ ...prev, quizzes: [nextQ], currentIndex: 0 }));
     setEndlessNextQ(null);
     setAnswered(false);
     setSelectedMembers(new Set());
     setResultMsg({ text: "", type: "" });
+    setScrollAnimPhase('scrolling');
+    setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
     // セッション更新（次の問題・残プール・ライフ等を保存）
     if (sessionId) {
@@ -973,7 +978,7 @@ function App() {
         current_step: newQNum,
         correct_count: quizState.correctCount,
         quiz_ids: {
-          current: endlessNextQ.id,
+          current: nextQ.id,
           pool: endlessPoolRef.current.map(q => q.id),
           lives: newLives,
           consecutive: endlessConsecutive
@@ -1033,10 +1038,9 @@ function App() {
     }
   }, [questionTimer, gameMode, screen, answered, members]);
 
-  // --- 検定モード：アナウンス時に song_lyrics を取得 ---
+  // --- アナウンス画面：2秒後にスクロール画面へ ---
   useEffect(() => {
-    if (quizPhase !== 'announce' || gameMode !== 'normal') return;
-    // 2秒後に自動でスクロール画面へ
+    if (quizPhase !== 'announce') return;
     const t = setTimeout(() => setQuizPhase('scrolling'), 2000);
     return () => clearTimeout(t);
   }, [quizPhase, quizState.currentIndex, gameMode]);
@@ -1516,8 +1520,7 @@ function App() {
   };
 
   const isSingleSelectMode =
-    (gameMode === 'normal' && (quizState.difficulty === 'easy' || quizState.difficulty === 'normal')) ||
-    (gameMode === 'endless' && endlessQNum <= 35);
+    (gameMode === 'normal' && (quizState.difficulty === 'easy' || quizState.difficulty === 'normal'));
 
   const toggleMember = (name) => {
     if (answered) return;
@@ -1537,12 +1540,8 @@ function App() {
   const quizCurr = quizState.quizzes[quizState.currentIndex];
   const sp = quizCurr?.surroundPrev || [];
   const sn = quizCurr?.surroundNext || [];
-  const showSongName = gameMode === 'custom'
-    ? customShowSongName
-    : gameMode === 'endless' ? endlessQNum <= 20 : false;
-  const showSurroundHint = gameMode === 'custom'
-    ? customShowSurround
-    : gameMode === 'endless' ? endlessQNum <= 50 : false;
+  const showSongName = gameMode === 'custom' ? customShowSongName : false;
+  const showSurroundHint = gameMode === 'custom' ? customShowSurround : false;
   const needsHintActive = gameMode !== 'normal' && quizCurr?.needs_hint && !showSurroundHint;
   const quizPrevLines = (showSurroundHint || needsHintActive) ? sp.slice(-1) : [];
   const quizNextLines = showSurroundHint
@@ -1962,11 +1961,15 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定モード：アナウンス画面 --- */}
-      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'announce' && (
+      {/* --- アナウンス画面 --- */}
+      {screen === 'quiz' && quizPhase === 'announce' && (
         <div className="quiz-announce-overlay">
           <div className="announce-main">
-            <p className="announce-question-num">第{quizState.currentIndex + 1}問</p>
+            <p className="announce-question-num">
+              {gameMode === 'endless' ? `第${endlessQNum}問` :
+               gameMode === 'custom' ? `第${customTotalQ - customRemaining + 1}問` :
+               `第${quizState.currentIndex + 1}問`}
+            </p>
             <p className="announce-from-text">
               <span className="announce-song-name">{quizCurr?.song_name}</span>
               <br />
@@ -1977,8 +1980,8 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定モード：全歌詞スクロール画面（アナウンス時はバック表示） --- */}
-      {screen === 'quiz' && gameMode === 'normal' && (quizPhase === 'announce' || quizPhase === 'scrolling') && (
+      {/* --- 全歌詞スクロール画面（アナウンス時はバック表示） --- */}
+      {screen === 'quiz' && (quizPhase === 'announce' || quizPhase === 'scrolling') && (
         <div className="box quiz-scrolling-card">
           <div className="scrolling-topbar">
             <p className="scrolling-song-name">{quizCurr?.song_name}</p>
@@ -2000,7 +2003,7 @@ function App() {
       )}
 
       {/* --- クイズ画面 --- */}
-      {screen === 'quiz' && (gameMode !== 'normal' || quizPhase === 'question') && (
+      {screen === 'quiz' && quizPhase === 'question' && (
         <div className="box quiz-card zoom-in">
           {/* カスタムモード：上部ボタン行 */}
           {gameMode === 'custom' && (
@@ -2192,16 +2195,6 @@ function App() {
             }}>
               リザルトへ進む →
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* --- 難易度UPオーバーレイ --- */}
-      {screen === 'quiz' && gameMode === 'endless' && endlessDiffNotif.text && (
-        <div key={endlessDiffNotif.key} className="endless-diffup-overlay">
-          <div className={`endless-diffup-card${endlessDiffNotif.text === '難易度MAX！！' ? ' endless-diffup-max' : ''}`}>
-            <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
-            {endlessDiffNotif.desc && <div className="endless-diffup-desc">{endlessDiffNotif.desc}</div>}
           </div>
         </div>
       )}
