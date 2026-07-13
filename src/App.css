@@ -621,14 +621,6 @@ body::before {
   color: #aaa;
 }
 
-.occurrence-badge {
-  font-size: 0.65em;
-  color: #b07ab0;
-  letter-spacing: 0;
-  margin-left: 2px;
-  white-space: nowrap;
-}
-
 .song-name-hint {
   display: flex;
   align-items: center;
@@ -2487,7 +2479,7 @@ body::before {
 }
 /* テキスト文字だけ点滅 — color:transparent で文字だけ消え、左ボーダーは常に残る */
 .scrolling-lyrics-body.is-zooming .lyric-blink-text {
-  animation: lyric-blink 1s step-end infinite;
+  animation: lyric-blink 0.6s step-end infinite;
 }
 @keyframes lyric-blink {
   0%, 100% { color: #333; }
@@ -2502,93 +2494,6 @@ body::before {
 }
 .scrolling-bottom-bar .submit {
   margin: 0 auto;
-}
-
-/* ===== スロットアニメーション ===== */
-:root { --slot-h: 72px; }
-
-.slot-window {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-/* 3行分のビューポート（中央がセンター行） */
-.slot-viewport {
-  height: calc(var(--slot-h) * 3);
-  overflow: hidden;
-  position: relative;
-}
-
-/* センター行を囲むボーダー */
-.slot-viewport::before {
-  content: '';
-  position: absolute;
-  top: var(--slot-h);
-  left: 12px; right: 12px;
-  height: var(--slot-h);
-  border-top: 2px solid #ffb6c1;
-  border-bottom: 2px solid #ffb6c1;
-  z-index: 2;
-  pointer-events: none;
-}
-.slot-window.is-zooming .slot-viewport::before {
-  border-color: #ff69b2;
-  box-shadow: 0 0 12px rgba(255, 105, 180, 0.4);
-}
-
-/* リール本体：rAF が毎フレーム translateY を直接書き換える（transition 不要） */
-.slot-track {
-  width: 100%;
-  will-change: transform;
-}
-
-/* 各行（固定高さでリールが揃う） */
-.slot-item {
-  height: var(--slot-h);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: #777;
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow: hidden;
-}
-
-/* 上下グラデーションでスロット窓の外側をフェード */
-.slot-fade-top,
-.slot-fade-bottom {
-  position: absolute;
-  left: 0; right: 0;
-  height: calc(var(--slot-h) + 8px);
-  pointer-events: none;
-  z-index: 3;
-}
-.slot-fade-top {
-  top: 0;
-  background: linear-gradient(to bottom, var(--white, #fff) 25%, transparent 100%);
-}
-.slot-fade-bottom {
-  bottom: 0;
-  background: linear-gradient(to top, var(--white, #fff) 25%, transparent 100%);
-}
-
-/* 停止後に中央アイテムが点滅 */
-.slot-item-target {
-  color: #e0005a !important;
-  font-weight: bold;
-  animation: slot-blink 0.42s step-end infinite;
-}
-@keyframes slot-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
 }
 
 /* 歌詞全体確認ボタン（問題画面内） */
@@ -2608,21 +2513,23 @@ body::before {
   background: #fff0f5;
 }
 
-/* 全歌詞オーバーレイ */
-/* 全歌詞モーダル内の各行 */
+/* 全歌詞オーバーレイ（クイズ開始前の全歌詞スクロール画面と同じ書式・レイアウト） */
+.full-lyrics-list {
+  gap: 0;
+}
 .full-lyrics-row {
-  font-size: 0.9rem;
-  line-height: 1.9;
-  color: #555;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #777;
   white-space: pre-wrap;
-  padding: 1px 0;
+  padding: 2px 0;
 }
 .full-lyrics-highlight {
-  background: #fff3cd;
-  border-left: 3px solid #ff9800;
-  padding: 4px 10px;
-  margin: 4px -10px;
-  border-radius: 4px;
-  font-weight: bold;
   color: #333;
+  font-weight: bold;
+}
+/* 1行に複数の繰り返しフレーズが含まれる場合、問題歌詞以外は強調を打ち消す */
+.full-lyrics-highlight .lyric-group-dim {
+  color: #777;
+  font-weight: normal;
 }

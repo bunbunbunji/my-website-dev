@@ -26,6 +26,17 @@ const superNormalize = (str) => {
     .trim();
 };
 
+// 正解メンバーの表示ラベルを組み立てる（全員なら「全員」、それ以外は名前を連結）
+const formatCorrectLabel = (members, allFlag) => {
+  if (String(allFlag) === '1') return '全員';
+  if (members.length < 3) return members.join('・');
+  const pairs = [];
+  for (let i = 0; i < members.length; i += 2) {
+    pairs.push(members.slice(i, i + 2).join('・'));
+  }
+  return pairs.join('<br>');
+};
+
 const renderLineWithAite = (line, keyPrefix = 'a') => {
   if (!/\([^)]+\)/.test(line)) return line;
   return line.split(/(\([^)]+\))/).map((part, i) =>
@@ -35,21 +46,14 @@ const renderLineWithAite = (line, keyPrefix = 'a') => {
   );
 };
 
-const renderLyricsWithOccurrence = (lyrics, occurrence) => {
+const renderLyricsWithAite = (lyrics) => {
   if (!lyrics) return null;
-  const lines = lyrics.split('\n');
-  const hasOccurrence = occurrence && Array.isArray(occurrence) && !occurrence.every(o => o == null);
-  const hasAite = /\([^)]+\)/.test(lyrics);
-  if (!hasOccurrence && !hasAite) return lyrics;
+  if (!/\([^)]+\)/.test(lyrics)) return lyrics;
   const result = [];
-  lines.forEach((line, i) => {
+  lyrics.split('\n').forEach((line, i) => {
     if (i > 0) result.push('\n');
     const rendered = renderLineWithAite(line, `lo-${i}`);
     Array.isArray(rendered) ? result.push(...rendered) : result.push(rendered);
-    if (hasOccurrence) {
-      const occ = occurrence[i];
-      if (occ != null) result.push(<span key={`occ-${i}`} className="occurrence-badge">（{occ}回目）</span>);
-    }
   });
   return result;
 };
@@ -85,11 +89,35 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
   const cls = `${baseClass}${isTarget ? ` ${targetClass}` : ''}`;
 
   if (group.type === 'single') {
+    if (!isTarget) {
+      return (
+        <div {...refProp} className={cls}>
+          {group.row.lyrics}
+        </div>
+      );
+    }
+    const rowLines = (group.row.lyrics || '').split('\n');
+    // 全行が同一テキストの繰り返し（「まだ まだ まだ まだ」等）の場合のみ、
+    // 最終行だけが実際の問題歌詞なのでそこだけ点滅させ、他は薄く表示する。
+    // 内容の異なる複数行（1つのフレーズが2行にまたがる場合）はまとめて点滅させる。
+    const isRepeatedPhrase = rowLines.length > 1 && rowLines.every(l => l.trim() === rowLines[0].trim());
+    if (!isRepeatedPhrase) {
+      return (
+        <div {...refProp} className={cls}>
+          <span className="lyric-blink-text">{group.row.lyrics}</span>
+        </div>
+      );
+    }
     return (
       <div {...refProp} className={cls}>
-        {isTarget
-          ? <span className="lyric-blink-text">{group.row.lyrics}</span>
-          : group.row.lyrics}
+        {rowLines.map((line, i) => (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            {i === rowLines.length - 1
+              ? <span className="lyric-blink-text">{line}</span>
+              : <span className="lyric-group-dim">{line}</span>}
+          </Fragment>
+        ))}
       </div>
     );
   }
@@ -478,10 +506,10 @@ function App() {
 
 
   const descriptions = {
-    easy:   ["有名な曲の特徴的な歌詞が選出されます","1人で歌う歌詞が選出されます", "ヒントとして曲名と前後の歌詞が表示されます"],
-    normal: ["MVがある曲の歌詞が選出されます","1人で歌う歌詞が選出されます", "ヒントとして前後の歌詞が表示されます"],
-    hard:   ["すべての曲の歌詞から選出されます","1人または全員で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します", "ヒントはありません"],
-    expert: ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します","ヒントはありません"],
+    easy:   ["有名な曲の特徴的な歌詞が選出されます","1人で歌う歌詞が選出されます"],
+    normal: ["MVがある曲の歌詞が選出されます","1人で歌う歌詞が選出されます"],
+    hard:   ["すべての曲の歌詞から選出されます","1人または全員で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します"],
+    expert: ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します"],
   };
 
   const resultMessages = {
@@ -818,15 +846,6 @@ function App() {
       .sort((a, b) => a.localeCompare(b, 'ja'));
     const isCorrect = JSON.stringify(correctArray) === JSON.stringify(selectedArray);
 
-    const formatCorrectLabel = (members, allFlag) => {
-      if (String(allFlag) === '1') return '全員';
-      if (members.length < 3) return members.join('・');
-      const pairs = [];
-      for (let i = 0; i < members.length; i += 2) {
-        pairs.push(members.slice(i, i + 2).join('・'));
-      }
-      return pairs.join('<br>');
-    };
     const isAll = correctArray.length === members.length && members.length > 0;
     const correctLabel = formatCorrectLabel(correctArray, isAll ? '1' : '0');
 
@@ -1002,15 +1021,17 @@ function App() {
     if (questionTimer === 0) {
       clearInterval(questionTimerIntervalRef.current);
       const curr = quizState.quizzes[quizState.currentIndex];
-      const correctArr = (curr?.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+      const correctArr = (curr?.correct_members || '').split(',').map(normalizeMemberName).filter(Boolean);
+      const isAll = correctArr.length === members.length && members.length > 0;
+      const correctLabel = formatCorrectLabel(correctArr, isAll ? '1' : '0');
       setResultMsg({
-        text: `<span style="font-size:1.15em">⏱️ 時間切れ！😢</span><br><span style="font-size:0.8em">( 正解：${correctArr.join('・')} )</span>`,
+        text: `<span style="font-size:1.15em">⏱️ 時間切れ！😢</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`,
         type: "incorrect"
       });
       setAnswered(true);
       setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }), 100);
     }
-  }, [questionTimer, gameMode, screen, answered]);
+  }, [questionTimer, gameMode, screen, answered, members]);
 
   // --- 検定モード：アナウンス時に song_lyrics を取得 ---
   useEffect(() => {
@@ -1063,7 +1084,7 @@ function App() {
             }
             setTimeout(() => {
               setScrollAnimPhase('zooming');
-              setTimeout(() => setQuizPhase('question'), 1600);
+              setTimeout(() => setQuizPhase('question'), 2600);
             }, 700);
           }
         };
@@ -1518,11 +1539,11 @@ function App() {
   const sn = quizCurr?.surroundNext || [];
   const showSongName = gameMode === 'custom'
     ? customShowSongName
-    : gameMode === 'endless' ? endlessQNum <= 20 : quizState.difficulty === 'easy';
+    : gameMode === 'endless' ? endlessQNum <= 20 : false;
   const showSurroundHint = gameMode === 'custom'
     ? customShowSurround
-    : gameMode === 'endless' ? endlessQNum <= 50 : (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || answered);
-  const needsHintActive = quizCurr?.needs_hint && !showSurroundHint;
+    : gameMode === 'endless' ? endlessQNum <= 50 : false;
+  const needsHintActive = gameMode !== 'normal' && quizCurr?.needs_hint && !showSurroundHint;
   const quizPrevLines = (showSurroundHint || needsHintActive) ? sp.slice(-1) : [];
   const quizNextLines = showSurroundHint
     ? sn.slice(0, 1)
@@ -2067,7 +2088,7 @@ function App() {
             </div>
           )}
 
-          <p id="lyrics" ref={lyricsRef}>{renderLyricsWithOccurrence(quizCurr?.lyrics, quizCurr?.occurrence)}</p>
+          <p id="lyrics" ref={lyricsRef}>{renderLyricsWithAite(quizCurr?.lyrics)}</p>
 
           {quizNextLines.length > 0 && (
             <div className="hint-lyrics">
@@ -2136,7 +2157,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowFullLyrics(false)}>
           <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
             <h2>{quizCurr?.song_name}</h2>
-            <div className="song-modal-list">
+            <div className="song-modal-list full-lyrics-list">
               {groupLyricRows(fullSongLyrics).map((group) => {
                 const ids = group.type === 'single'
                   ? [group.row.lyrics_id]
@@ -2659,6 +2680,11 @@ function App() {
               setAnswered(false);
               setResultMsg({ text: '', type: '' });
               setDebugQuizStatus(`✅ ID:${qData.id} / ${qData.song_name}`);
+              if (qData.sounds_id) await fetchSongLyrics(qData.sounds_id);
+              setGameMode('normal');
+              setShowFullLyrics(false);
+              setScrollAnimPhase('scrolling');
+              setQuizPhase('announce');
               setScreen('quiz');
             }}>▶ このクイズをテスト</button>
             {debugQuizStatus && <div style={{marginTop: '4px', fontSize: '0.65rem', color: '#aaa', wordBreak: 'break-all'}}>{debugQuizStatus}</div>}
