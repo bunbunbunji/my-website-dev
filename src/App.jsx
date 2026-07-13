@@ -280,8 +280,6 @@ function App() {
   const [pendingEndlessReveal, setPendingEndlessReveal] = useState(false);
   const [pendingCustomReveal, setPendingCustomReveal] = useState(false);
   const [isUnlockAnimating, setIsUnlockAnimating] = useState(false);
-  const [customShowSurround, setCustomShowSurround] = useState(false);
-  const [customShowSongName, setCustomShowSongName] = useState(false);
 
   const [songListData, setSongListData] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -325,8 +323,6 @@ function App() {
 
   const diffTooltipRef = useRef(null);
   const lyricsRef = useRef(null);
-  const hintPrevRef = useRef(null);
-  const hintNextRef = useRef(null);
   const commentRef = useRef(null);
   const questionLyricScrollRef = useRef(null);
   const fullLyricsHighlightRef = useRef(null);
@@ -472,6 +468,9 @@ function App() {
     setResultMsg({ text: '', type: '' });
     setCustomIsLoading(false);
     setGameMode('custom');
+    if (shuffled[0]?.sounds_id) await fetchSongLyrics(shuffled[0].sounds_id);
+    setScrollAnimPhase('scrolling');
+    setQuizPhase('announce');
     setScreen('quiz');
   };
 
@@ -487,14 +486,12 @@ function App() {
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
-    setCustomShowSurround(false);
-    setCustomShowSongName(false);
     setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const restartCustomMode = () => {
+  const restartCustomMode = async () => {
     customResultReadyRef.current = false;
     const shuffled = shuffle(customOriginalPoolRef.current);
     customQueueRef.current = shuffled;
@@ -505,6 +502,9 @@ function App() {
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
     setCustomWrongAnswers([]);
+    if (shuffled[0]?.sounds_id) await fetchSongLyrics(shuffled[0].sounds_id);
+    setScrollAnimPhase('scrolling');
+    setQuizPhase('announce');
     setScreen('quiz');
   };
 
@@ -1387,8 +1387,6 @@ function App() {
         const cur = parseFloat(window.getComputedStyle(lyricsRef.current).fontSize);
         if (cur > 16) lyricsRef.current.style.fontSize = '16px';
       }
-      fitText(hintPrevRef.current, 0.62, 3);
-      fitText(hintNextRef.current, 0.62, 3);
     };
     fitAll();
     document.fonts.ready.then(fitAll);
@@ -1538,16 +1536,6 @@ function App() {
   };
 
   const quizCurr = quizState.quizzes[quizState.currentIndex];
-  const sp = quizCurr?.surroundPrev || [];
-  const sn = quizCurr?.surroundNext || [];
-  const showSongName = gameMode === 'custom' ? customShowSongName : false;
-  const showSurroundHint = gameMode === 'custom' ? customShowSurround : false;
-  const needsHintActive = gameMode !== 'normal' && quizCurr?.needs_hint && !showSurroundHint;
-  const quizPrevLines = (showSurroundHint || needsHintActive) ? sp.slice(-1) : [];
-  const quizNextLines = showSurroundHint
-    ? sn.slice(0, 1)
-    : (needsHintActive && quizPrevLines.length === 0) ? sn.slice(0, 1)
-    : [];
   const quizExplanation = (quizCurr?.song_name && quizCurr?.section_name)
     ? `この歌詞は「${quizCurr.song_name}」の\n${quizCurr.section_name}部分でした！` : "";
   const displayMembers = gameMode === 'custom'
@@ -2077,41 +2065,7 @@ function App() {
           )}
           <h2 className="title quiz-title">だれが歌ってる？</h2>
 
-          {showSongName && quizCurr?.song_name && (
-            <div className="song-name-hint">
-              <span className="song-name-hint-label">ヒント：</span>
-              <span className="song-name-hint-badge">{quizCurr.song_name}</span>
-            </div>
-          )}
-
-          {quizPrevLines.length > 0 && (
-            <div className="hint-lyrics">
-              <span className="hint-label">直前の歌詞：</span>
-              <div className="hint-text" ref={hintPrevRef}>{quizPrevLines.join('\n')}</div>
-            </div>
-          )}
-
           <p id="lyrics" ref={lyricsRef}>{renderLyricsWithAite(quizCurr?.lyrics)}</p>
-
-          {quizNextLines.length > 0 && (
-            <div className="hint-lyrics">
-              <span className="hint-label">直後の歌詞：</span>
-              <div className="hint-text" ref={hintNextRef}>{quizNextLines.join('\n')}</div>
-            </div>
-          )}
-
-          {gameMode === 'custom' && (
-            <div className="custom-hint-buttons">
-              <button className={`custom-hint-btn${customShowSurround ? ' active' : ''}`} onClick={() => {
-                setCustomShowSurround(v => !v);
-              }}>
-                {customShowSurround ? '前後の歌詞を隠す' : '前後の歌詞をみる'}
-              </button>
-              <button className={`custom-hint-btn${customShowSongName ? ' active' : ''}`} onClick={() => setCustomShowSongName(v => !v)}>
-                {customShowSongName ? '曲名を隠す' : '曲名をみる'}
-              </button>
-            </div>
-          )}
 
           <div className="members">
             {displayMembers.map(m => (
