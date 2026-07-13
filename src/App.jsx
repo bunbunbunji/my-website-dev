@@ -486,6 +486,7 @@ function App() {
     setSelectedMembers(new Set());
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
+    setShowFullLyrics(false);
     setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1390,7 +1391,7 @@ function App() {
     };
     fitAll();
     document.fonts.ready.then(fitAll);
-  }, [screen, quizState.currentIndex, quizState.quizzes]);
+  }, [screen, quizPhase, quizState.currentIndex, quizState.quizzes]);
 
   // ツールチップのテキストがはみ出る場合にフォントを縮小
   useLayoutEffect(() => {
@@ -2057,8 +2058,8 @@ function App() {
               <span className={`quiz-qtimer-num${questionTimer <= 10 ? ' danger' : ''}`}>{questionTimer}秒</span>
             </div>
           )}
-          {/* 検定モード：歌詞全体確認ボタン */}
-          {gameMode === 'normal' && (
+          {/* 検定・カスタムモード：歌詞全体確認ボタン */}
+          {(gameMode === 'normal' || gameMode === 'custom') && (
             <button className="lyrics-toggle-btn" onClick={() => setShowFullLyrics(v => !v)}>
               {showFullLyrics ? '問題の歌詞に戻る' : '歌詞全体を確認する'}
             </button>
@@ -2109,8 +2110,8 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定モード：全歌詞モーダル --- */}
-      {screen === 'quiz' && gameMode === 'normal' && quizPhase === 'question' && showFullLyrics && (
+      {/* --- 検定・カスタムモード：全歌詞モーダル --- */}
+      {screen === 'quiz' && (gameMode === 'normal' || gameMode === 'custom') && quizPhase === 'question' && showFullLyrics && (
         <div className="modal-overlay" onClick={() => setShowFullLyrics(false)}>
           <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
             <h2>{quizCurr?.song_name}</h2>
