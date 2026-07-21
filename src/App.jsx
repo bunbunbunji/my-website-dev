@@ -307,7 +307,7 @@ function App() {
     setSongModalMembers([]);
     setIsLoadingSongModal(true);
     const { data } = await supabase
-      .from('quiz_full')
+      .from('quiz_full_dev')
       .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence')
       .eq('group_name', groupName)
       .eq('song_name', title)
@@ -398,7 +398,7 @@ function App() {
     let from = 0;
     let hasMore = true;
     while (hasMore) {
-      const { data } = await supabase.from('quiz_full').select('group_name, song_name').in('group_name', groups).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+      const { data } = await supabase.from('quiz_full_dev').select('group_name, song_name').in('group_name', groups).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
       if (!data || data.length === 0) { hasMore = false; }
       else { allData = [...allData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
     }
@@ -431,7 +431,7 @@ function App() {
         let from = 0;
         let hasMore = true;
         while (hasMore) {
-          const { data } = await supabase.from('quiz_full').select('*').eq('group_name', group).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+          const { data } = await supabase.from('quiz_full_dev').select('*').eq('group_name', group).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
           if (!data || data.length === 0) { hasMore = false; }
           else { groupData = [...groupData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
         }
@@ -586,10 +586,10 @@ function App() {
 
     // 現在の問題と残プールを取得
     const [{ data: qData }, { data: mData }, { data: pData }] = await Promise.all([
-      supabase.from('quiz_full').select('*').eq('id', saved.current).single(),
+      supabase.from('quiz_full_dev').select('*').eq('id', saved.current).single(),
       supabase.from('members').select('*').eq('group_name', s.group_name).order('sort_order'),
       saved.pool?.length > 0
-        ? supabase.from('quiz_full').select('*').in('id', saved.pool)
+        ? supabase.from('quiz_full_dev').select('*').in('id', saved.pool)
         : Promise.resolve({ data: [] }),
     ]);
     const poolData = pData || [];
@@ -644,7 +644,7 @@ function App() {
 
   const fetchSongLyrics = async (soundsId) => {
     setIsLoadingLyrics(true);
-    const { data } = await supabase.from('song_lyrics').select('*').eq('sounds_id', soundsId).order('seq');
+    const { data } = await supabase.from('song_lyrics_dev').select('*').eq('sounds_id', soundsId).order('seq');
     setFullSongLyrics(data || []);
     setIsLoadingLyrics(false);
   };
@@ -674,7 +674,7 @@ function App() {
       allData = [];
       let from = 0;
       while (true) {
-        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
         if (!data || data.length === 0) break;
         allData = allData.concat(data);
         if (data.length < 1000) break;
@@ -737,7 +737,7 @@ function App() {
       let from = 0;
       let hasMore = true;
       while (hasMore) {
-        const { data } = await supabase.from("quiz_full").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
         if (!data || data.length === 0) { hasMore = false; }
         else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
       }
@@ -795,7 +795,7 @@ function App() {
 
       while (hasMore) {
         const { data, error } = await supabase
-          .from('quiz_full')
+          .from('quiz_full_dev')
           .select('group_name, song_name')
           .in('sounds_id', DEV_SOUNDS_IDS)
           .range(from, from + 999);
@@ -2619,7 +2619,7 @@ function App() {
             <button className="debug-jump-btn" style={{marginTop: '6px'}} onClick={async () => {
               if (!debugQuizId) return;
               setDebugQuizStatus('取得中…');
-              const { data: qData, error } = await supabase.from('quiz_full').select('*').eq('id', Number(debugQuizId)).single();
+              const { data: qData, error } = await supabase.from('quiz_full_dev').select('*').eq('id', Number(debugQuizId)).single();
               if (error || !qData) { setDebugQuizStatus('❌ 見つかりません'); return; }
               const { data: mData } = await supabase.from('members').select('*').eq('group_name', qData.group_name).order('sort_order');
               setMembers(mData || []);
