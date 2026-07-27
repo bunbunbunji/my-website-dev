@@ -3,7 +3,7 @@
 -- truelyric.txt を完成形として全行を照合・修正済み。
 --
 -- 主な修正点:
---   ・「こ、個性 こーこーせい」→「こ、個性\nこーこーせい」に分割（全箇所）
+--   ・「こ、個性 こーこーせい」→「こ、個性　こーこーせい」全角スペースで1行化（全12箇所）
 --   ・「求められるような恋とか、/なんとか欲しがられたりだけど」→ 1行に結合（3233）
 --   ・「むずがゆいような言葉だって今、言っていこ？」→ 1行化（3242,3272）, occurrence更新
 --   ・「え、いつからだっていいじゃん、いつまでとかないじゃん」→ 1行化（3252）
@@ -13,22 +13,18 @@
 --   ・「ねぇ、ねえねえ 昨日」→「ねぇ、ねえねえ昨日」スペース除去（3258）
 --   ・「忘れないような言葉も/何度も、言っていこ？」→ 1行化（3264）
 --   ・section_name を空行位置に合わせて全面見直し
---     （イントロ/Bメロ/間奏/サビをサブセクションに分割）
+--     （イントロ①〜④、Bメロ①②、間奏①〜③、サビ①〜⑤ 等に細分化）
 --
 -- 実行方法: Supabase ダッシュボード → SQL Editor に貼り付けて実行。
 -- ============================================================
 
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '1', "section_name" = 'イントロ①', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3224';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '1', "section_name" = 'イントロ①', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3224';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '2', "section_name" = 'イントロ①', "lyric" = '同じ制服着ても', "occurrence" = '{1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3225';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '3', "section_name" = 'イントロ②', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3226';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '3', "section_name" = 'イントロ②', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3226';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '4', "section_name" = 'イントロ②', "lyric" = '同じ授業受けても', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3227';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '5', "section_name" = 'イントロ③', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3228';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '5', "section_name" = 'イントロ③', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3228';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '6', "section_name" = 'イントロ③', "lyric" = '同じ頃生まれても', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3229';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '7', "section_name" = 'イントロ④', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3230';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '7', "section_name" = 'イントロ④', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3230';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '8', "section_name" = 'イントロ④', "lyric" = '同じとこ続いても', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3231';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '9', "section_name" = '1番のAメロ', "lyric" = 'わたしはわたしで、いーの
 ってそりゃそうです、', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3232';
@@ -38,11 +34,9 @@ UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '11', "section_name"
 虹色くらいにあって、大変です', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3234';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '12', "section_name" = '1番のBメロ②', "lyric" = 'ねぇ、だから気持ち悪さもかわいいでしょ？
 ねぇ、あきらめの悪さもかわいいでしょ？', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3235';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '13', "section_name" = '1番の間奏①', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3236';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '13', "section_name" = '1番の間奏①', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3236';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '14', "section_name" = '1番の間奏①', "lyric" = '同じ制服着ても', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3237';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '15', "section_name" = '1番の間奏②', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3238';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '15', "section_name" = '1番の間奏②', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3238';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '16', "section_name" = '1番の間奏②', "lyric" = '同じように生きても', "occurrence" = '{1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3239';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '17', "section_name" = '1番の間奏③', "lyric" = '発揮したいね', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3240';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '18', "section_name" = '1番のサビ①', "lyric" = '君の変なところが好きです
@@ -70,11 +64,9 @@ UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '34', "section_name"
 自分の中でしかなくて、参考程度', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3257';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '35', "section_name" = '2番のBメロ②', "lyric" = 'ねぇ、ねえねえ昨日よりもかわいいでしょ？
 ねぇ、ねえって言いすぎてもかわいいでしょ？', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3258';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '36', "section_name" = '2番の間奏①', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3259';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '36', "section_name" = '2番の間奏①', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3259';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '37', "section_name" = '2番の間奏①', "lyric" = '同じ制服着ても', "occurrence" = '{3}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3260';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '38', "section_name" = '2番の間奏②', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3261';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '38', "section_name" = '2番の間奏②', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3261';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '39', "section_name" = '2番の間奏②', "lyric" = '同じように生きても', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3262';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '40', "section_name" = '2番のサビ', "lyric" = '君の変なところが好きです
 昨日と違う君がいるから', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3263';
@@ -96,14 +88,10 @@ UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '53', "section_name"
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '54', "section_name" = '3番のサビ④', "lyric" = 'オリジナルなこう世界を', "occurrence" = '{3}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3277';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '55', "section_name" = '3番のサビ④', "lyric" = 'どうやったって見せるのです', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3278';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '56', "section_name" = '3番のサビ⑤', "lyric" = '君のそんなとこ世界一好き', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3279';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '57', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3280';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '58', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3281';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '59', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3282';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '60', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性
-こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3283';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '57', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3280';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '58', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3281';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '59', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3282';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '4', "seq" = '60', "section_name" = '3番のアウトロ', "lyric" = 'こ、個性　こーこーせい', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '3283';
 
 -- ============================================================
 -- 確認用: 実行後の全行を表示
