@@ -2458,6 +2458,9 @@ body::before {
   padding: 40px 0;
   font-size: 0.9rem;
 }
+.lyric-section-break {
+  height: 0.75em;
+}
 .scrolling-lyric-row {
   font-size: 0.8rem;
   line-height: 1.55;

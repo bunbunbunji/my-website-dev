@@ -63,7 +63,13 @@ const renderLyricsWithAite = (lyrics) => {
 const groupLyricRows = (rows) => {
   const groups = [];
   let cur = null;
-  rows.forEach(row => {
+  let prevSection = null;
+  rows.forEach((row, i) => {
+    if (i > 0 && row.section_name !== prevSection) {
+      if (cur) { groups.push(cur); cur = null; }
+      groups.push({ type: 'section-break', key: `sb-${i}` });
+    }
+    prevSection = row.section_name;
     if (!row.lyric_col || row.lyric_col === 1) {
       if (cur) groups.push(cur);
       if (!row.lyric_col) {
@@ -1986,6 +1992,7 @@ function App() {
             {isLoadingLyrics && quizPhase === 'scrolling' ? (
               <p className="scrolling-loading">読み込み中...</p>
             ) : groupLyricRows(fullSongLyrics).map((group) => {
+              if (group.type === 'section-break') return <div key={group.key} className="lyric-section-break" />;
               const ids = group.type === 'single'
                 ? [group.row.lyrics_id]
                 : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
@@ -2123,6 +2130,7 @@ function App() {
             <h2>{quizCurr?.song_name}</h2>
             <div className="song-modal-list full-lyrics-list">
               {groupLyricRows(fullSongLyrics).map((group) => {
+                if (group.type === 'section-break') return <div key={group.key} className="lyric-section-break" />;
                 const ids = group.type === 'single'
                   ? [group.row.lyrics_id]
                   : [group.base.lyrics_id, ...group.appends.map(a => a.lyrics_id)];
