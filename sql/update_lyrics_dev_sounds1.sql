@@ -5,14 +5,13 @@
 -- 主な修正点:
 --   ・Its → It's（1892,1893,1906,1907）
 --   ・2番間奏の雨音行はピリオド付き（1906）
---   ・全角スペースの復元（1900,1902,1903,1904,1910,1911,1912,1913,1914,1917,1918,1924）
+--   ・全角スペースの復元（各所）
 --   ・? → ？ 全角に統一（1904,1914）
---   ・サビ「湾岸ルーレット」: 3行分割→2行に戻す（1902,1912）, occurrence更新
---   ・サビ「すこし」: 2行分割→1行に戻す（1905,1915）, occurrence更新
---   ・サビ「すこし」2番/3番は全角スペースに統一（1915,1924）
---   ・サビ「そうよ」: 2行分割→1行に戻す（1918）
---   ・「きっと」半角→全角スペース（1911）
---   ・「きらり」半角→全角スペース（1917）
+--   ・サビ「湾岸ルーレット」: 2行（1902,1912）
+--   ・サビ「そうよ悲しまないで　顔を上げて」: 1行化（1904,1914）, occurrence {N,N}
+--   ・サビ「すこし」: 1行（1905,1915）; 2番/3番は全角スペース（1915,1924）
+--   ・サビ「そうよ」3番: 1行（1918）
+--   ・「きっと」「きらり」全角スペース（1911,1917）
 --
 -- 実行方法: Supabase ダッシュボード → SQL Editor に貼り付けて実行。
 -- ============================================================
@@ -32,9 +31,8 @@ UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '10', "section_name"
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '11', "section_name" = '1番のサビ', "lyric" = '湾岸ルーレット　ハイウェイ
 乗り込んだら　もうどこへだって行けそう', "occurrence" = '{1,1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1902';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '12', "section_name" = '1番のサビ', "lyric" = '夜が明ける頃は　違う私で', "occurrence" = '{1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1903';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '13', "section_name" = '1番のサビ', "lyric" = 'そうよ悲しまないで
-顔を上げて
-そんなに惨めじゃないでしょ？', "occurrence" = '{1,1,1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1904';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '13', "section_name" = '1番のサビ', "lyric" = 'そうよ悲しまないで　顔を上げて
+そんなに惨めじゃないでしょ？', "occurrence" = '{1,1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1904';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '14', "section_name" = '1番のサビ', "lyric" = 'すこし すこしずつ変われるチャンス', "occurrence" = '{1}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1905';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '15', "section_name" = '2番の間奏', "lyric" = 'It''s time to live my life. 雨音', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1906';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '16', "section_name" = '2番の間奏', "lyric" = 'It''s time to live my life ため息', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1907';
@@ -47,30 +45,19 @@ UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '20', "section_name"
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '21', "section_name" = '2番のサビ', "lyric" = '湾岸ルーレット　ハイウェイ
 乗り込んだら　もうどこへだって行けそう', "occurrence" = '{2,2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1912';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '22', "section_name" = '2番のサビ', "lyric" = '夜が明ける頃は　違う私で', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1913';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '23', "section_name" = '2番のサビ', "lyric" = 'そうよ悲しまないで
-顔を上げて
-そんなに惨めじゃないでしょ？', "occurrence" = '{2,2,2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1914';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '23', "section_name" = '2番のサビ', "lyric" = 'そうよ悲しまないで　顔を上げて
+そんなに惨めじゃないでしょ？', "occurrence" = '{2,2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1914';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '24', "section_name" = '2番のサビ', "lyric" = 'すこし　すこしずつ変われるチャンス', "occurrence" = '{2}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1915';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '25', "section_name" = '3番のサビ', "lyric" = '湾岸ルーレット　ハイウェイ
 涙にそっと　都会のネオンを映す', "occurrence" = '{3,NULL}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1916';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '26', "section_name" = '3番のサビ', "lyric" = 'きらり　まとい　素敵　大人になれる', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1917';
 UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '27', "section_name" = '3番のサビ', "lyric" = 'そうよ　悲しまないで感じるでしょ　予感', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1918';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '28', "section_name" = '3番のサビ', "lyric" = '今が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1919';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '29', "section_name" = '3番のサビ', "lyric" = 'ここが', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1920';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '30', "section_name" = '3番のサビ', "lyric" = '彼が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1921';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '31', "section_name" = '3番のサビ', "lyric" = '雨の', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1922';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '32', "section_name" = '3番のサビ', "lyric" = '夜が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1923';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '33', "section_name" = '3番のサビ', "lyric" = 'すこし　すこしずつ変われるチャンス', "occurrence" = '{3}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1924';
-
-
--- ============================================================
--- section_name 修正: id=1919〜1924（3番のサビ → 3番のアウトロ）
---
--- truelyric.txt の「予感」と「今が」の間に空行があるが、
--- 両レコードとも section_name='3番のサビ' だと section 変化で検知できない。
--- 「今が ここが 彼が 雨の 夜が すこし」を別セクションとして切り出す。
--- ============================================================
-UPDATE "public"."lyrics_dev" SET "section_name" = '3番のアウトロ' WHERE "id" IN ('1919','1920','1921','1922','1923','1924');
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '28', "section_name" = '3番のアウトロ', "lyric" = '今が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1919';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '29', "section_name" = '3番のアウトロ', "lyric" = 'ここが', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1920';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '30', "section_name" = '3番のアウトロ', "lyric" = '彼が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1921';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '31', "section_name" = '3番のアウトロ', "lyric" = '雨の', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1922';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '32', "section_name" = '3番のアウトロ', "lyric" = '夜が', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1923';
+UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '33', "section_name" = '3番のエンディング', "lyric" = 'すこし　すこしずつ変われるチャンス', "occurrence" = '{3}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 'True' WHERE "id" = '1924';
 
 -- ============================================================
 -- 確認用: 実行後の全行を表示
