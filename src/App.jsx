@@ -333,12 +333,11 @@ function App() {
   const catchText1Ref = useRef(null);
   const catchText2Ref = useRef(null);
   const listBtnRef = useRef(null);
+  const activeSoundsIdsRef = useRef([]);
 
 
   const DEBUG_ENABLED = true; // ?debug によるデバッグモードを有効にする (本番マージ時は false に)
   const debugMode = DEBUG_ENABLED && new URLSearchParams(window.location.search).has('debug');
-  // 開発中のみ: lyric_col/col_space 整備済みの曲に限定 (本番マージ時は null に)
-  const DEV_SOUNDS_IDS = [10, 60, 88];
   const [debugScore, setDebugScore] = useState(0);
   const [debugGroup, setDebugGroup] = useState('FRUITS ZIPPER');
   const [debugDiff, setDebugDiff] = useState('easy');
@@ -398,7 +397,7 @@ function App() {
     let from = 0;
     let hasMore = true;
     while (hasMore) {
-      const { data } = await supabase.from('quiz_full_dev').select('group_name, song_name').in('group_name', groups).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+      const { data } = await supabase.from('quiz_full_dev').select('group_name, song_name').in('group_name', groups).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
       if (!data || data.length === 0) { hasMore = false; }
       else { allData = [...allData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
     }
@@ -431,7 +430,7 @@ function App() {
         let from = 0;
         let hasMore = true;
         while (hasMore) {
-          const { data } = await supabase.from('quiz_full_dev').select('*').eq('group_name', group).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+          const { data } = await supabase.from('quiz_full_dev').select('*').eq('group_name', group).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
           if (!data || data.length === 0) { hasMore = false; }
           else { groupData = [...groupData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
         }
@@ -523,6 +522,12 @@ function App() {
     hard: { zero: "全問不正解…。<br>「むずかしい」の壁はかなり高かったようだ。", low: "この難易度はまだ早かったかも…？<br>でも挑戦する姿勢は最高にかっこいいぜ。", mid: "大健闘！<br>「むずかしい」でこれだけ解ければ相当なもの。", high: "すごい！よくここまで正解できましたね！<br>全問正解までもうちょっと。もう一回チャレンジだ！", perfect: "全問正解！コングラッチュレーション！！<br>この難易度で満点はもはや職人の域ですな！" },
     expert: { zero: "へんじがない。ただのしかばねのようだ。<br>0点でも泣かないで。当てる方がおかしいレベルですから。", low: "相手が悪すぎた…。<br>一筋縄ではいかないね。ドンマイドンマイ！", mid: "素晴らしい！<br>この難問揃いで半分解けるとは、なかなかやるな？", high: "素晴らしすぎて鳥肌ものです。<br>もしかしたら本人よりも詳しいかも…！？", perfect: "👼⛩️✨神、降臨✨⛩️👼。<br>あなたは一体何者…？まさか本人？？" }
   };
+
+  // --- アクティブな sounds_id を起動時に取得 ---
+  useEffect(() => {
+    supabase.from('sounds').select('id').eq('is_active', true)
+      .then(({ data }) => { if (data) activeSoundsIdsRef.current = data.map(s => s.id); });
+  }, []);
 
   // --- セッション復元チェック（マウント時）: エンドレスのみ対象 ---
   useEffect(() => {
@@ -674,7 +679,7 @@ function App() {
       allData = [];
       let from = 0;
       while (true) {
-        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
         if (!data || data.length === 0) break;
         allData = allData.concat(data);
         if (data.length < 1000) break;
@@ -737,7 +742,7 @@ function App() {
       let from = 0;
       let hasMore = true;
       while (hasMore) {
-        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', DEV_SOUNDS_IDS).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
         if (!data || data.length === 0) { hasMore = false; }
         else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
       }
@@ -797,7 +802,7 @@ function App() {
         const { data, error } = await supabase
           .from('quiz_full_dev')
           .select('group_name, song_name')
-          .in('sounds_id', DEV_SOUNDS_IDS)
+          .in('sounds_id', activeSoundsIdsRef.current)
           .range(from, from + 999);
 
         if (error) throw error;
@@ -822,6 +827,7 @@ function App() {
           .from('sounds')
           .select('song_name')
           .eq('group_name', group.name)
+          .eq('is_active', true)
           .order('song_name', { ascending: true });
         if (songs) {
           const processedSongs = songs.map(s => ({
@@ -1062,7 +1068,7 @@ function App() {
 
         body.scrollTop = 0;
 
-        const TOTAL_DURATION = 3000;
+        const TOTAL_DURATION = 2500;
         const endScroll = body.scrollHeight - body.clientHeight;
 
         let startTime = null;
