@@ -2459,13 +2459,13 @@ body::before {
   font-size: 0.9rem;
 }
 .lyric-section-break {
-  height: 0.75em;
+  height: 1em;
 }
 .scrolling-lyric-row {
   font-size: 0.8rem;
   line-height: 1.55;
   color: #555;
-  padding: 2px 0;
+  padding: 0;
   white-space: pre-wrap;
 }
 .lyric-inline-append {
@@ -2518,14 +2518,22 @@ body::before {
 
 /* 全歌詞オーバーレイ（クイズ開始前の全歌詞スクロール画面と同じ書式・レイアウト） */
 .full-lyrics-list {
-  gap: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+  text-align: left;
 }
+.full-lyrics-list::-webkit-scrollbar { width: 4px; }
+.full-lyrics-list::-webkit-scrollbar-track { background: #fff0f5; border-radius: 2px; }
+.full-lyrics-list::-webkit-scrollbar-thumb { background: #ffb6c1; border-radius: 2px; }
 .full-lyrics-row {
   font-size: 0.8rem;
   line-height: 1.55;
   color: #777;
   white-space: pre-wrap;
-  padding: 2px 0;
+  padding: 0;
 }
 .full-lyrics-highlight {
   color: #333;
@@ -2535,4 +2543,41 @@ body::before {
 .full-lyrics-highlight .lyric-group-dim {
   color: #777;
   font-weight: normal;
+}
+.song-modal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  font-size: 0.82rem;
+  color: #555;
+  text-align: left;
+  line-height: 1.8;
+  flex-shrink: 0;
+  border: 1px solid #ffb7d5;
+  border-radius: 7px;
+  padding: 5px 10px;
+  margin-bottom: 8px;
+  background: rgba(255, 240, 245, 0.45);
+}
+.song-modal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+.song-modal-legend-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.song-modal-lyric-row {
+  font-size: 0.8rem;
+  line-height: 1.55;
+  padding: 0;
+  white-space: pre-wrap;
+}
+.song-modal-lyric-annotation {
+  white-space: normal;
 }

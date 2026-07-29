@@ -2128,7 +2128,7 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowFullLyrics(false)}>
           <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
             <h2>{quizCurr?.song_name}</h2>
-            <div className="song-modal-list full-lyrics-list">
+            <div className="full-lyrics-list">
               {groupLyricRows(fullSongLyrics).map((group) => {
                 if (group.type === 'section-break') return <div key={group.key} className="lyric-section-break" />;
                 const ids = group.type === 'single'
@@ -2398,54 +2398,75 @@ function App() {
         songModalMembers.forEach(m => {
           memberLookup[m.name] = { lastName: m.Last_name, color: memberColorCSS[m.color] || '#333' };
         });
+
+        const groups = [];
+        let prevSec = null;
+        songModalData.forEach((row, i) => {
+          if (i > 0 && row.section_name !== prevSec) {
+            groups.push({ type: 'break', key: `sb-${i}` });
+          }
+          prevSec = row.section_name;
+          groups.push({ type: 'row', row, i });
+        });
+
         return (
           <div className={`modal-overlay${closingSongModal ? ' closing' : ''}`} onClick={closeSongModal}>
             <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
               <h2>{songModal?.title}</h2>
-              <div className="song-modal-group-badge">{songModal?.groupName}</div>
+              <div className="song-modal-legend">
+                {songModalMembers.map((m, mi) => (
+                  <span key={mi} className="song-modal-legend-item">
+                    <span className="song-modal-legend-dot" style={{ background: memberColorCSS[m.color] || '#333' }} />
+                    <span style={{ color: memberColorCSS[m.color] || '#333' }}>{m.Last_name}</span>
+                  </span>
+                ))}
+                <span className="song-modal-legend-item">
+                  <span className="song-modal-legend-dot" style={{ background: '#444' }} />
+                  <span style={{ color: '#444' }}>複数</span>
+                </span>
+              </div>
               {isLoadingSongModal ? (
                 <div className="song-modal-loading">データを取得中...</div>
               ) : songModalData.length === 0 ? (
                 <div className="song-modal-loading">データがありません</div>
               ) : (
-                <div className="song-modal-list">
-                  {songModalData.map((row, i) => {
-                    const correctArr = row.correct_members.split(',').map(s => s.trim()).filter(Boolean);
+                <div className="full-lyrics-list">
+                  {groups.map((item) => {
+                    if (item.type === 'break') return <div key={item.key} className="lyric-section-break" />;
+                    const { row, i } = item;
+                    const correctArr = (row.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
                     const isAll = correctArr.length === songModalMembers.length && songModalMembers.length > 0;
                     const isSolo = correctArr.length === 1;
-                    const lyricsColor = isSolo
-                      ? (memberLookup[correctArr[0]]?.color || '#333')
-                      : '#000';
-                    const memberNameNodes = isAll
-                      ? <span>全員</span>
-                      : correctArr.map((n, ni) => (
-                          <span key={ni} style={{ color: memberLookup[n]?.color || '#333' }}>
-                            {ni > 0 && <span style={{ color: '#333' }}>・</span>}
-                            {memberLookup[n]?.lastName || n}
-                          </span>
-                        ));
+                    const lyricColor = isSolo ? (memberLookup[correctArr[0]]?.color || '#333') : '#333';
                     const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
                     return (
-                      <div key={i} className="song-modal-row">
-                        <div className="song-modal-lyrics" style={{ color: lyricsColor, whiteSpace: 'pre-wrap' }}>
-                          {lyricLines.map((line, li) => {
-                            const occ = row.occurrence && row.occurrence[li];
-                            return (
-                              <Fragment key={li}>
-                                {li > 0 && '\n'}
-                                {renderLineWithAite(line, `sm-${li}`)}
-                                {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
-                              </Fragment>
-                            );
-                          })}
-                        </div>
-                        <div className="song-modal-members">🎤 {memberNameNodes}</div>
-                        <div className="diff-dots">
-                          {Number(row.easy)   > 0 && <span className="diff-dot diff-dot-easy"   title="やさしい" />}
-                          {Number(row.normal) > 0 && <span className="diff-dot diff-dot-normal" title="ふつう" />}
-                          {Number(row.hard)   > 0 && <span className="diff-dot diff-dot-hard"   title="むずかしい" />}
-                          {Number(row.expert) > 0 && <span className="diff-dot diff-dot-expert" title="げきむず" />}
-                        </div>
+                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor }}>
+                        {lyricLines.map((line, li) => (
+                          <Fragment key={li}>
+                            {li > 0 && '\n'}
+                            {renderLineWithAite(line, `sm-${i}-${li}`)}
+                          </Fragment>
+                        ))}
+                        {!isSolo && (
+                          <span className="song-modal-lyric-annotation">
+                            {isAll ? (
+                              '（全員）'
+                            ) : (
+                              <>
+                                <span style={{ color: '#777' }}>（</span>
+                                {correctArr.map((n, ni) => (
+                                  <Fragment key={ni}>
+                                    {ni > 0 && <span style={{ color: '#777' }}>・</span>}
+                                    <span style={{ color: memberLookup[n]?.color || '#555' }}>
+                                      {memberLookup[n]?.lastName || n}
+                                    </span>
+                                  </Fragment>
+                                ))}
+                                <span style={{ color: '#777' }}>）</span>
+                              </>
+                            )}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
