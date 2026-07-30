@@ -2459,7 +2459,7 @@ body::before {
   font-size: 0.9rem;
 }
 .lyric-section-break {
-  height: 1em;
+  height: 1.4em;
 }
 .scrolling-lyric-row {
   font-size: 0.8rem;
@@ -2547,7 +2547,7 @@ body::before {
 .song-modal-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px 12px;
+  gap: 3px 18px;
   font-size: 0.82rem;
   color: #555;
   text-align: left;
@@ -2575,7 +2575,7 @@ body::before {
 .song-modal-lyric-row {
   font-size: 0.8rem;
   line-height: 1.55;
-  padding: 0;
+  padding: 1px 0;
   white-space: pre-wrap;
 }
 .song-modal-lyric-annotation {
