@@ -2501,7 +2501,7 @@ function App() {
                     };
 
                     const startAnnotTouch = (key) => {
-                      songAnnotTimerRef.current = setTimeout(() => setSongAnnotKey(key), 500);
+                      songAnnotTimerRef.current = setTimeout(() => setSongAnnotKey(key), 150);
                     };
                     const endAnnotTouch = () => {
                       clearTimeout(songAnnotTimerRef.current);

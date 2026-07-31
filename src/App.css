@@ -2579,6 +2579,7 @@ body::before {
 @media (prefers-color-scheme: dark) {
   .song-modal-legend {
     background: rgba(40, 22, 30, 0.97);
+    border-color: #7a3a55;
   }
 }
 .song-modal-legend-item {
