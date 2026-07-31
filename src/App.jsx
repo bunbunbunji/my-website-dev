@@ -197,6 +197,8 @@ function App() {
   const [timerKey, setTimerKey] = useState(0);
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
+  const [songAnnotKey, setSongAnnotKey] = useState(null);
+  const songAnnotTimerRef = useRef(null);
 
   const tooltipHoverTimerRef = useRef(null);
   const tooltipCloseTimerRef = useRef(null);
@@ -316,7 +318,7 @@ function App() {
     setIsLoadingSongModal(true);
     const { data } = await supabase
       .from('quiz_full_dev')
-      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence')
+      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence, lyric_col, col_space')
       .eq('group_name', groupName)
       .eq('song_name', title)
       .order('seq');
@@ -2420,15 +2422,31 @@ function App() {
           memberLookup[m.name] = { lastName: m.Last_name, color: memberColorCSS[m.color] || '#333' };
         });
 
+        const spaceChar = (sp) => sp === 'half' ? ' ' : sp === 'full' ? '　' : '';
         const groups = [];
         let prevSec = null;
+        let curGroup = null;
         songModalData.forEach((row, i) => {
           if (i > 0 && row.section_name !== prevSec) {
+            if (curGroup) { groups.push(curGroup); curGroup = null; }
             groups.push({ type: 'break', key: `sb-${i}` });
           }
           prevSec = row.section_name;
-          groups.push({ type: 'row', row, i });
+          const col = row.lyric_col;
+          if (!col || col === 1) {
+            if (curGroup) groups.push(curGroup);
+            if (!col) {
+              groups.push({ type: 'row', row, i });
+              curGroup = null;
+            } else {
+              curGroup = { type: 'group', base: row, baseIdx: i, appends: [] };
+            }
+          } else {
+            if (curGroup) curGroup.appends.push({ row, i });
+            else groups.push({ type: 'row', row, i });
+          }
         });
+        if (curGroup) groups.push(curGroup);
 
         return (
           <div className={`modal-overlay${closingSongModal ? ' closing' : ''}`} onClick={closeSongModal}>
@@ -2454,40 +2472,121 @@ function App() {
                 <div className="full-lyrics-list">
                   {groups.map((item) => {
                     if (item.type === 'break') return <div key={item.key} className="lyric-section-break" />;
+
+                    const renderAnnotation = (correctArr) => {
+                      const isAll = correctArr.length === songModalMembers.length && songModalMembers.length > 0;
+                      return (
+                        <span className="song-modal-lyric-annotation">
+                          {isAll ? '（全員）' : (
+                            <>
+                              <span style={{ color: '#777' }}>（</span>
+                              {correctArr.map((n, ni) => (
+                                <Fragment key={ni}>
+                                  {ni > 0 && <span style={{ color: '#777' }}>・</span>}
+                                  <span style={{ color: memberLookup[n]?.color || '#555' }}>
+                                    {memberLookup[n]?.lastName || n}
+                                  </span>
+                                </Fragment>
+                              ))}
+                              <span style={{ color: '#777' }}>）</span>
+                            </>
+                          )}
+                        </span>
+                      );
+                    };
+
+                    const partColor = (r) => {
+                      const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+                      return arr.length === 1 ? (memberLookup[arr[0]]?.color || '#333') : '#333';
+                    };
+
+                    const startAnnotTouch = (key) => {
+                      songAnnotTimerRef.current = setTimeout(() => setSongAnnotKey(key), 500);
+                    };
+                    const endAnnotTouch = () => {
+                      clearTimeout(songAnnotTimerRef.current);
+                      setSongAnnotKey(null);
+                    };
+
+                    if (item.type === 'group') {
+                      const i = item.baseIdx;
+                      const allParts = [item.base, ...item.appends.map(ap => ap.row)];
+                      const memberSig = r => (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean).sort().join(',');
+                      const allSame = allParts.every(r => memberSig(r) === memberSig(item.base));
+                      const correctArr = allSame
+                        ? (item.base.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)
+                        : [];
+                      const hasAnnot = correctArr.length > 1;
+                      const annotKey = `g-${i}`;
+
+                      const renderPartLines = (r, kp) => {
+                        const color = partColor(r);
+                        return (r.lyrics ? r.lyrics.split('\n') : ['']).map((line, li) => (
+                          <Fragment key={`${kp}-${li}`}>
+                            {li > 0 && '\n'}
+                            <span style={{ color }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
+                          </Fragment>
+                        ));
+                      };
+
+                      return (
+                        <div
+                          key={i}
+                          className={`song-modal-lyric-row${hasAnnot && songAnnotKey === annotKey ? ' annot-visible' : ''}`}
+                        >
+                          <span
+                            className={hasAnnot ? 'song-modal-lyric-text' : undefined}
+                            onMouseEnter={hasAnnot ? () => setSongAnnotKey(annotKey) : undefined}
+                            onMouseLeave={hasAnnot ? () => setSongAnnotKey(null) : undefined}
+                            onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
+                            onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
+                            onTouchCancel={hasAnnot ? endAnnotTouch : undefined}
+                          >
+                            {renderPartLines(item.base, `sm-${i}-base`)}
+                            {item.appends.map((ap, ai) => {
+                              const prev = ai === 0 ? item.base : item.appends[ai - 1].row;
+                              return (
+                                <Fragment key={ai}>
+                                  {spaceChar(prev.col_space)}
+                                  {renderPartLines(ap.row, `sm-g-${i}-${ai}`)}
+                                </Fragment>
+                              );
+                            })}
+                          </span>
+                          {hasAnnot && renderAnnotation(correctArr)}
+                        </div>
+                      );
+                    }
+
+                    // type: 'row'
                     const { row, i } = item;
                     const correctArr = (row.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
-                    const isAll = correctArr.length === songModalMembers.length && songModalMembers.length > 0;
-                    const isSolo = correctArr.length === 1;
-                    const lyricColor = isSolo ? (memberLookup[correctArr[0]]?.color || '#333') : '#333';
+                    const hasAnnot = correctArr.length > 1;
+                    const annotKey = `r-${i}`;
+                    const lyricColor = partColor(row);
                     const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
                     return (
-                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor }}>
-                        {lyricLines.map((line, li) => (
-                          <Fragment key={li}>
-                            {li > 0 && '\n'}
-                            {renderLineWithAite(line, `sm-${i}-${li}`)}
-                          </Fragment>
-                        ))}
-                        {!isSolo && (
-                          <span className="song-modal-lyric-annotation">
-                            {isAll ? (
-                              '（全員）'
-                            ) : (
-                              <>
-                                <span style={{ color: '#777' }}>（</span>
-                                {correctArr.map((n, ni) => (
-                                  <Fragment key={ni}>
-                                    {ni > 0 && <span style={{ color: '#777' }}>・</span>}
-                                    <span style={{ color: memberLookup[n]?.color || '#555' }}>
-                                      {memberLookup[n]?.lastName || n}
-                                    </span>
-                                  </Fragment>
-                                ))}
-                                <span style={{ color: '#777' }}>）</span>
-                              </>
-                            )}
-                          </span>
-                        )}
+                      <div
+                        key={i}
+                        className={`song-modal-lyric-row${hasAnnot && songAnnotKey === annotKey ? ' annot-visible' : ''}`}
+                        style={{ color: lyricColor }}
+                      >
+                        <span
+                          className={hasAnnot ? 'song-modal-lyric-text' : undefined}
+                          onMouseEnter={hasAnnot ? () => setSongAnnotKey(annotKey) : undefined}
+                          onMouseLeave={hasAnnot ? () => setSongAnnotKey(null) : undefined}
+                          onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
+                          onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
+                          onTouchCancel={hasAnnot ? endAnnotTouch : undefined}
+                        >
+                          {lyricLines.map((line, li) => (
+                            <Fragment key={li}>
+                              {li > 0 && '\n'}
+                              {renderLineWithAite(line, `sm-${i}-${li}`)}
+                            </Fragment>
+                          ))}
+                        </span>
+                        {hasAnnot && renderAnnotation(correctArr)}
                       </div>
                     );
                   })}

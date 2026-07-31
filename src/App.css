@@ -457,7 +457,8 @@ body::before {
 
 .song-lyrics-modal {
   max-height: 75vh;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   padding-bottom: 20px;
@@ -2517,6 +2518,11 @@ body::before {
 }
 
 /* 全歌詞オーバーレイ（クイズ開始前の全歌詞スクロール画面と同じ書式・レイアウト） */
+.song-lyrics-modal .full-lyrics-list {
+  overflow: visible;
+  flex: none;
+  min-height: auto;
+}
 .full-lyrics-list {
   overflow-y: auto;
   overflow-x: hidden;
@@ -2565,7 +2571,15 @@ body::before {
   border-radius: 7px;
   padding: 5px 10px;
   margin-bottom: 8px;
-  background: rgba(255, 240, 245, 0.45);
+  background: rgba(255, 240, 245, 0.97);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+@media (prefers-color-scheme: dark) {
+  .song-modal-legend {
+    background: rgba(40, 22, 30, 0.97);
+  }
 }
 .song-modal-legend-item {
   display: inline-flex;
@@ -2585,7 +2599,36 @@ body::before {
   line-height: 1.55;
   padding: 1px 0;
   white-space: pre-wrap;
+  position: relative;
 }
 .song-modal-lyric-annotation {
-  white-space: normal;
+  position: absolute;
+  bottom: calc(100% + 3px);
+  left: 0;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #e0ccd5;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.18s;
+  pointer-events: none;
+}
+@media (prefers-color-scheme: dark) {
+  .song-modal-lyric-annotation {
+    background: rgba(38, 28, 33, 0.97);
+    border-color: #6a4a58;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+.song-modal-lyric-text {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.song-modal-lyric-row.annot-visible .song-modal-lyric-annotation {
+  opacity: 1;
 }
