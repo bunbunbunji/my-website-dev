@@ -1,0 +1,15 @@
+{
+  "name": "KAWAII LAB. 歌割検定",
+  "short_name": "歌割検定",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "any",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a0a2e",
+  "theme_color": "#ff69b2"
+}
