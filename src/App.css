@@ -2544,6 +2544,14 @@ body::before {
   color: #777;
   font-weight: normal;
 }
+/* モーダルを開いて自動スクロールした直後、問題の歌詞を1.5秒間点滅させる */
+.full-lyrics-blink {
+  animation: full-lyrics-blink 0.25s step-end 6;
+}
+@keyframes full-lyrics-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
 .song-modal-legend {
   display: flex;
   flex-wrap: wrap;

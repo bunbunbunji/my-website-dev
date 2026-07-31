@@ -253,6 +253,7 @@ function App() {
   const [endlessIsOver, setEndlessIsOver] = useState(false);
   const [endlessNextQ, setEndlessNextQ] = useState(null);
   const [endlessNextQLoading, setEndlessNextQLoading] = useState(false);
+  const [nextQLoading, setNextQLoading] = useState(false);
   const [endlessLifeBonus, setEndlessLifeBonus] = useState({ type: 'none', amount: 0, key: 0 });
   const [endlessDiffNotif, setEndlessDiffNotif] = useState({ text: '', key: 0 });
   const [endlessUnlockedGroups, setEndlessUnlockedGroups] = useState(() => {
@@ -305,6 +306,7 @@ function App() {
   const [quizPhase, setQuizPhase] = useState(null); // 'announce' | 'scrolling' | 'question'
   const [fullSongLyrics, setFullSongLyrics] = useState([]);
   const [showFullLyrics, setShowFullLyrics] = useState(false);
+  const [fullLyricsBlink, setFullLyricsBlink] = useState(false);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
 
   const openSongModal = async (title, groupName) => {
@@ -930,25 +932,34 @@ function App() {
 
   const nextQuestion = async () => {
     if (gameMode === 'endless') { advanceEndlessQuestion(); return; }
-    if (gameMode === 'custom') { nextCustomQuestion(); return; }
-    // 検定モード
-    const nextIndex = quizState.currentIndex + 1;
-    if (nextIndex >= quizState.quizzes.length) {
-      setScreen('result');
+    if (gameMode === 'custom') {
+      setNextQLoading(true);
+      try { await nextCustomQuestion(); } finally { setNextQLoading(false); }
       return;
     }
-    // 先に歌詞を取得してからannounceへ（モーダル表示時に歌詞が確実に表示される）
-    const nextQuiz = quizState.quizzes[nextIndex];
-    if (nextQuiz?.sounds_id) await fetchSongLyrics(nextQuiz.sounds_id);
-    setQuestionTimer(60);
-    setQuizState(prev => ({ ...prev, currentIndex: nextIndex }));
-    setSelectedMembers(new Set());
-    setAnswered(false);
-    setResultMsg({ text: "", type: "" });
-    setShowFullLyrics(false);
-    setScrollAnimPhase('scrolling');
-    setQuizPhase('announce');
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // 検定モード
+    setNextQLoading(true);
+    try {
+      const nextIndex = quizState.currentIndex + 1;
+      if (nextIndex >= quizState.quizzes.length) {
+        setScreen('result');
+        return;
+      }
+      // 先に歌詞を取得してからannounceへ（モーダル表示時に歌詞が確実に表示される）
+      const nextQuiz = quizState.quizzes[nextIndex];
+      if (nextQuiz?.sounds_id) await fetchSongLyrics(nextQuiz.sounds_id);
+      setQuestionTimer(60);
+      setQuizState(prev => ({ ...prev, currentIndex: nextIndex }));
+      setSelectedMembers(new Set());
+      setAnswered(false);
+      setResultMsg({ text: "", type: "" });
+      setShowFullLyrics(false);
+      setScrollAnimPhase('scrolling');
+      setQuizPhase('announce');
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setNextQLoading(false);
+    }
   };
 
   const advanceEndlessQuestion = async () => {
@@ -1093,8 +1104,11 @@ function App() {
             // 3秒スクロール後、対象歌詞を中央に再スクロール
             const targetEl = questionLyricScrollRef.current;
             if (targetEl) {
+              const bodyRect = body.getBoundingClientRect();
+              const elRect = targetEl.getBoundingClientRect();
+              const deltaToCenter = (elRect.top + elRect.height / 2) - (bodyRect.top + bodyRect.height / 2);
               const targetScrollTop = Math.max(0, Math.min(
-                targetEl.offsetTop - body.clientHeight / 2 + targetEl.clientHeight / 2,
+                body.scrollTop + deltaToCenter,
                 body.scrollHeight - body.clientHeight
               ));
               body.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
@@ -1118,11 +1132,13 @@ function App() {
 
   // --- 検定モード：全歌詞オーバーレイ表示時に問題箇所へスクロール ---
   useEffect(() => {
-    if (!showFullLyrics) return;
+    if (!showFullLyrics) { setFullLyricsBlink(false); return; }
     const t = setTimeout(() => {
       fullLyricsHighlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setFullLyricsBlink(true);
     }, 150);
-    return () => clearTimeout(t);
+    const blinkOffT = setTimeout(() => setFullLyricsBlink(false), 150 + 1500);
+    return () => { clearTimeout(t); clearTimeout(blinkOffT); setFullLyricsBlink(false); };
   }, [showFullLyrics]);
 
   useEffect(() => {
@@ -1952,10 +1968,15 @@ function App() {
             </>)}
           </div>
           <button className="start-btn" disabled={isPreparing} onClick={async () => {
-            if (gameMode === 'endless') { startQuiz(); return; }
-            const ok = await prepareQuiz(quizState.group, quizState.difficulty);
-            if (ok) startQuiz();
-          }}>クイズを始める！</button>
+            setIsPreparing(true);
+            try {
+              if (gameMode === 'endless') { await startQuiz(); return; }
+              const ok = await prepareQuiz(quizState.group, quizState.difficulty);
+              if (ok) await startQuiz();
+            } finally {
+              setIsPreparing(false);
+            }
+          }}>{isPreparing ? 'ロード中…' : 'クイズを始める！'}</button>
           <button className="back-btn" onClick={() => setScreen(gameMode === 'endless' ? 'group' : 'difficulty')}>
             {gameMode === 'endless' ? 'グループ選択に戻る' : '難易度選択に戻る'}
           </button>
@@ -2115,9 +2136,9 @@ function App() {
             <button
               className="submit"
               onClick={nextQuestion}
-              disabled={gameMode === 'endless' && endlessNextQLoading}
+              disabled={(gameMode === 'endless' && endlessNextQLoading) || nextQLoading}
             >
-              {gameMode === 'endless' && endlessNextQLoading ? '読み込み中…' : '次の問題へ'}
+              {(gameMode === 'endless' && endlessNextQLoading) || nextQLoading ? 'ロード中…' : '次の問題へ'}
             </button>
           )}
         </div>
@@ -2139,7 +2160,7 @@ function App() {
                 return renderLyricGroup(
                   group, isQ,
                   { key, ref: isQ ? fullLyricsHighlightRef : null },
-                  'full-lyrics-row', 'full-lyrics-highlight',
+                  'full-lyrics-row', `full-lyrics-highlight${fullLyricsBlink ? ' full-lyrics-blink' : ''}`,
                   quizCurr?.lyrics_id
                 );
               })}
