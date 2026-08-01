@@ -2507,12 +2507,8 @@ function App() {
                   </span>
                 ))}
                 <span className="song-modal-legend-item">
-                  <span className="song-modal-legend-dot" style={{ background: '#333' }} />
-                  <span style={{ color: '#333', fontWeight: 'bold' }}>全員</span>
-                </span>
-                <span className="song-modal-legend-item">
                   <span className="song-modal-legend-dot" style={{ background: '#444' }} />
-                  <span style={{ color: '#444' }}>複数</span>
+                  <span style={{ color: '#444', fontWeight: 'bold' }}>複数</span>
                 </span>
               </div>
               {isLoadingSongModal ? (
@@ -2530,7 +2526,7 @@ function App() {
                     };
                     const partBold = (r) => {
                       const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
-                      return songModalMembers.length > 0 && arr.length === songModalMembers.length;
+                      return arr.length >= 2 && arr.length < songModalMembers.length;
                     };
 
                     if (item.type === 'group') {
@@ -2541,7 +2537,7 @@ function App() {
                       const correctArr = allSame
                         ? (item.base.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)
                         : [];
-                      const hasAnnot = correctArr.length > 1;
+                      const hasAnnot = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
 
                       const renderPartLines = (r, kp) => {
                         const color = partColor(r);
@@ -2581,7 +2577,7 @@ function App() {
                     // type: 'row'
                     const { row, i } = item;
                     const correctArr = (row.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
-                    const hasAnnot = correctArr.length > 1;
+                    const hasAnnot = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
                     const lyricColor = partColor(row);
                     const lyricBold = partBold(row);
                     const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
