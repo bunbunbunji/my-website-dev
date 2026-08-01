@@ -2500,13 +2500,8 @@ function App() {
                       return arr.length === 1 ? (memberLookup[arr[0]]?.color || '#333') : '#333';
                     };
 
-                    const startAnnotTouch = (key) => {
-                      songAnnotTimerRef.current = setTimeout(() => setSongAnnotKey(key), 150);
-                    };
-                    const endAnnotTouch = () => {
-                      clearTimeout(songAnnotTimerRef.current);
-                      setSongAnnotKey(null);
-                    };
+                    const startAnnotTouch = (key) => { setSongAnnotKey(key); };
+                    const endAnnotTouch = () => { setSongAnnotKey(null); };
 
                     if (item.type === 'group') {
                       const i = item.baseIdx;
