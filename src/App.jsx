@@ -2531,8 +2531,8 @@ function App() {
                         >
                           <span
                             className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onMouseEnter={hasAnnot ? () => setSongAnnotKey(annotKey) : undefined}
-                            onMouseLeave={hasAnnot ? () => setSongAnnotKey(null) : undefined}
+                            onPointerEnter={hasAnnot ? (e) => { if (e.pointerType === 'mouse') setSongAnnotKey(annotKey); } : undefined}
+                            onPointerLeave={hasAnnot ? (e) => { if (e.pointerType === 'mouse') setSongAnnotKey(null); } : undefined}
                             onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
                             onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
                             onTouchCancel={hasAnnot ? endAnnotTouch : undefined}

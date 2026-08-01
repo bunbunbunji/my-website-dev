@@ -2517,9 +2517,6 @@ body::before {
 }
 
 /* 全歌詞オーバーレイ（クイズ開始前の全歌詞スクロール画面と同じ書式・レイアウト） */
-.song-lyrics-modal .full-lyrics-list {
-  padding-top: 34px;
-}
 .full-lyrics-list {
   overflow-y: auto;
   overflow-x: hidden;
