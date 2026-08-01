@@ -795,6 +795,12 @@ function App() {
     setIsLoadingList(true);
     setScreen('lyrics');
     try {
+      // 起動直後に activeSoundsIdsRef がまだ未ロードの場合は先に取得する
+      if (activeSoundsIdsRef.current.length === 0) {
+        const { data } = await supabase.from('sounds').select('id').eq('is_active', true);
+        if (data) activeSoundsIdsRef.current = data.map(s => s.id);
+      }
+
       const groups = [
         { name: 'FRUITS ZIPPER' },
         { name: 'CANDY TUNE' },
