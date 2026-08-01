@@ -2611,3 +2611,8 @@ body::before {
 .song-modal-lyric-row.annot-visible .song-modal-lyric-annotation {
   opacity: 1;
 }
+@media (hover: hover) {
+  .song-modal-lyric-text:hover + .song-modal-lyric-annotation {
+    opacity: 1;
+  }
+}

@@ -198,7 +198,6 @@ function App() {
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
   const [songAnnotKey, setSongAnnotKey] = useState(null);
-  const isMouseActiveRef = useRef(true);
 
   const tooltipHoverTimerRef = useRef(null);
   const tooltipCloseTimerRef = useRef(null);
@@ -539,20 +538,6 @@ function App() {
       .then(({ data }) => { if (data) activeSoundsIdsRef.current = data.map(s => s.id); });
   }, []);
 
-  useEffect(() => {
-    let touchEndTime = 0;
-    const onTouchStart = () => { isMouseActiveRef.current = false; };
-    const onTouchEnd = () => { touchEndTime = Date.now(); };
-    const onMouseMove = () => { if (Date.now() - touchEndTime > 600) isMouseActiveRef.current = true; };
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    window.addEventListener('mousemove', onMouseMove);
-    return () => {
-      window.removeEventListener('touchstart', onTouchStart);
-      window.removeEventListener('touchend', onTouchEnd);
-      window.removeEventListener('mousemove', onMouseMove);
-    };
-  }, []);
 
   // --- セッション復元チェック（マウント時）: エンドレスのみ対象 ---
   useEffect(() => {
@@ -2546,8 +2531,6 @@ function App() {
                         >
                           <span
                             className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onMouseEnter={hasAnnot ? () => { if (isMouseActiveRef.current) setSongAnnotKey(annotKey); } : undefined}
-                            onMouseLeave={hasAnnot ? () => setSongAnnotKey(null) : undefined}
                             onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
                             onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
                             onTouchCancel={hasAnnot ? endAnnotTouch : undefined}
@@ -2583,8 +2566,6 @@ function App() {
                       >
                         <span
                           className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                          onMouseEnter={hasAnnot ? () => setSongAnnotKey(annotKey) : undefined}
-                          onMouseLeave={hasAnnot ? () => setSongAnnotKey(null) : undefined}
                           onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
                           onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
                           onTouchCancel={hasAnnot ? endAnnotTouch : undefined}
