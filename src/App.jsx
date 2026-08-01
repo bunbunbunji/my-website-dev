@@ -2551,7 +2551,7 @@ function App() {
                       const allSame = allParts.every(r => memberSig(r) === memberSig(item.base));
                       const correctArr = allSame
                         ? (item.base.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)
-                        : [];
+                        : [...new Set(allParts.flatMap(r => (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)))];
                       const hasAnnot = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
                       const lyricText = allParts.map((r, ri) => {
                         const space = ri === 0 ? '' : spaceChar(allParts[ri - 1].col_space);
