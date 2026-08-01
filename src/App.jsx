@@ -197,16 +197,13 @@ function App() {
   const [timerKey, setTimerKey] = useState(0);
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
-  const [touchAnnot, setTouchAnnot] = useState(null);
-  const [touchAnnotFading, setTouchAnnotFading] = useState(false);
-
   const tooltipHoverTimerRef = useRef(null);
   const tooltipCloseTimerRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const longPressTriggeredRef = useRef(false);
   const touchEndedRef = useRef(false);
   const touchEndTimerRef = useRef(null);
-  const touchAnnotFadeTimerRef = useRef(null);
+  const touchAnnotRef = useRef(null);
 
   const openTooltip = (level) => {
     clearTimeout(tooltipCloseTimerRef.current);
@@ -2450,17 +2447,31 @@ function App() {
         });
         if (curGroup) groups.push(curGroup);
 
+        const getAnnotHTML = (correctArr) => {
+          const isAll = correctArr.length === songModalMembers.length && songModalMembers.length > 0;
+          if (isAll) return '（全員）';
+          const inner = correctArr.map((n, ni) => {
+            const sep = ni > 0 ? '<span style="color:#777">・</span>' : '';
+            const color = memberLookup[n]?.color || '#555';
+            const name = (memberLookup[n]?.lastName || n).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `${sep}<span style="color:${color}">${name}</span>`;
+          }).join('');
+          return `<span style="color:#777">（</span>${inner}<span style="color:#777">）</span>`;
+        };
         const showTouchAnnot = (top, left, correctArr) => {
-          clearTimeout(touchAnnotFadeTimerRef.current);
-          setTouchAnnotFading(false);
-          setTouchAnnot({ top, left, correctArr });
+          const el = touchAnnotRef.current;
+          if (!el) return;
+          el.innerHTML = getAnnotHTML(correctArr);
+          el.style.top = `${top - 3}px`;
+          el.style.left = `${left}px`;
+          el.style.transition = 'none';
+          el.style.opacity = '1';
         };
         const hideTouchAnnot = () => {
-          setTouchAnnotFading(true);
-          touchAnnotFadeTimerRef.current = setTimeout(() => {
-            setTouchAnnot(null);
-            setTouchAnnotFading(false);
-          }, 180);
+          const el = touchAnnotRef.current;
+          if (!el) return;
+          el.style.transition = 'opacity 0.18s ease-in';
+          el.style.opacity = '0';
         };
 
         const renderAnnotContent = (correctArr) => {
@@ -2565,9 +2576,9 @@ function App() {
                       <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor }}>
                         <span
                           className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                          onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); setTouchAnnot({ top: rect.top, left: rect.left, correctArr }); } : undefined}
-                          onTouchEnd={hasAnnot ? () => setTouchAnnot(null) : undefined}
-                          onTouchCancel={hasAnnot ? () => setTouchAnnot(null) : undefined}
+                          onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.left, correctArr); } : undefined}
+                          onTouchEnd={hasAnnot ? hideTouchAnnot : undefined}
+                          onTouchCancel={hasAnnot ? hideTouchAnnot : undefined}
                         >
                           {lyricLines.map((line, li) => (
                             <Fragment key={li}>
@@ -2584,11 +2595,7 @@ function App() {
               )}
               <button className="modal-close-btn" onClick={closeSongModal}>とじる</button>
             </div>
-            {touchAnnot && (
-              <span className={`song-modal-annot-fixed${touchAnnotFading ? ' fading' : ''}`} style={{ top: `${touchAnnot.top - 3}px`, left: `${touchAnnot.left}px` }}>
-                {renderAnnotContent(touchAnnot.correctArr)}
-              </span>
-            )}
+            <span ref={touchAnnotRef} className="song-modal-annot-fixed" />
           </div>
         );
       })()}

@@ -2613,14 +2613,6 @@ body::before {
     opacity: 1;
   }
 }
-@keyframes annotFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes annotFadeOut {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
 .song-modal-annot-fixed {
   position: fixed;
   transform: translateY(-100%);
@@ -2633,8 +2625,5 @@ body::before {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 10001;
   pointer-events: none;
-  animation: annotFadeIn 0.18s ease-out;
-}
-.song-modal-annot-fixed.fading {
-  animation: annotFadeOut 0.18s ease-in forwards;
+  opacity: 0;
 }
