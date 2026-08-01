@@ -198,7 +198,6 @@ function App() {
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
   const [songAnnotKey, setSongAnnotKey] = useState(null);
-  const songAnnotTimerRef = useRef(null);
 
   const tooltipHoverTimerRef = useRef(null);
   const tooltipCloseTimerRef = useRef(null);
@@ -2500,15 +2499,8 @@ function App() {
                       return arr.length === 1 ? (memberLookup[arr[0]]?.color || '#333') : '#333';
                     };
 
-                    const startAnnotTouch = (key) => {
-                      clearTimeout(songAnnotTimerRef.current);
-                      songAnnotTimerRef.current = null;
-                      setSongAnnotKey(key);
-                    };
-                    const endAnnotTouch = () => {
-                      setSongAnnotKey(null);
-                      songAnnotTimerRef.current = setTimeout(() => { songAnnotTimerRef.current = null; }, 600);
-                    };
+                    const startAnnotTouch = (key) => { setSongAnnotKey(key); };
+                    const endAnnotTouch = () => { setSongAnnotKey(null); };
 
                     if (item.type === 'group') {
                       const i = item.baseIdx;
@@ -2538,8 +2530,6 @@ function App() {
                         >
                           <span
                             className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onPointerEnter={hasAnnot ? (e) => { if (e.pointerType === 'mouse' && !songAnnotTimerRef.current) setSongAnnotKey(annotKey); } : undefined}
-                            onPointerLeave={hasAnnot ? (e) => { if (e.pointerType === 'mouse') setSongAnnotKey(null); } : undefined}
                             onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
                             onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
                             onTouchCancel={hasAnnot ? endAnnotTouch : undefined}
