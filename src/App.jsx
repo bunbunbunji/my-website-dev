@@ -198,6 +198,7 @@ function App() {
   const [closingResumeModal, setClosingResumeModal] = useState(false);
   const [closingSongModal, setClosingSongModal] = useState(false);
   const [touchAnnot, setTouchAnnot] = useState(null);
+  const [touchAnnotFading, setTouchAnnotFading] = useState(false);
 
   const tooltipHoverTimerRef = useRef(null);
   const tooltipCloseTimerRef = useRef(null);
@@ -205,6 +206,7 @@ function App() {
   const longPressTriggeredRef = useRef(false);
   const touchEndedRef = useRef(false);
   const touchEndTimerRef = useRef(null);
+  const touchAnnotFadeTimerRef = useRef(null);
 
   const openTooltip = (level) => {
     clearTimeout(tooltipCloseTimerRef.current);
@@ -2448,6 +2450,19 @@ function App() {
         });
         if (curGroup) groups.push(curGroup);
 
+        const showTouchAnnot = (top, left, correctArr) => {
+          clearTimeout(touchAnnotFadeTimerRef.current);
+          setTouchAnnotFading(false);
+          setTouchAnnot({ top, left, correctArr });
+        };
+        const hideTouchAnnot = () => {
+          setTouchAnnotFading(true);
+          touchAnnotFadeTimerRef.current = setTimeout(() => {
+            setTouchAnnot(null);
+            setTouchAnnotFading(false);
+          }, 180);
+        };
+
         const renderAnnotContent = (correctArr) => {
           const isAll = correctArr.length === songModalMembers.length && songModalMembers.length > 0;
           return isAll ? '（全員）' : (
@@ -2520,9 +2535,9 @@ function App() {
                         <div key={i} className="song-modal-lyric-row">
                           <span
                             className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); setTouchAnnot({ top: rect.top, left: rect.left, correctArr }); } : undefined}
-                            onTouchEnd={hasAnnot ? () => setTouchAnnot(null) : undefined}
-                            onTouchCancel={hasAnnot ? () => setTouchAnnot(null) : undefined}
+                            onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.left, correctArr); } : undefined}
+                            onTouchEnd={hasAnnot ? hideTouchAnnot : undefined}
+                            onTouchCancel={hasAnnot ? hideTouchAnnot : undefined}
                           >
                             {renderPartLines(item.base, `sm-${i}-base`)}
                             {item.appends.map((ap, ai) => {
@@ -2570,7 +2585,7 @@ function App() {
               <button className="modal-close-btn" onClick={closeSongModal}>とじる</button>
             </div>
             {touchAnnot && (
-              <span className="song-modal-annot-fixed" style={{ top: `${touchAnnot.top - 3}px`, left: `${touchAnnot.left}px` }}>
+              <span className={`song-modal-annot-fixed${touchAnnotFading ? ' fading' : ''}`} style={{ top: `${touchAnnot.top - 3}px`, left: `${touchAnnot.left}px` }}>
                 {renderAnnotContent(touchAnnot.correctArr)}
               </span>
             )}
