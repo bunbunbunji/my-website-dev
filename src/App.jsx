@@ -2465,6 +2465,9 @@ function App() {
           el.style.top = `${top - 3}px`;
           el.style.left = `${left}px`;
           el.style.transition = 'none';
+          el.style.opacity = '0';
+          void el.offsetHeight; // ブラウザにopacity:0を確定させてからトランジション開始
+          el.style.transition = 'opacity 0.18s ease-out';
           el.style.opacity = '1';
         };
         const hideTouchAnnot = () => {
