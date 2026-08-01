@@ -2500,8 +2500,15 @@ function App() {
                       return arr.length === 1 ? (memberLookup[arr[0]]?.color || '#333') : '#333';
                     };
 
-                    const startAnnotTouch = (key) => { setSongAnnotKey(key); };
-                    const endAnnotTouch = () => { setSongAnnotKey(null); };
+                    const startAnnotTouch = (key) => {
+                      clearTimeout(songAnnotTimerRef.current);
+                      songAnnotTimerRef.current = null;
+                      setSongAnnotKey(key);
+                    };
+                    const endAnnotTouch = () => {
+                      setSongAnnotKey(null);
+                      songAnnotTimerRef.current = setTimeout(() => { songAnnotTimerRef.current = null; }, 600);
+                    };
 
                     if (item.type === 'group') {
                       const i = item.baseIdx;
@@ -2531,7 +2538,7 @@ function App() {
                         >
                           <span
                             className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onPointerEnter={hasAnnot ? (e) => { if (e.pointerType === 'mouse') setSongAnnotKey(annotKey); } : undefined}
+                            onPointerEnter={hasAnnot ? (e) => { if (e.pointerType === 'mouse' && !songAnnotTimerRef.current) setSongAnnotKey(annotKey); } : undefined}
                             onPointerLeave={hasAnnot ? (e) => { if (e.pointerType === 'mouse') setSongAnnotKey(null); } : undefined}
                             onTouchStart={hasAnnot ? () => startAnnotTouch(annotKey) : undefined}
                             onTouchEnd={hasAnnot ? endAnnotTouch : undefined}
