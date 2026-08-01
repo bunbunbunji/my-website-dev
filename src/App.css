@@ -2589,41 +2589,66 @@ body::before {
 }
 .song-modal-lyric-annotation {
   position: absolute;
-  bottom: calc(100% + 3px);
+  top: calc(100% + 5px);
   left: 0;
-  white-space: nowrap;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid #e0ccd5;
-  border-radius: 5px;
-  padding: 4px 12px;
+  white-space: normal;
+  max-width: min(85vw, 260px);
+  background: #fdfdfd;
+  border: 1px solid #f0d0e0;
+  border-radius: 10px;
+  padding: 7px 12px;
   font-size: 0.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 30;
   opacity: 0;
   transition: opacity 0.18s;
   pointer-events: none;
+  text-align: left;
+  color: #333;
+  line-height: 1.6;
+}
+.song-modal-annot-card-lyrics {
+  margin-bottom: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.song-modal-annot-card-members {
+  font-size: 0.75rem;
 }
 .song-modal-lyric-text {
   text-decoration: underline;
+  text-decoration-color: rgba(255, 105, 178, 0.5);
   text-underline-offset: 3px;
-  cursor: help;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 1px 2px;
+}
+.song-modal-lyric-text:active {
+  background-color: rgba(255, 105, 178, 0.15);
 }
 @media (hover: hover) {
+  .song-modal-lyric-text:hover {
+    background-color: rgba(255, 105, 178, 0.1);
+    text-decoration-color: #ff69b2;
+  }
   .song-modal-lyric-text:hover + .song-modal-lyric-annotation {
     opacity: 1;
   }
 }
 .song-modal-annot-fixed {
   position: fixed;
-  transform: translateY(-100%);
-  white-space: nowrap;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid #e0ccd5;
-  border-radius: 5px;
-  padding: 4px 12px;
+  white-space: normal;
+  max-width: min(85vw, 260px);
+  background: #fdfdfd;
+  border: 1px solid #f0d0e0;
+  border-radius: 10px;
+  padding: 7px 12px;
   font-size: 0.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   z-index: 10001;
   pointer-events: none;
   opacity: 0;
+  text-align: left;
+  color: #333;
+  line-height: 1.6;
 }
