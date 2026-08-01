@@ -2508,7 +2508,7 @@ function App() {
                 ))}
                 <span className="song-modal-legend-item">
                   <span className="song-modal-legend-dot" style={{ background: '#444' }} />
-                  <span style={{ color: '#444' }}>複数</span>
+                  <span style={{ color: '#444', fontStyle: 'italic' }}>複数</span>
                 </span>
               </div>
               {isLoadingSongModal ? (
@@ -2537,10 +2537,12 @@ function App() {
 
                       const renderPartLines = (r, kp) => {
                         const color = partColor(r);
+                        const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+                        const italic = arr.length >= 2 && arr.length < songModalMembers.length;
                         return (r.lyrics ? r.lyrics.split('\n') : ['']).map((line, li) => (
                           <Fragment key={`${kp}-${li}`}>
                             {li > 0 && '\n'}
-                            <span style={{ color }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
+                            <span style={{ color, fontStyle: italic ? 'italic' : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
                           </Fragment>
                         ));
                       };
@@ -2574,9 +2576,10 @@ function App() {
                     const correctArr = (row.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
                     const hasAnnot = correctArr.length > 1;
                     const lyricColor = partColor(row);
+                    const lyricItalic = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
                     const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
                     return (
-                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor }}>
+                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor, fontStyle: lyricItalic ? 'italic' : undefined }}>
                         <span
                           className={hasAnnot ? 'song-modal-lyric-text' : undefined}
                           onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.left, correctArr); } : undefined}
