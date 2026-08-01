@@ -2608,11 +2608,21 @@ body::before {
   text-underline-offset: 3px;
   cursor: help;
 }
-.song-modal-lyric-row.annot-visible .song-modal-lyric-annotation {
-  opacity: 1;
-}
 @media (hover: hover) {
   .song-modal-lyric-text:hover + .song-modal-lyric-annotation {
     opacity: 1;
   }
+}
+.song-modal-annot-fixed {
+  position: fixed;
+  transform: translateY(-100%);
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid #e0ccd5;
+  border-radius: 5px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  z-index: 10001;
+  pointer-events: none;
 }
