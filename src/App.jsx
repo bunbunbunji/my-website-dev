@@ -2547,16 +2547,6 @@ function App() {
                     if (item.type === 'group') {
                       const i = item.baseIdx;
                       const allParts = [item.base, ...item.appends.map(ap => ap.row)];
-                      const memberSig = r => (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean).sort().join(',');
-                      const allSame = allParts.every(r => memberSig(r) === memberSig(item.base));
-                      const correctArr = allSame
-                        ? (item.base.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)
-                        : [...new Set(allParts.flatMap(r => (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean)))];
-                      const hasAnnot = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
-                      const lyricText = allParts.map((r, ri) => {
-                        const space = ri === 0 ? '' : spaceChar(allParts[ri - 1].col_space);
-                        return space + (r.lyrics || '');
-                      }).join('');
 
                       const renderPartLines = (r, kp) => {
                         const color = partColor(r);
@@ -2571,24 +2561,31 @@ function App() {
 
                       return (
                         <div key={i} className="song-modal-lyric-row">
-                          <span
-                            className={hasAnnot ? 'song-modal-lyric-text' : undefined}
-                            onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
-                            onTouchEnd={hasAnnot ? hideTouchAnnot : undefined}
-                            onTouchCancel={hasAnnot ? hideTouchAnnot : undefined}
-                          >
-                            {renderPartLines(item.base, `sm-${i}-base`)}
-                            {item.appends.map((ap, ai) => {
-                              const prev = ai === 0 ? item.base : item.appends[ai - 1].row;
-                              return (
-                                <Fragment key={ai}>
-                                  {spaceChar(prev.col_space)}
-                                  {renderPartLines(ap.row, `sm-g-${i}-${ai}`)}
-                                </Fragment>
-                              );
-                            })}
-                          </span>
-                          {hasAnnot && <div className="song-modal-lyric-annotation">{renderAnnotContent(correctArr, lyricText)}</div>}
+                          {allParts.map((r, ri) => {
+                            const prev = ri === 0 ? null : allParts[ri - 1];
+                            const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+                            const isPartMulti = arr.length >= 2 && arr.length < songModalMembers.length;
+                            return (
+                              <Fragment key={ri}>
+                                {ri > 0 && spaceChar(prev.col_space)}
+                                {isPartMulti ? (
+                                  <>
+                                    <span
+                                      className="song-modal-lyric-text"
+                                      onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                                      onTouchEnd={hideTouchAnnot}
+                                      onTouchCancel={hideTouchAnnot}
+                                    >
+                                      {renderPartLines(r, `sm-g-${i}-${ri}`)}
+                                    </span>
+                                    <div className="song-modal-lyric-annotation">{renderAnnotContent(arr, r.lyrics || '')}</div>
+                                  </>
+                                ) : (
+                                  renderPartLines(r, `sm-g-${i}-${ri}`)
+                                )}
+                              </Fragment>
+                            );
+                          })}
                         </div>
                       );
                     }
