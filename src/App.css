@@ -2446,7 +2446,6 @@ body::before {
 }
 .scrolling-lyrics-body.is-zooming .scrolling-lyric-row {
   opacity: 0.2;
-  transition: opacity 0.6s ease;
 }
 /* ターゲット行は opacity を 1 に戻す（他の行だけ dimにする） */
 .scrolling-lyrics-body.is-zooming .scrolling-lyric-target {
@@ -2467,10 +2466,14 @@ body::before {
   color: #555;
   padding: 0;
   white-space: pre-wrap;
+  transition: opacity 0.6s ease;
 }
 .lyric-inline-append {
   display: inline;
   white-space: pre-wrap;
+}
+.lyric-group-dim {
+  transition: opacity 0.6s ease;
 }
 .scrolling-lyric-target {
   color: #333;
@@ -2478,7 +2481,6 @@ body::before {
 /* 同グループ内で選ばれなかった歌詞は他の行と同様に薄く表示 */
 .scrolling-lyrics-body.is-zooming .lyric-group-dim {
   opacity: 0.2;
-  transition: opacity 0.6s ease;
 }
 /* テキスト文字だけ点滅 — color:transparent で文字だけ消え、左ボーダーは常に残る */
 .scrolling-lyrics-body.is-zooming .lyric-blink-text {
