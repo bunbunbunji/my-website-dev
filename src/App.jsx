@@ -335,7 +335,6 @@ function App() {
   const questionLyricScrollRef = useRef(null);
   const fullLyricsHighlightRef = useRef(null);
   const lyricBodyRef  = useRef(null);
-  const [scrollAnimPhase, setScrollAnimPhase] = useState('scrolling'); // 'scrolling' | 'zooming'
   const rankRef = useRef(null);
   const descTextRef = useRef(null);
   const catchText1Ref = useRef(null);
@@ -1079,7 +1078,6 @@ function App() {
   // --- 検定モード：全歌詞スクロールアニメーション (rAF) ---
   useEffect(() => {
     if (quizPhase !== 'scrolling') return;
-    setScrollAnimPhase('scrolling');
     if (!fullSongLyrics.length || isLoadingLyrics) return;
 
     let rafId;
@@ -1121,7 +1119,10 @@ function App() {
               body.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
             }
             setTimeout(() => {
-              setScrollAnimPhase('zooming');
+              // ReactのstateではなくDOMを直接操作することでiOSでもCSSアニメーションが発火する
+              requestAnimationFrame(() => {
+                if (lyricBodyRef.current) lyricBodyRef.current.classList.add('is-zooming');
+              });
               setTimeout(() => setQuizPhase('question'), 2600);
             }, 700);
           }
@@ -2016,7 +2017,7 @@ function App() {
             <p className="scrolling-song-name">{quizCurr?.song_name}</p>
             <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
           </div>
-          <div ref={lyricBodyRef} className={`scrolling-lyrics-body${scrollAnimPhase === 'zooming' ? ' is-zooming' : ''}`}>
+          <div ref={lyricBodyRef} className="scrolling-lyrics-body">
             {isLoadingLyrics && quizPhase === 'scrolling' ? (
               <p className="scrolling-loading">読み込み中...</p>
             ) : groupLyricRows(fullSongLyrics).map((group) => {
