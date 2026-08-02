@@ -2444,17 +2444,9 @@ body::before {
   padding: 12px 20px;
   text-align: left;
 }
-@keyframes lyric-dim {
-  from { opacity: 1; }
-  to   { opacity: 0.2; }
-}
-.scrolling-lyrics-body.is-zooming .scrolling-lyric-row {
-  animation: lyric-dim 0.6s ease forwards;
-}
-/* ターゲット行はアニメーションをキャンセルして opacity を 1 に保つ */
+/* ターゲット行のopacity保証（Web Animations APIでの上書き防止） */
 .scrolling-lyrics-body.is-zooming .scrolling-lyric-target {
-  animation: none;
-  opacity: 1;
+  opacity: 1 !important;
 }
 .scrolling-loading {
   text-align: center;
@@ -2481,10 +2473,7 @@ body::before {
 .scrolling-lyric-target {
   color: #333;
 }
-/* 同グループ内で選ばれなかった歌詞は他の行と同様に薄く表示 */
-.scrolling-lyrics-body.is-zooming .lyric-group-dim {
-  animation: lyric-dim 0.6s ease forwards;
-}
+/* lyric-group-dimのopacityはWeb Animations APIで制御 */
 /* テキスト文字だけ点滅 — color:transparent で文字だけ消え、左ボーダーは常に残る */
 .scrolling-lyrics-body.is-zooming .lyric-blink-text {
   animation: lyric-blink 0.6s step-end infinite;

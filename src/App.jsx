@@ -1120,10 +1120,15 @@ function App() {
               body.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
             }
             setTimeout(() => {
-              // ReactのstateではなくDOMを直接操作することでiOSでもCSSアニメーションが発火する
-              requestAnimationFrame(() => {
-                if (lyricBodyRef.current) lyricBodyRef.current.classList.add('is-zooming');
-              });
+              const b = lyricBodyRef.current;
+              if (!b) return;
+              // is-zooming クラス付与（lyric-blink-text のCSSアニメーション用）
+              b.classList.add('is-zooming');
+              // opacity dimはWeb Animations APIで直接制御（iOSのスクロールコンテナ内CSS animation問題を回避）
+              const dimOpts = { duration: 600, easing: 'ease', fill: 'forwards' };
+              const dimKf = [{ opacity: 1 }, { opacity: 0.2 }];
+              b.querySelectorAll('.scrolling-lyric-row:not(.scrolling-lyric-target)').forEach(el => el.animate(dimKf, dimOpts));
+              b.querySelectorAll('.lyric-group-dim').forEach(el => el.animate(dimKf, dimOpts));
               setTimeout(() => setQuizPhase('question'), 2600);
             }, 700);
           }
