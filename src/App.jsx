@@ -335,6 +335,7 @@ function App() {
   const questionLyricScrollRef = useRef(null);
   const fullLyricsHighlightRef = useRef(null);
   const lyricBodyRef  = useRef(null);
+  const [scrollAnimPhase, setScrollAnimPhase] = useState('scrolling'); // 'scrolling' | 'zooming' — is-zoomingクラスはDOM直接操作で付与
   const rankRef = useRef(null);
   const descTextRef = useRef(null);
   const catchText1Ref = useRef(null);
