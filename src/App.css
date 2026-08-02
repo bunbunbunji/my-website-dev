@@ -2573,6 +2573,10 @@ body::before {
   gap: 3px;
   white-space: nowrap;
 }
+.song-modal-legend-loading {
+  font-size: 0.78rem;
+  color: #bbb;
+}
 .song-modal-legend-dot {
   display: inline-block;
   width: 7px;

@@ -2515,22 +2515,27 @@ function App() {
             <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
               <h2>{songModal?.title}</h2>
               <div className="song-modal-legend">
-                {songModalMembers.map((m, mi) => (
-                  <span key={mi} className="song-modal-legend-item">
-                    <span className="song-modal-legend-dot" style={{ background: memberColorCSS[m.color] || '#333' }} />
-                    <span style={{ color: memberColorCSS[m.color] || '#333' }}>{m.Last_name}</span>
-                  </span>
-                ))}
-                {songModalMembers.length > 0 && <>
-                  <span className="song-modal-legend-item">
-                    <span className="song-modal-legend-dot" style={{ background: '#444' }} />
-                    <span style={{ color: '#444', fontWeight: 'bold' }}>複数</span>
-                  </span>
-                  <span className="song-modal-legend-item">
-                    <span className="song-modal-legend-dot" style={{ background: '#333' }} />
-                    <span style={{ color: '#333' }}>全員</span>
-                  </span>
-                </>}
+                {isLoadingSongModal && songModalMembers.length === 0
+                  ? <span className="song-modal-legend-loading">メンバー情報を取得中...</span>
+                  : <>
+                    {songModalMembers.map((m, mi) => (
+                      <span key={mi} className="song-modal-legend-item">
+                        <span className="song-modal-legend-dot" style={{ background: memberColorCSS[m.color] || '#333' }} />
+                        <span style={{ color: memberColorCSS[m.color] || '#333' }}>{m.Last_name}</span>
+                      </span>
+                    ))}
+                    {songModalMembers.length > 0 && <>
+                      <span className="song-modal-legend-item">
+                        <span className="song-modal-legend-dot" style={{ background: '#444' }} />
+                        <span style={{ color: '#444', fontWeight: 'bold' }}>複数</span>
+                      </span>
+                      <span className="song-modal-legend-item">
+                        <span className="song-modal-legend-dot" style={{ background: '#333' }} />
+                        <span style={{ color: '#333' }}>全員</span>
+                      </span>
+                    </>}
+                  </>
+                }
               </div>
               {isLoadingSongModal ? (
                 <div className="song-modal-loading">データを取得中...</div>
