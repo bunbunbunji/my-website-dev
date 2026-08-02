@@ -1611,6 +1611,7 @@ function App() {
 
   return (
     <div className="app-root">
+      <div className="build-version">{__BUILD_TIME__}</div>
       <div className="global-footer-link">
         {screen !== 'top' && screen !== 'result' && screen !== 'custom-review' && (
           <span onClick={async () => {

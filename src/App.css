@@ -60,6 +60,19 @@ body::before {
   box-sizing: border-box;
 }
 
+.build-version {
+  position: fixed;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: rgba(150, 150, 150, 0.6);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+
 /* --- カードデザイン共通 --- */
 .box {
   background: var(--white);
