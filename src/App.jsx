@@ -1122,13 +1122,22 @@ function App() {
             setTimeout(() => {
               const b = lyricBodyRef.current;
               if (!b) return;
-              // is-zooming クラス付与（lyric-blink-text のCSSアニメーション用）
               b.classList.add('is-zooming');
-              // opacity dimはWeb Animations APIで直接制御（iOSのスクロールコンテナ内CSS animation問題を回避）
-              const dimOpts = { duration: 600, easing: 'ease', fill: 'forwards' };
-              const dimKf = [{ opacity: 1 }, { opacity: 0.2 }];
-              b.querySelectorAll('.scrolling-lyric-row:not(.scrolling-lyric-target)').forEach(el => el.animate(dimKf, dimOpts));
-              b.querySelectorAll('.lyric-group-dim').forEach(el => el.animate(dimKf, dimOpts));
+              // RAFループで毎フレームstyle.opacityを直接書き換える（iOSスクロールコンテナ内でCSS/Web Animations APIが効かない問題の回避）
+              const dimEls = [
+                ...b.querySelectorAll('.scrolling-lyric-row:not(.scrolling-lyric-target)'),
+                ...b.querySelectorAll('.lyric-group-dim'),
+              ];
+              const DIM_DURATION = 600;
+              const startTs = performance.now();
+              const rafDim = (now) => {
+                const t = Math.min((now - startTs) / DIM_DURATION, 1);
+                const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                const opacity = 1 - 0.8 * ease; // 1.0 → 0.2
+                dimEls.forEach(el => { el.style.opacity = String(opacity); });
+                if (t < 1) requestAnimationFrame(rafDim);
+              };
+              requestAnimationFrame(rafDim);
               setTimeout(() => setQuizPhase('question'), 2600);
             }, 700);
           }
