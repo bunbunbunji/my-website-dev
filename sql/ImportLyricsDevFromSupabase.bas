@@ -1,13 +1,12 @@
-Sub ImportLyricsDevFromSupabase()
+Sub ImportLyricsFromSupabase()
     Const SUPABASE_URL As String = "https://atinpqtedmrfrtdlkpkd.supabase.co"
     Const SUPABASE_KEY As String = "sb_publishable_SWT3WgKAN77Ujv_lbDSppg_gmedWl64"
-    Const QUERY_NAME   As String = "lyrics_dev_data"
-    Const SHEET_NAME   As String = "lyrics_dev"
+    Const QUERY_NAME   As String = "lyrics_data"
+    Const SHEET_NAME   As String = "lyrics"
     Const PAGE_SIZE    As Long = 1000
 
-    ' 取得対象の sounds_id（カンマ区切り）
-    ' 全件取得する場合は SOUNDS_FILTER = "" にする
-    Const SOUNDS_FILTER As String = ""
+    Const SOUNDS_FILTER     As String = ""
+    Const SOUNDS_NAME_COL  As Long = 2  ' Soundsシートの何列目がsong_nameか（A=1, B=2, ...）
 
     Dim filterParam As String
     If SOUNDS_FILTER <> "" Then
@@ -39,7 +38,7 @@ Sub ImportLyricsDevFromSupabase()
 
     ' --- 2. CSVファイル準備（BOM付きUTF-8） ---
     Dim csvPath As String
-    csvPath = ThisWorkbook.Path & "\lyrics_dev_tmp.csv"
+    csvPath = ThisWorkbook.Path & "\lyrics_tmp.csv"
 
     Dim bom(2) As Byte
     bom(0) = &HEF: bom(1) = &HBB: bom(2) = &HBF
@@ -108,7 +107,6 @@ Sub ImportLyricsDevFromSupabase()
         Set ws = ThisWorkbook.Sheets.Add
         ws.name = SHEET_NAME
     Else
-        ' 既存のクエリテーブルを削除
         Dim qt As QueryTable
         For Each qt In ws.QueryTables
             qt.Delete
@@ -132,7 +130,7 @@ Sub ImportLyricsDevFromSupabase()
 
     ThisWorkbook.Queries.Add name:=QUERY_NAME, Formula:=pqFormula
 
-    ' --- 7. シートに展開（テーブル化しない: QueryTableとして展開） ---
+    ' --- 7. シートに展開 ---
     Application.DisplayAlerts = False
     With ws.QueryTables.Add( _
         Connection:="OLEDB;Provider=Microsoft.Mashup.OleDb.1;Data Source=$Workbook$;Location=" & QUERY_NAME & ";Extended Properties=""""", _
@@ -147,5 +145,22 @@ Sub ImportLyricsDevFromSupabase()
     Kill csvPath
     On Error GoTo 0
 
+    ' --- 8. song_name列をVLOOKUPで追加（sounds_idの右隣・C列に挿入） ---
+    Dim lastRow As Long
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+    If lastRow >= 2 Then
+        ws.Columns(3).Insert Shift:=xlToRight
+        ws.Cells(1, 3).Value = "song_name"
+
+        Dim lookupRange As String
+        lookupRange = "Sounds!$A:$" & Chr(64 + SOUNDS_NAME_COL)
+        Dim nameFormula As String
+        nameFormula = "=IFERROR(VLOOKUP(B2," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
+        ws.Range(ws.Cells(2, 3), ws.Cells(lastRow, 3)).Formula = nameFormula
+    End If
+
     MsgBox "取得完了: " & totalCount & " 件"
 End Sub
+
+
