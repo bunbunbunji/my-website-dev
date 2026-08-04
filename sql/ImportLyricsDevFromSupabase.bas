@@ -6,7 +6,7 @@ Sub ImportLyricsFromSupabase()
     Const PAGE_SIZE    As Long = 1000
 
     Const SOUNDS_FILTER     As String = ""
-    Const SOUNDS_NAME_COL  As Long = 2  ' Soundsシートの何列目がsong_nameか（A=1, B=2, ...）
+    Const SOUNDS_NAME_COL  As Long = 3  ' Soundsシートの何列目がsong_nameか（A=1, B=2, C=3, ...）
 
     Dim filterParam As String
     If SOUNDS_FILTER <> "" Then
@@ -156,7 +156,7 @@ Sub ImportLyricsFromSupabase()
         Dim lookupRange As String
         lookupRange = "Sounds!$A:$" & Chr(64 + SOUNDS_NAME_COL)
         Dim nameFormula As String
-        nameFormula = "=IFERROR(VLOOKUP(B2," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
+        nameFormula = "=IFERROR(VLOOKUP(VALUE(B2)," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
         ws.Range(ws.Cells(2, 3), ws.Cells(lastRow, 3)).Formula = nameFormula
     End If
 
