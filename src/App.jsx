@@ -48,9 +48,11 @@ const renderLineWithAite = (line, keyPrefix = 'a') => {
 
 const renderLyricsWithAite = (lyrics) => {
   if (!lyrics) return null;
-  if (!/\([^)]+\)/.test(lyrics)) return lyrics;
+  // クイズ問題文では合いの手挿入マーカー(##)を全角スペース1つに変換して表示する
+  const sanitized = lyrics.replace(/##/g, '　');
+  if (!/\([^)]+\)/.test(sanitized)) return sanitized;
   const result = [];
-  lyrics.split('\n').forEach((line, i) => {
+  sanitized.split('\n').forEach((line, i) => {
     if (i > 0) result.push('\n');
     const rendered = renderLineWithAite(line, `lo-${i}`);
     Array.isArray(rendered) ? result.push(...rendered) : result.push(rendered);
@@ -136,6 +138,65 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
   // targetLyricsId が指定されていれば、対象の歌詞だけに lyric-blink-text を適用
   const baseIsTarget = isTarget && targetLyricsId != null && group.base.lyrics_id === targetLyricsId;
   const shouldDimOthers = isTarget && targetLyricsId != null;
+
+  // col_space='insert': base本文中の "##" マーカー位置に後続レコードを合いの手として差し込む
+  // （末尾追記ではなく、途中挿入したい合いの手・歌割り用の特殊モード）
+  if (group.base.col_space === 'insert') {
+    const MARKER = '##';
+    let apIdx = 0;
+
+    const piece = (id, text, key) => {
+      const pieceIsTarget = isTarget && targetLyricsId != null && id === targetLyricsId;
+      if (pieceIsTarget) return <span key={key} className="lyric-blink-text">{text}</span>;
+      if (shouldDimOthers) return <span key={key} className="lyric-group-dim">{text}</span>;
+      return <Fragment key={key}>{text}</Fragment>;
+    };
+
+    const renderLineWithMarkers = (line, lineKey) => {
+      const parts = line.split(MARKER);
+      const nodes = [];
+      parts.forEach((part, pi) => {
+        if (part) nodes.push(piece(group.base.lyrics_id, part, `${lineKey}-t${pi}`));
+        if (pi < parts.length - 1 && apIdx < group.appends.length) {
+          const ap = group.appends[apIdx];
+          nodes.push(piece(ap.lyrics_id, ap.lyrics, `${lineKey}-a${pi}`));
+          apIdx += 1;
+        }
+      });
+      return nodes;
+    };
+
+    const insertedContent = (
+      <>
+        {prevLines.map((line, i) => (
+          <Fragment key={i}>
+            {renderLineWithMarkers(line, `p${i}`)}
+            <br />
+          </Fragment>
+        ))}
+        {renderLineWithMarkers(lastLine, 'l')}
+        {group.appends.slice(apIdx).map((ap, relIdx) => {
+          const ai = apIdx + relIdx;
+          const prevRow = ai === 0 ? group.base : group.appends[ai - 1];
+          const apIsTarget = isTarget && targetLyricsId != null && ap.lyrics_id === targetLyricsId;
+          return (
+            <span key={`ov-${ai}`} className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
+              {spaceChar(prevRow.col_space)}
+              {apIsTarget
+                ? <span className="lyric-blink-text">{ap.lyrics}</span>
+                : ap.lyrics}
+            </span>
+          );
+        })}
+      </>
+    );
+
+    return (
+      <div {...refProp} className={cls}>
+        {insertedContent}
+      </div>
+    );
+  }
 
   const groupContent = (
     <>
@@ -2334,7 +2395,7 @@ function App() {
                       <span className="custom-review-group">（{w.group_name}）</span>
                     </div>
                     <div className="custom-review-lyrics">
-                      {w.lyrics ? w.lyrics.split('\n').map((line, li) => {
+                      {w.lyrics ? w.lyrics.replace(/##/g, '　').split('\n').map((line, li) => {
                         const occ = w.occurrence && w.occurrence[li];
                         return (
                           <Fragment key={li}>
@@ -2504,29 +2565,6 @@ function App() {
           el.style.opacity = '0';
         };
 
-        const renderAnnotContent = (correctArr, lyricText) => {
-          const lyricsColor = correctArr.length === 1 ? (memberLookup[correctArr[0]]?.color || '#333') : '#333';
-          return (
-            <>
-              <div className="song-modal-annot-card-lyrics" style={{ color: lyricsColor }}>
-                {(lyricText || '').split('\n').map((line, li) => (
-                  <Fragment key={li}>{li > 0 && <br />}{line}</Fragment>
-                ))}
-              </div>
-              <div className="song-modal-annot-card-members">
-                🎤 {correctArr.map((n, ni) => (
-                  <Fragment key={ni}>
-                    {ni > 0 && <span style={{ color: '#777' }}>・</span>}
-                    <span style={{ color: memberLookup[n]?.color || '#555' }}>
-                      {memberLookup[n]?.lastName || n}
-                    </span>
-                  </Fragment>
-                ))}
-              </div>
-            </>
-          );
-        };
-
         return (
           <div className={`modal-overlay${closingSongModal ? ' closing' : ''}`} onClick={closeSongModal}>
             <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
@@ -2587,6 +2625,67 @@ function App() {
                         ));
                       };
 
+                      // col_space='insert': base本文中の "##" マーカー位置に後続レコードを合いの手として差し込む
+                      if (item.base.col_space === 'insert') {
+                        const MARKER = '##';
+                        let apIdx = 0;
+
+                        const renderPart = (r, kp) => {
+                          const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+                          const isPartMulti = arr.length >= 2 && arr.length < songModalMembers.length;
+                          const content = renderPartLines(r, kp);
+                          if (!isPartMulti) return <Fragment key={kp}>{content}</Fragment>;
+                          return (
+                            <span
+                              key={kp}
+                              className="song-modal-lyric-text"
+                              onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                              onTouchEnd={hideTouchAnnot}
+                              onTouchCancel={hideTouchAnnot}
+                              onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                              onMouseLeave={hideTouchAnnot}
+                            >
+                              {content}
+                            </span>
+                          );
+                        };
+
+                        const baseColor = partColor(item.base);
+                        const baseBold = partBold(item.base);
+                        const baseLines = (item.base.lyrics || '').split('\n');
+                        const nodes = [];
+                        baseLines.forEach((line, li) => {
+                          if (li > 0) nodes.push(<Fragment key={`br-${li}`}>{'\n'}</Fragment>);
+                          const parts = line.split(MARKER);
+                          parts.forEach((textPart, pi) => {
+                            if (textPart) {
+                              nodes.push(
+                                <span key={`t-${li}-${pi}`} style={{ color: baseColor, fontWeight: baseBold ? 'bold' : undefined }}>
+                                  {renderLineWithAite(textPart, `t-${li}-${pi}`)}
+                                </span>
+                              );
+                            }
+                            if (pi < parts.length - 1 && apIdx < item.appends.length) {
+                              const ap = item.appends[apIdx].row;
+                              nodes.push(renderPart(ap, `ins-${li}-${pi}`));
+                              apIdx += 1;
+                            }
+                          });
+                        });
+                        item.appends.slice(apIdx).forEach((apWrap, relIdx) => {
+                          const ai = apIdx + relIdx;
+                          const prevRow = ai === 0 ? item.base : item.appends[ai - 1].row;
+                          nodes.push(<Fragment key={`sp-${ai}`}>{spaceChar(prevRow.col_space)}</Fragment>);
+                          nodes.push(renderPart(apWrap.row, `ov-${ai}`));
+                        });
+
+                        return (
+                          <div key={i} className="song-modal-lyric-row">
+                            {nodes}
+                          </div>
+                        );
+                      }
+
                       return (
                         <div key={i} className="song-modal-lyric-row">
                           {allParts.map((r, ri) => {
@@ -2597,17 +2696,16 @@ function App() {
                               <Fragment key={ri}>
                                 {ri > 0 && spaceChar(prev.col_space)}
                                 {isPartMulti ? (
-                                  <>
-                                    <span
-                                      className="song-modal-lyric-text"
-                                      onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
-                                      onTouchEnd={hideTouchAnnot}
-                                      onTouchCancel={hideTouchAnnot}
-                                    >
-                                      {renderPartLines(r, `sm-g-${i}-${ri}`)}
-                                    </span>
-                                    <div className="song-modal-lyric-annotation">{renderAnnotContent(arr, r.lyrics || '')}</div>
-                                  </>
+                                  <span
+                                    className="song-modal-lyric-text"
+                                    onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                                    onTouchEnd={hideTouchAnnot}
+                                    onTouchCancel={hideTouchAnnot}
+                                    onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                                    onMouseLeave={hideTouchAnnot}
+                                  >
+                                    {renderPartLines(r, `sm-g-${i}-${ri}`)}
+                                  </span>
                                 ) : (
                                   renderPartLines(r, `sm-g-${i}-${ri}`)
                                 )}
@@ -2633,6 +2731,8 @@ function App() {
                           onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
                           onTouchEnd={hasAnnot ? hideTouchAnnot : undefined}
                           onTouchCancel={hasAnnot ? hideTouchAnnot : undefined}
+                          onMouseEnter={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
+                          onMouseLeave={hasAnnot ? hideTouchAnnot : undefined}
                         >
                           {lyricLines.map((line, li) => (
                             <Fragment key={li}>
@@ -2641,7 +2741,6 @@ function App() {
                             </Fragment>
                           ))}
                         </span>
-                        {hasAnnot && <span className="song-modal-lyric-annotation">{renderAnnotContent(correctArr, lyricText)}</span>}
                       </div>
                     );
                   })}
