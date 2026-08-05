@@ -265,6 +265,8 @@ function App() {
   const touchEndedRef = useRef(false);
   const touchEndTimerRef = useRef(null);
   const touchAnnotRef = useRef(null);
+  const annotTouchEndedRef = useRef(false);
+  const annotTouchEndTimerRef = useRef(null);
 
   const openTooltip = (level) => {
     clearTimeout(tooltipCloseTimerRef.current);
@@ -2558,11 +2560,16 @@ function App() {
           el.style.transition = 'opacity 0.18s ease-out';
           el.style.opacity = '1';
         };
-        const hideTouchAnnot = () => {
+        const hideTouchAnnot = (fromTouch = false) => {
           const el = touchAnnotRef.current;
           if (!el) return;
           el.style.transition = 'opacity 0.18s ease-in';
           el.style.opacity = '0';
+          if (fromTouch) {
+            annotTouchEndedRef.current = true;
+            clearTimeout(annotTouchEndTimerRef.current);
+            annotTouchEndTimerRef.current = setTimeout(() => { annotTouchEndedRef.current = false; }, 600);
+          }
         };
 
         return (
@@ -2640,9 +2647,9 @@ function App() {
                               key={kp}
                               className="song-modal-lyric-text"
                               onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
-                              onTouchEnd={hideTouchAnnot}
-                              onTouchCancel={hideTouchAnnot}
-                              onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                              onTouchEnd={() => hideTouchAnnot(true)}
+                              onTouchCancel={() => hideTouchAnnot(true)}
+                              onMouseEnter={(e) => { if (annotTouchEndedRef.current) return; const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
                               onMouseLeave={hideTouchAnnot}
                             >
                               {content}
@@ -2699,9 +2706,9 @@ function App() {
                                   <span
                                     className="song-modal-lyric-text"
                                     onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
-                                    onTouchEnd={hideTouchAnnot}
-                                    onTouchCancel={hideTouchAnnot}
-                                    onMouseEnter={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                                    onTouchEnd={() => hideTouchAnnot(true)}
+                                    onTouchCancel={() => hideTouchAnnot(true)}
+                                    onMouseEnter={(e) => { if (annotTouchEndedRef.current) return; const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
                                     onMouseLeave={hideTouchAnnot}
                                   >
                                     {renderPartLines(r, `sm-g-${i}-${ri}`)}
@@ -2729,9 +2736,9 @@ function App() {
                         <span
                           className={hasAnnot ? 'song-modal-lyric-text' : undefined}
                           onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
-                          onTouchEnd={hasAnnot ? hideTouchAnnot : undefined}
-                          onTouchCancel={hasAnnot ? hideTouchAnnot : undefined}
-                          onMouseEnter={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
+                          onTouchEnd={hasAnnot ? () => hideTouchAnnot(true) : undefined}
+                          onTouchCancel={hasAnnot ? () => hideTouchAnnot(true) : undefined}
+                          onMouseEnter={hasAnnot ? (e) => { if (annotTouchEndedRef.current) return; const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
                           onMouseLeave={hasAnnot ? hideTouchAnnot : undefined}
                         >
                           {lyricLines.map((line, li) => (
