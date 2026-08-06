@@ -2565,7 +2565,7 @@ function App() {
           if (!el) return;
           el.style.transition = 'opacity 0.18s ease-in';
           el.style.opacity = '0';
-          if (fromTouch) {
+          if (fromTouch === true) {
             annotTouchEndedRef.current = true;
             clearTimeout(annotTouchEndTimerRef.current);
             annotTouchEndTimerRef.current = setTimeout(() => { annotTouchEndedRef.current = false; }, 600);
