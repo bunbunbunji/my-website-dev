@@ -48,8 +48,8 @@ const renderLineWithAite = (line, keyPrefix = 'a') => {
 
 const renderLyricsWithAite = (lyrics) => {
   if (!lyrics) return null;
-  // クイズ問題文では合いの手挿入マーカー(##)を全角スペース1つに変換して表示する
-  const sanitized = lyrics.replace(/##/g, '　');
+  // クイズ問題文では合いの手挿入マーカー(##)を半角スペース1つに変換して表示する
+  const sanitized = lyrics.replace(/##/g, ' ');
   if (!/\([^)]+\)/.test(sanitized)) return sanitized;
   const result = [];
   sanitized.split('\n').forEach((line, i) => {
@@ -2397,7 +2397,7 @@ function App() {
                       <span className="custom-review-group">（{w.group_name}）</span>
                     </div>
                     <div className="custom-review-lyrics">
-                      {w.lyrics ? w.lyrics.replace(/##/g, '　').split('\n').map((line, li) => {
+                      {w.lyrics ? w.lyrics.replace(/##/g, ' ').split('\n').map((line, li) => {
                         const occ = w.occurrence && w.occurrence[li];
                         return (
                           <Fragment key={li}>
