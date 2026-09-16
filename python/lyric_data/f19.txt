@@ -1,0 +1,65 @@
+id	sounds_id	seq	section_name	lyric	occurrence	lyric_col	col_space	is_active
+3742	19	1	1番のイントロ	"My sweet heart, my sweet heart,
+Lovely you are like a sunshine"	{1,1}			True
+3743	19	2	1番のAメロ	"君を待っていた
+そう 出会ってわかったんだ"				True
+3744	19	3	1番のAメロ	"何もかも映えないエビデイ
+突如現れし王子様"				True
+3745	19	4	1番のAメロ	"君が笑えば
+「キュン！」ってハートがしゃべるんだ"				True
+3746	19	5	1番のAメロ	"きっと “すきぴ” や “推し” を超えた
+運命的存在"				True
+3747	19	6	1番のBメロ	"笑っちゃうくらいカラフルな
+恋のフィルター越しの世界"				True
+3748	19	7	1番のBメロ	Let’s share love	{1}			True
+3749	19	8	1番のBメロ	Let’s share love	{2}			True
+3750	19	9	1番のBメロ	君と	{1}			True
+3751	19	10	1番のBメロ	「ぜったい運命だよ！」				True
+3752	19	11	1番のサビ	"あふれだす あふれだす
+巡り会えた喜びが"				True
+3753	19	12	1番のサビ	好きすぎる	{1}			True
+3754	19	13	1番のサビ	愛しすぎる	{1}			True
+3755	19	14	1番のサビ	これって…神様！？				True
+3756	19	15	1番のサビ	"24時を回っても
+解けない魔法があるよ"				True
+3757	19	16	1番のサビ	"超バズしちゃうくらい
+あちあちな恋をしよう"				True
+3758	19	17	1番のサビ	Destiny love	{1}			True
+3759	19	18	2番のBメロ	"好きバレしてもシェアしたい
+脳内でリピってるラブソング"				True
+3760	19	19	2番のBメロ	Let’s share love	{3}			True
+3761	19	20	2番のBメロ	Let’s share love	{4}			True
+3762	19	21	2番のBメロ	君と	{2}			True
+3763	19	22	2番のBメロ	「ねぇ、ちゃんと目見て？」				True
+3764	19	23	2番のサビ	"あふれだす あふれだす
+見つめ合えばドキドキが"				True
+3765	19	24	2番のサビ	祝福の 				True
+3766	19	25	2番のサビ	鐘のように				True
+3767	19	26	2番のサビ	Ding Dong ハピネスじゃん！				True
+3768	19	27	2番のサビ	"24時間経ってもずっと
+消えないストーリーだよ"				True
+3769	19	28	2番のサビ	"君だけのあしあと
+尊くて心でスクショした"				True
+3770	19	29	2番のCメロ	"運命は決められた物語じゃなく
+愛する強さの名前"				True
+3771	19	30	2番のCメロ	"だから赤い糸や
+ガラスの靴が なくたって見つけ合えたんだ"				True
+3772	19	31	2番のCメロ	もう私を離さないで				True
+3773	19	32	3番の落ちサビ	"あふれだす あふれだす
+想いを今 届けよう"				True
+3774	19	33	3番の落ちサビ	好きすぎる	{2}			True
+3775	19	34	3番の落ちサビ	愛しすぎる	{2}			True
+3776	19	35	3番の落ちサビ	あれれ？ はにかんだ？				True
+3777	19	36	3番のサビ	"100年後も きっと来世も
+好きだと言い切れるよ"				True
+3778	19	37	3番のサビ	「一瞬」も「永遠」も				True
+3779	19	38	3番のサビ	君にだけ恋をしよう				True
+3780	19	39	3番のサビ	Destiny love	{2}			True
+3781	19	40	3番のアウトロ	"My sweet heart, my sweet heart,
+Lovely you are like a sunshine"	{2,2}			True
+3782	19	41	3番のアウトロ	"My sweet heart, my sweet heart,
+lovely Destiny lover"	{3,1}			True
+3783	19	42	3番のアウトロ	My sweet heart, my sweet heart,	{4}			True
+3784	19	43	3番のアウトロ	Lovely you are like a sunshine	{3}			True
+3785	19	44	3番のアウトロ	My sweet heart, my sweet heart,	{5}			True
+3786	19	45	3番のアウトロ	lovely Destiny lover	{2}			True

@@ -1,0 +1,75 @@
+lyrics_tool.py コマンド一覧
+============================
+
+すべて python lyrics_tool.py <コマンド> の形式で実行する。
+長い名前・短い名前(エイリアス)どちらも使える。
+
+
+【取得】
+
+  ff  fetch-false   Supabaseからfalselyricを取得
+      使い方: ff 18
+              ff 16,17,18
+              ff 16-20
+      出力  : f18.txt
+
+  ft  fetch-true    uta-netからtruelyricを取得
+      使い方: ft --sounds-id 18
+              ft --sounds-id 18-25
+              ft https://www.uta-net.com/song/xxx/
+              ft --sounds-id 18 --plain   (プレーンテキスト版も出力)
+      出力  : t18.txt
+
+
+【ルートA】空白・改行の位置だけ直す(文言は変えない前提)
+
+  er  export-rendered   レコードを表示形式に組み立ててtxt出力
+      使い方: er lyric_data/f18.txt
+      出力  : r18.txt
+
+  bs  build-sql         編集済みrenderedからSQLを再構築
+      使い方: bs lyric_data/f18.txt lyric_data/r18.txt
+      出力  : u18.sql
+
+
+【ルートB】文言そのものを直す([id]タグで対応関係を明示)
+
+  eb  export-byrecord   [id]タグ付きでレコードを出力
+      使い方: eb lyric_data/f18.txt
+      出力  : br18.txt
+
+  ab  apply-byrecord    編集済みbyrecordからSQLを生成
+      使い方: ab lyric_data/br18.txt
+              (falselyricは同フォルダのf18.txtを自動検出。
+               見つからない/別名の場合は第2引数で明示可: ab br18.txt f18.txt)
+      出力  : lu18.sql
+
+
+【ルートC】文言そのものを直す(タグなし、id昇順のブロックで暗黙的に対応)
+
+  eq  export-quoted     ダブルクォート形式でレコードを出力
+      使い方: eq lyric_data/f18.txt
+      出力  : q18.txt
+
+  aq  apply-quoted      編集済みquotedからSQLを生成
+      使い方: aq lyric_data/q18.txt
+              (falselyricは同フォルダのf18.txtを自動検出。
+               見つからない/別名の場合は第2引数で明示可: aq q18.txt f18.txt)
+      出力  : lu18.sql
+
+
+【検証】
+
+  ck  check             自動対応付けレポートを表示
+      使い方: ck --sounds-id 18-25
+              ck lyric_data/f18.txt lyric_data/t18.txt
+
+
+補足
+----
+- 各コマンドの詳しい説明は -h を付けると見られる (例: python lyrics_tool.py bs -h)
+- レコード数・IDは絶対に増減させない
+- スペースは常に半角(U+0020)として扱う(全角には変換しない)
+- 全角/半角括弧の違いは検証対象外(意図的なDB側の使い分けのため)
+- ルートB・Cは「文言そのものを編集してよい」、ルートAは「文言は変えず
+  空白・改行の位置だけ変える」という前提の違いがある

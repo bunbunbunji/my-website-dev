@@ -1,43 +1,96 @@
-id	sounds_id	seq	section_name	lyric	occurrence	lyric_col	col_space	is_active
-1892	1	1	1番のイントロ	It's time to live my life 雨音	{1}			t
-1893	1	2	1番のイントロ	It's time to live my life ため息	{1}			t
-1894	1	3	1番のAメロ	"Baby I loved, Baby I loved
-儚くって"		1	NULL	t
-1895	1	4	1番のAメロ	あれほど信じた日々の終点		2	NULL	t
-1896	1	5	1番のAメロ	水たまりの街 反射するメモリー				t
-1897	1	6	1番のAメロ	やけに、綺麗、憎い。				t
-1898	1	7	1番のAメロ	"Baby I loved, Baby I loved
-わがままって"				t
-1899	1	8	1番のAメロ	恋から愛への証拠だった				t
-1900	1	9	1番のAメロ	解釈違いの　ロマンス手を振って				t
-1901	1	10	1番のAメロ	それじゃ、私、行くね。				t
-1902	1	11	1番のサビ	"湾岸ルーレット　ハイウェイ
-乗り込んだら　もうどこへだって行けそう"	{1,1}			t
-1903	1	12	1番のサビ	夜が明ける頃は　違う私で	{1}			t
-1904	1	13	1番のサビ	"そうよ悲しまないで　顔を上げて
-そんなに惨めじゃないでしょ？"	{1,1}			t
-1905	1	14	1番のサビ	すこし すこしずつ変われるチャンス	{1}			t
-1906	1	15	2番の間奏	It's time to live my life. 雨音	{2}			t
-1907	1	16	2番の間奏	It's time to live my life ため息	{2}			t
-1908	1	17	2番のAメロ	"Baby I loved, Baby I loved
-猫かぶって"				t
-1909	1	18	2番のAメロ	合わせて笑うの疲れちゃった				t
-1910	1	19	2番のAメロ	"今更　泣きついたって
-無駄よ　許してあげない"				t
-1911	1	20	2番のAメロ	きっと　きっと　きっとよ				t
-1912	1	21	2番のサビ	"湾岸ルーレット　ハイウェイ
-乗り込んだら　もうどこへだって行けそう"	{2,2}			t
-1913	1	22	2番のサビ	夜が明ける頃は　違う私で	{2}			t
-1914	1	23	2番のサビ	"そうよ悲しまないで　顔を上げて
-そんなに惨めじゃないでしょ？"	{2,2}			t
-1915	1	24	2番のサビ	すこし　すこしずつ変われるチャンス	{2}			t
-1916	1	25	3番のサビ	"湾岸ルーレット　ハイウェイ
-涙にそっと　都会のネオンを映す"	{3,NULL}			t
-1917	1	26	3番のサビ	きらり　まとい　素敵　大人になれる				t
-1918	1	27	3番のサビ	そうよ　悲しまないで感じるでしょ　予感				t
-1919	1	28	3番のサビ	今が				t
-1920	1	29	3番のサビ	ここが				t
-1921	1	30	3番のサビ	彼が				t
-1922	1	31	3番のサビ	雨の				t
-1923	1	32	3番のサビ	夜が				t
-1924	1	33	3番のサビ	すこし　すこしずつ変われるチャンス	{3}			t
+id	sounds_id	song_name	seq	section_name	lyric	occurrence	lyric_col	col_space	is_active
+145	10	RADIO GALAXY	1	1番の頭サビ	超次元　まじまじ	{1}			t
+146	10	RADIO GALAXY	2	1番の頭サビ	セカイに	{1}	1	half	t
+147	10	RADIO GALAXY	3	1番の頭サビ	走るセンセーション	{1}	2		t
+148	10	RADIO GALAXY	4	1番の頭サビ	満天の星ぎゅっと	{1}			t
+149	10	RADIO GALAXY	5	1番の頭サビ	抱きしめ	{1}	1	half	t
+150	10	RADIO GALAXY	6	1番の頭サビ	旅に出よう	{1}	2		t
+151	10	RADIO GALAXY	7	1番の頭サビ	全宇宙巻き込んで	{1}	1	half	t
+152	10	RADIO GALAXY	8	1番の頭サビ	いっちょ突破	{1}	2		t
+153	10	RADIO GALAXY	9	1番の頭サビ	刺されインテンション	{1}			t
+154	10	RADIO GALAXY	10	1番の頭サビ	めーいっぱいにとばせ	{1}			t
+155	10	RADIO GALAXY	11	1番の頭サビ	電波（レディオ） ギャラクシー	{1}			t
+156	10	RADIO GALAXY	12	1番のポストコーラス	"Go,go,go,lets go
+Are you ready? Galaxy"	{1,1,NULL}			t
+157	10	RADIO GALAXY	13	1番のポストコーラス	いくぞ！				t
+158	10	RADIO GALAXY	14	1番のポストコーラス	"わああああああああ
+FRUITS ZIPPER"				t
+159	10	RADIO GALAXY	15	1番のポストコーラス	"せーの ほいほいほい･･･
+あーよいしょー！"				t
+160	10	RADIO GALAXY	16	1番のAメロ1	当たり前に日が昇り				t
+161	10	RADIO GALAXY	17	1番のAメロ1	新たな時代カミン				t
+162	10	RADIO GALAXY	18	1番のAメロ1	光の速さでグッモーニン				t
+163	10	RADIO GALAXY	19	1番のAメロ1	あれあれ待てよと言う間に				t
+164	10	RADIO GALAXY	20	1番のAメロ1	日常も色チェンジ				t
+165	10	RADIO GALAXY	21	1番のAメロ1	カラフル		1	half	t
+166	10	RADIO GALAXY	22	1番のAメロ1	さながらファンタジー		2		t
+167	10	RADIO GALAXY	23	1番のAメロ2	想像じゃなくて		1	half	t
+168	10	RADIO GALAXY	24	1番のAメロ2	確かにここにある		2		t
+169	10	RADIO GALAXY	25	1番のAメロ2	脳に染みてく		1	half	t
+170	10	RADIO GALAXY	26	1番のAメロ2	好奇心のトキメキ		2		t
+171	10	RADIO GALAXY	27	1番のAメロ2	楽しいこと		1	half	t
+172	10	RADIO GALAXY	28	1番のAメロ2	一緒に感じたいの		2		t
+173	10	RADIO GALAXY	29	1番のAメロ2	こぼさないで		1	half	t
+174	10	RADIO GALAXY	30	1番のAメロ2	ちゃんと受け取ってさ！		2		t
+175	10	RADIO GALAXY	31	1番のBメロ	アアア チェック ワンツー				t
+176	10	RADIO GALAXY	32	1番のBメロ	で途切れる 交信中？				t
+177	10	RADIO GALAXY	33	1番のBメロ	ノッティスミー！				t
+178	10	RADIO GALAXY	34	1番のBメロ	マッシュ！マッシュ！マッシュ！				t
+179	10	RADIO GALAXY	35	1番のBメロ	スマッシュ		1	half	t
+180	10	RADIO GALAXY	36	1番のBメロ	かませよー		2		t
+181	10	RADIO GALAXY	37	1番のBメロ	ボタンを倍プッシュ				t
+182	10	RADIO GALAXY	38	1番のBメロ	炸裂する猛ラッシュ				t
+183	10	RADIO GALAXY	39	1番のBメロ	技もスルーなキミに届けたいの				t
+184	10	RADIO GALAXY	40	1番のBメロ	繋がれ点と点		1	half	t
+185	10	RADIO GALAXY	41	1番のBメロ	結んで線と線		2		t
+186	10	RADIO GALAXY	42	1番のBメロ	この指		1	half	t
+187	10	RADIO GALAXY	43	1番のBメロ	とまれ		2		t
+188	10	RADIO GALAXY	44	1番のBメロ	で せーので返事！		1	half	t
+189	10	RADIO GALAXY	45	1番のBメロ	はーい！！！		2		t
+190	10	RADIO GALAXY	46	1番のBメロ	みんなまとめて最高へ招待				t
+191	10	RADIO GALAXY	47	1番のBメロ	これが我らの煌煌の				t
+192	10	RADIO GALAXY	48	1番のBメロ	ショータイム				t
+193	10	RADIO GALAXY	49	1番のサビ	ああ超次元　まじまじ	{NULL,2}			t
+194	10	RADIO GALAXY	50	1番のサビ	セカイが		1	half	t
+195	10	RADIO GALAXY	51	1番のサビ	ゆれるハイテンション		2		t
+196	10	RADIO GALAXY	52	1番のサビ	満天の星ずっと		1	half	t
+197	10	RADIO GALAXY	53	1番のサビ	照らすよ		2	half	t
+198	10	RADIO GALAXY	54	1番のサビ	どこまでも		3		t
+199	10	RADIO GALAXY	55	1番のサビ	全宇宙巻き込んで	{2}	1	half	t
+200	10	RADIO GALAXY	56	1番のサビ	いっせーので		2		t
+201	10	RADIO GALAXY	57	1番のサビ	ステキ フォーメーション				t
+202	10	RADIO GALAXY	58	1番のサビ	めーいっぱいにとばせ	{2}			t
+203	10	RADIO GALAXY	59	1番のサビ	電波（レディオ） ギャラクシー	{2}			t
+204	10	RADIO GALAXY	60	1番の間奏	-緊急事態発生-				t
+205	10	RADIO GALAXY	61	2番のAメロ	人口過多定員オーバー？				t
+206	10	RADIO GALAXY	62	2番のAメロ	昔は皆兄弟だった？				t
+207	10	RADIO GALAXY	63	2番のAメロ	手と手を繋げよ友よ				t
+208	10	RADIO GALAXY	64	2番のAメロ	胸を張って生きれば		1	half	t
+209	10	RADIO GALAXY	65	2番のAメロ	最強なんだ		2		t
+210	10	RADIO GALAXY	66	2番のBメロ	"瞳の真ん中
+ブラックホールみたいだね"				t
+211	10	RADIO GALAXY	67	2番のBメロ	予想もつかないような何かしたい				t
+212	10	RADIO GALAXY	68	2番のBメロ	不可能の文字				t
+213	10	RADIO GALAXY	69	2番のBメロ	オモイで吹き消したら				t
+214	10	RADIO GALAXY	70	2番のBメロ	何度でも　さぁ				t
+215	10	RADIO GALAXY	71	2番のブリッジ	歌うんだ		1	half	t
+216	10	RADIO GALAXY	72	2番のブリッジ	（大きな声で）		2		t
+217	10	RADIO GALAXY	73	2番のブリッジ	あなたに	{1}	1	half	t
+218	10	RADIO GALAXY	74	2番のブリッジ	（届けたいから）		2		t
+219	10	RADIO GALAXY	75	2番のブリッジ	あなたに	{2}	1	half	t
+220	10	RADIO GALAXY	76	2番のブリッジ	（伝えたいから）		2		t
+221	10	RADIO GALAXY	77	2番のブリッジ	強くほら				t
+222	10	RADIO GALAXY	78	2番のブリッジ	"Go,go,go,lets go
+Are you ready?"	{2,2}			t
+223	10	RADIO GALAXY	79	2番のサビ	超次元　まじまじ	{3}			t
+224	10	RADIO GALAXY	80	2番のサビ	セカイに	{2}	1	half	t
+225	10	RADIO GALAXY	81	2番のサビ	走るセンセーション	{2}	2		t
+226	10	RADIO GALAXY	82	2番のサビ	満天の星ぎゅっと	{2}			t
+227	10	RADIO GALAXY	83	2番のサビ	抱きしめ	{2}	1	half	t
+228	10	RADIO GALAXY	84	2番のサビ	旅に出よう	{2}	2		t
+229	10	RADIO GALAXY	85	2番のサビ	全宇宙巻き込んで	{3}	1	half	t
+230	10	RADIO GALAXY	86	2番のサビ	いっちょ突破	{2}	2		t
+231	10	RADIO GALAXY	87	2番のサビ	刺されインテンション	{2}			t
+232	10	RADIO GALAXY	88	2番のサビ	めーいっぱいにとばせ	{3}			t
+233	10	RADIO GALAXY	89	2番のサビ	進め未来へ				t
+234	10	RADIO GALAXY	90	2番のサビ	ラララ･･･				t
