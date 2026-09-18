@@ -64,6 +64,11 @@ Sub ImportSoundsFromSupabase()
             Put #fNum, , pageBytes
             isFirstPage = False
         Else
+            ' 各ページのレスポンスは末尾に改行が付いていないため、
+            ' 前ページの最終行と今ページの先頭行が融合しないよう区切りの改行を先に書き込む
+            Dim lf(0) As Byte
+            lf(0) = 10
+            Put #fNum, , lf
             Dim i As Long
             For i = LBound(pageBytes) To UBound(pageBytes)
                 If pageBytes(i) = 10 Then

@@ -115,6 +115,21 @@ function generateUpdateLyricLength(xlsmPath) {
   return lines.join('\n');
 }
 
+// lyrics_dev.weight のみの更新（"lyrics"シート、id列で直接更新）
+// unique / length には触れない。weightに値を入れた行だけSQLを生成する（空欄はスキップ）。
+function generateUpdateLyricWeight(xlsmPath) {
+  const lines = [];
+  for (const row of loadRowsFromSheet(xlsmPath, 'lyrics')) {
+    const id = parseInt(row.id);
+    if (!id) continue;
+    const rawWeight = row.weight;
+    if (rawWeight === null || rawWeight === undefined || rawWeight === '') continue;
+    const weightVal = parseFloat(rawWeight);
+    lines.push(`UPDATE lyrics_dev SET weight = ${weightVal} WHERE id = ${id};`);
+  }
+  return lines.join('\n');
+}
+
 // sounds.mv / fam / bars_per_phrase の更新（"sounds_tags"シート、id列で直接更新）
 function generateUpdateSoundsTags(xlsmPath) {
   const lines = [];
@@ -264,6 +279,7 @@ const modeMap = {
   'u-m':  { fn: generateUpdateMembers,              suffix: '_update_members' },
   'u-t':  { fn: generateUpdateLyricTags,            suffix: '_update_lyric_tags' },
   'u-len': { fn: generateUpdateLyricLength,         suffix: '_update_lyric_length' },
+  'u-w':  { fn: generateUpdateLyricWeight,          suffix: '_update_lyric_weight' },
   'u-st': { fn: generateUpdateSoundsTags,            suffix: '_update_sounds_tags' },
 };
 
@@ -280,6 +296,6 @@ if (mode && modeMap[mode]) {
   console.log(`完了: ${inputFile} → ${outputFile} (${sql.split('\n').length}行のSQL)`);
 } else {
   console.error(`ERROR: 不明なモード "${mode}"`);
-  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-dl | u-lo | u-a | u-m | u-t | u-len | u-st]');
+  console.error('使い方: node excel_to_sql.js [u-l | u-d | u-dl | u-lo | u-a | u-m | u-t | u-len | u-w | u-st]');
   process.exit(1);
 }
