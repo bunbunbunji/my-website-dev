@@ -1338,6 +1338,13 @@ body::before {
   padding: 4px 0;
 }
 
+/* 5番目（奇数個の最後）は2カラムぶち抜きで中央寄せし、片側だけ余らないようにする */
+.difficulty-item:nth-child(5):nth-last-child(1) {
+  grid-column: 1 / -1;
+  max-width: calc(50% - 6px);
+  margin: 0 auto;
+}
+
 .difficulty-item {
   position: relative;
   display: flex;
@@ -1411,10 +1418,11 @@ body::before {
   .diff-btn:active { transform: translateY(1px) scale(0.97); box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
 }
 
-.diff-btn-easy   { background: linear-gradient(145deg, #81c784, #43a047); }
-.diff-btn-normal { background: linear-gradient(145deg, #ffd54f, #ffb300); color: #5d4037; text-shadow: none; }
-.diff-btn-hard   { background: linear-gradient(145deg, #ef5350, #c62828); }
-.diff-btn-expert { background: linear-gradient(145deg, #ce93d8, #8e24aa); }
+.diff-btn-easy      { background: linear-gradient(145deg, #81c784, #43a047); }
+.diff-btn-normal    { background: linear-gradient(145deg, #ffd54f, #ffb300); color: #5d4037; text-shadow: none; }
+.diff-btn-hard      { background: linear-gradient(145deg, #ef5350, #c62828); }
+.diff-btn-superhard { background: linear-gradient(145deg, #8e2140, #3a0a1b); }
+.diff-btn-expert    { background: linear-gradient(145deg, #ce93d8, #8e24aa); }
 
 .diff-longpress-hint {
   font-size: clamp(10px, 2.5vw, 12px);
@@ -2276,10 +2284,11 @@ body::before {
 }
 .custom-diff-toggle.on { opacity: 1; }
 .custom-diff-toggle:active { transform: scale(0.94); }
-.custom-diff-toggle--easy.on   { background: linear-gradient(135deg, #81c784, #43a047); }
-.custom-diff-toggle--normal.on { background: linear-gradient(135deg, #ffd54f, #ffb300); color: #5d4037; }
-.custom-diff-toggle--hard.on   { background: linear-gradient(135deg, #ef5350, #c62828); }
-.custom-diff-toggle--expert.on { background: linear-gradient(135deg, #ce93d8, #8e24aa); }
+.custom-diff-toggle--easy.on      { background: linear-gradient(135deg, #81c784, #43a047); }
+.custom-diff-toggle--normal.on    { background: linear-gradient(135deg, #ffd54f, #ffb300); color: #5d4037; }
+.custom-diff-toggle--hard.on      { background: linear-gradient(135deg, #ef5350, #c62828); }
+.custom-diff-toggle--superhard.on { background: linear-gradient(135deg, #8e2140, #3a0a1b); }
+.custom-diff-toggle--expert.on    { background: linear-gradient(135deg, #ce93d8, #8e24aa); }
 .custom-diff-error {
   font-size: 0.75rem;
   color: #e53935;

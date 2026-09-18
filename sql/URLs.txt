@@ -1,0 +1,146 @@
+No.	アーティスト	曲名	歌ネットURL
+1	FRUITS ZIPPER	BABY I LOVED	https://www.uta-net.com/song/352883/
+2	FRUITS ZIPPER	Bye-Bye	https://www.uta-net.com/song/360324/
+3	FRUITS ZIPPER	Chill Out	https://www.uta-net.com/song/360325/
+4	FRUITS ZIPPER	CO-個性	https://www.uta-net.com/song/345052/
+5	FRUITS ZIPPER	Going!	https://www.uta-net.com/song/352887/
+6	FRUITS ZIPPER	JAM	https://www.uta-net.com/song/380942/
+7	FRUITS ZIPPER	KawaiiってMagic	https://www.uta-net.com/song/371844/
+8	FRUITS ZIPPER	Midnight in my Head	該当なし
+9	FRUITS ZIPPER	NEW KAWAII	https://www.uta-net.com/song/352885/
+10	FRUITS ZIPPER	RADIO GALAXY	https://www.uta-net.com/song/330062/
+11	FRUITS ZIPPER	Re→TRY & FLY	https://www.uta-net.com/song/330066/
+12	FRUITS ZIPPER	Round and Round	該当なし
+13	FRUITS ZIPPER	skyfeelan	https://www.uta-net.com/song/330065/
+14	FRUITS ZIPPER	Spotlight	https://www.uta-net.com/song/360319/
+15	FRUITS ZIPPER	Sugarless GiRL	該当なし
+16	FRUITS ZIPPER	We are Frontier	https://www.uta-net.com/song/330064/
+17	FRUITS ZIPPER	うぇるかむとぅ〜ざ♡ふるっぱー！	https://www.uta-net.com/song/352888/
+18	FRUITS ZIPPER	かがみ	https://www.uta-net.com/song/367019/
+19	FRUITS ZIPPER	キミコイ	https://www.uta-net.com/song/346105/
+20	FRUITS ZIPPER	さん	https://www.uta-net.com/song/374121/
+21	FRUITS ZIPPER	すーぱーかれんたいむ	https://www.uta-net.com/song/360321/
+22	FRUITS ZIPPER	スターライト・ヴァルキリー	https://www.uta-net.com/song/360329/
+23	FRUITS ZIPPER	ずっと、ずっと、ずっと！	https://www.uta-net.com/song/352884/
+24	FRUITS ZIPPER	ぱーすとめいみー	https://www.uta-net.com/song/360327/
+25	FRUITS ZIPPER	ハートのローラーコースター	https://www.uta-net.com/song/352886/
+26	FRUITS ZIPPER	はちゃめちゃわちゃライフ！	https://www.uta-net.com/song/381275/
+27	FRUITS ZIPPER	ハピチョコ	https://www.uta-net.com/song/334591/
+28	FRUITS ZIPPER	ピポパポ	https://www.uta-net.com/song/378191/
+29	FRUITS ZIPPER	ぴゅあいんざわーるど	https://www.uta-net.com/song/341925/
+30	FRUITS ZIPPER	ぴんきーれっど！	https://www.uta-net.com/song/360322/
+31	FRUITS ZIPPER	フルーツバスケット	https://www.uta-net.com/song/360330/
+32	FRUITS ZIPPER	ふるっぱーりー！	該当なし
+33	FRUITS ZIPPER	ふれふるサマー！	https://www.uta-net.com/song/330063/
+34	FRUITS ZIPPER	マナカマナカマナ	https://www.uta-net.com/song/360318/
+35	FRUITS ZIPPER	わたしの一番かわいいところ	https://www.uta-net.com/song/323011/
+36	FRUITS ZIPPER	大きくなったら何になる？	該当なし
+37	FRUITS ZIPPER	完璧主義で☆	https://www.uta-net.com/song/323012/
+38	FRUITS ZIPPER	君と目があったとき	https://www.uta-net.com/song/386848/
+39	FRUITS ZIPPER	君の明るい未来を追いかけて	https://www.uta-net.com/song/323013/
+40	FRUITS ZIPPER	月の音	https://www.uta-net.com/song/360323/
+41	FRUITS ZIPPER	好き、お願い	https://www.uta-net.com/song/368428/
+42	FRUITS ZIPPER	世界はキミからはじまる	https://www.uta-net.com/song/332556/
+43	FRUITS ZIPPER	成長期なので。	https://www.uta-net.com/song/387432/
+44	FRUITS ZIPPER	超めでたいソング〜こんなに幸せでいいのかな？〜	https://www.uta-net.com/song/339739/
+45	FRUITS ZIPPER	天真爛漫	https://www.uta-net.com/song/360326/
+46	FRUITS ZIPPER	虹	https://www.uta-net.com/song/360328/
+47	FRUITS ZIPPER	末っ子パラドックス	https://www.uta-net.com/song/360320/
+48	FRUITS ZIPPER	ぶちかませよ！	https://www.uta-net.com/song/389745/
+49	FRUITS ZIPPER	ふるっぱれーど	https://www.uta-net.com/song/392152/
+50	CANDY TUNE	CATCH YOU	該当なし
+51	CANDY TUNE	hanamaru	https://www.uta-net.com/song/372109/
+52	CANDY TUNE	LASTING TUNE	https://www.uta-net.com/song/380180/
+53	CANDY TUNE	TUNE MY WAY	該当なし
+54	CANDY TUNE	Twilight Dilemma	該当なし
+55	CANDY TUNE	WAO！アオハル！	該当なし
+56	CANDY TUNE	アイしちゃってます♡	https://www.uta-net.com/song/381000/
+57	CANDY TUNE	いえなかったことば ～ありがとう～	該当なし
+58	CANDY TUNE	いざや接吻菓子司	該当なし
+59	CANDY TUNE	エトセトLOVE YOU	https://www.uta-net.com/song/358463/
+60	CANDY TUNE	キス・ミー・パティシエ	https://www.uta-net.com/song/358458/
+61	CANDY TUNE	きゅきゅきゅキュート	該当なし
+62	CANDY TUNE	ナナイロプロローグ	https://www.uta-net.com/song/372110/
+63	CANDY TUNE	レイドバックジャーニー	https://www.uta-net.com/song/358462/
+64	CANDY TUNE	レベチかわいい！	https://www.uta-net.com/song/369914/
+65	CANDY TUNE	永遠Twilight	https://www.uta-net.com/song/381001/
+66	CANDY TUNE	夏しかサマーー！♡	https://www.uta-net.com/song/377624/
+67	CANDY TUNE	君もゾンビですか ゾンビですね	https://www.uta-net.com/song/363097/
+68	CANDY TUNE	推し♡好き♡しんどい	https://www.uta-net.com/song/372111/
+69	CANDY TUNE	絶対きゃんちゅー宣言っ！	https://www.uta-net.com/song/371845/
+70	CANDY TUNE	倍倍FIGHT！	https://www.uta-net.com/song/358461/
+71	CANDY TUNE	備えあれば無問題	該当なし
+72	CANDY TUNE	必殺あざとポーズ	https://www.uta-net.com/song/358459/
+73	CANDY TUNE	未完な青春	該当なし
+74	CANDY TUNE	HAPPY BOUNCE BIRTHDAY	https://www.uta-net.com/song/388329/
+75	CANDY TUNE	シャットダウン！	https://www.uta-net.com/song/391991/
+76	SWEET STEADY	Call me, Tell me	https://www.uta-net.com/song/378805/
+77	SWEET STEADY	SWEET BLOOM	https://www.uta-net.com/song/372842/
+78	SWEET STEADY	Sweet Cafe	https://www.uta-net.com/song/390483/
+79	SWEET STEADY	SWEET STEP	https://www.uta-net.com/song/388257/
+80	SWEET STEADY	YAKIMOCHI	https://www.uta-net.com/song/376078/
+81	SWEET STEADY	おねがいペンタス	https://www.uta-net.com/song/390482/
+82	SWEET STEADY	カワイイコレクション	https://www.uta-net.com/song/382899/
+83	SWEET STEADY	ぐっじょぶ！	https://www.uta-net.com/song/372841/
+84	SWEET STEADY	すいすてたいむ	https://www.uta-net.com/song/382425/
+85	SWEET STEADY	ダイヤモンドデイズ	https://www.uta-net.com/song/365597/
+86	SWEET STEADY	なりたい私	https://www.uta-net.com/song/378806/
+87	SWEET STEADY	なんてねっ！	https://www.uta-net.com/song/365595/
+88	SWEET STEADY	ハートの魔法	https://www.uta-net.com/song/390481/
+89	SWEET STEADY	ぱじゃまぱーてぃー！	https://www.uta-net.com/song/365598/
+90	SWEET STEADY	ファンファーレ	https://www.uta-net.com/song/382426/
+91	SWEET STEADY	ミチシルベ	https://www.uta-net.com/song/365594/
+92	SWEET STEADY	ワガママ	該当なし
+93	SWEET STEADY	始まりの合図	https://www.uta-net.com/song/365596/
+94	SWEET STEADY	新世界クレッシェンド	該当なし
+95	SWEET STEADY	Melodies	https://www.uta-net.com/song/390484/
+96	SWEET STEADY	ガーベラの花のように	https://www.uta-net.com/song/392808/
+97	SWEET STEADY	いぶいぶっ！	該当なし
+98	SWEET STEADY	S.O.S	該当なし
+99	CUTIE STREET	daylight	https://www.uta-net.com/song/363261/
+100	CUTIE STREET	Shooting Star	https://www.uta-net.com/song/382424/
+101	CUTIE STREET	かわいいさがしてくれますか？	https://www.uta-net.com/song/379347/
+102	CUTIE STREET	かわいいだけじゃだめですか？	https://www.uta-net.com/song/362166/
+103	CUTIE STREET	きゅーすとのうた	https://www.uta-net.com/song/379346/
+104	CUTIE STREET	キューにストップできません！	https://www.uta-net.com/song/372838/
+105	CUTIE STREET	ちきゅーめいくあっぷ計画	https://www.uta-net.com/song/372108/
+106	CUTIE STREET	チョットヒトサジ	https://www.uta-net.com/song/376079/
+107	CUTIE STREET	ハッピー世界！	https://www.uta-net.com/song/367488/
+108	CUTIE STREET	ハルフレーク	https://www.uta-net.com/song/372107/
+109	CUTIE STREET	ハロハロミライ	https://www.uta-net.com/song/363264/
+110	CUTIE STREET	ひたむきシンデレラ！	https://www.uta-net.com/song/363263/
+111	CUTIE STREET	ぷりきゅきゅ	https://www.uta-net.com/song/386530/
+112	CUTIE STREET	モアベリサマー	https://www.uta-net.com/song/378789/
+113	CUTIE STREET	ゆめみるプリマドンナ	https://www.uta-net.com/song/387641/
+114	CUTIE STREET	ラブトレ	https://www.uta-net.com/song/369160/
+115	CUTIE STREET	解	https://www.uta-net.com/song/363262/
+116	CUTIE STREET	多元幸福論	https://www.uta-net.com/song/381112/
+117	CUTIE STREET	でぃすこみゅーたんと！	https://www.uta-net.com/song/388610/
+118	CUTIE STREET	ナイスだね	https://www.uta-net.com/song/390721/
+119	MORE STAR	タイムライド	https://www.uta-net.com/song/388064/
+120	MORE STAR	ハグ！	https://www.uta-net.com/song/385338/
+121	MORE STAR	ぴたぴたきゅん	https://www.uta-net.com/song/388382/
+122	MORE STAR	もっと、キラッと	https://www.uta-net.com/song/385164/
+123	MORE STAR	大人未満	https://www.uta-net.com/song/387312/
+124	MORE STAR	相ラブユー	https://www.uta-net.com/song/390241/
+186	CANDY TUNE	すーぱー優勝ちゅーーん！	https://www.uta-net.com/song/391992/
+507	FRUITS ZIPPER	ぱわーオブらぶ	https://www.uta-net.com/song/393903/
+508	FRUITS ZIPPER	センセーション	https://www.uta-net.com/song/396181/
+509	FRUITS ZIPPER	KODO	該当なし
+510	CANDY TUNE	HTAG	https://www.uta-net.com/song/393520/
+511	CANDY TUNE	スペシャル感謝祭	https://www.uta-net.com/song/394272/
+512	CANDY TUNE	HOT！SCOOP！	https://www.uta-net.com/song/390720/
+513	CANDY TUNE	びびなつFEVER！	該当なし
+514	CANDY TUNE	アンインストールちゅー	該当なし
+515	CANDY TUNE	Princess Girls♡	該当なし
+516	CUTIE STREET	Crush on you	https://www.uta-net.com/song/392150/
+517	CUTIE STREET	I Aman Me Mind	https://www.uta-net.com/song/392151/
+518	CUTIE STREET	キュートなキューたい	https://www.uta-net.com/song/393522/
+519	SWEET STEADY	とびきりドラマティカ	https://www.uta-net.com/song/394647/
+520	CUTIE STREET	ホメマクリズム	https://www.uta-net.com/song/395102/
+521	MORE STAR	あしたの準備ができたなら	https://www.uta-net.com/song/391989/
+522	MORE STAR	WITH KAWAII論	https://www.uta-net.com/song/393113/
+523	SWEET STEADY	気味が悪いんだからねっ	https://www.uta-net.com/song/396021/
+524	CUTIE STREET	Error404♡	https://www.uta-net.com/song/396155/
+525	MORE STAR	サマーゴー！！	https://www.uta-net.com/song/396020/
+526	SWEET STEADY	DASH!!!	https://www.uta-net.com/song/396996/
