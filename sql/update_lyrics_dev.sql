@@ -1,6 +1,2 @@
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '28', "section_name" = '3番のサビ', "lyric" = '今が', "occurrence" = NULL, "lyric_col" = '1', "col_space" = 'full', "is_active" = 't' WHERE "id" = '1919';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '29', "section_name" = '3番のサビ', "lyric" = 'ここが', "occurrence" = NULL, "lyric_col" = '2', "col_space" = 'full', "is_active" = 't' WHERE "id" = '1920';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '30', "section_name" = '3番のサビ', "lyric" = '彼が', "occurrence" = NULL, "lyric_col" = '3', "col_space" = 'full', "is_active" = 't' WHERE "id" = '1921';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '31', "section_name" = '3番のサビ', "lyric" = '雨の', "occurrence" = NULL, "lyric_col" = '4', "col_space" = 'full', "is_active" = 't' WHERE "id" = '1922';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '32', "section_name" = '3番のサビ', "lyric" = '夜が', "occurrence" = NULL, "lyric_col" = '5', "col_space" = NULL, "is_active" = 't' WHERE "id" = '1923';
-UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '33', "section_name" = '3番のサビ', "lyric" = 'すこし　すこしずつ変われるチャンス', "occurrence" = '{3}', "lyric_col" = NULL, "col_space" = NULL, "is_active" = 't' WHERE "id" = '1924';
+﻿UPDATE "public"."lyrics_dev" SET "sounds_id" = '1', "seq" = '3', "section_name" = '1番のAメロ', "lyric" = 'Baby I loved, Baby I loved
+儚くってあれほど信じた日々の終点', "occurrence" = NULL, "lyric_col" = NULL, "col_space" = NULL, "is_active" = 't' WHERE "id" = '1894';

@@ -338,7 +338,7 @@ function App() {
   const [customWrongAnswers, setCustomWrongAnswers] = useState([]);
   const [customMembersByGroup, setCustomMembersByGroup] = useState({});
   const [customIsLoading, setCustomIsLoading] = useState(false);
-  const [customDifficulties, setCustomDifficulties] = useState(new Set(['easy', 'normal', 'hard', 'expert']));
+  const [customDifficulties, setCustomDifficulties] = useState(new Set(['easy', 'normal', 'hard', 'superhard', 'expert']));
   const [customDiffError, setCustomDiffError] = useState(false);
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
@@ -417,9 +417,9 @@ function App() {
   const [debugPanelOpen, setDebugPanelOpen] = useState(true);
 
   const debugGroups = ['FRUITS ZIPPER', 'CANDY TUNE', 'SWEET STEADY', 'CUTIE STREET', 'MORE STAR'];
-  const debugDiffs = ['easy', 'normal', 'hard', 'expert'];
+  const debugDiffs = ['easy', 'normal', 'hard', 'superhard', 'expert'];
 
-  const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", expert: "げきむず" };
+  const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", superhard: "げきむず", expert: "きちく" };
 
   // --- エンドレスモード補助関数 ---
   const getEndlessEligiblePool = (pool, qNum) => {
@@ -439,6 +439,105 @@ function App() {
 
   const selectEndlessWeighted = (eligible) => {
     return eligible[Math.floor(Math.random() * eligible.length)];
+  };
+
+  // --- 難易度タグベースの出題プール解決（5段階） ---
+  // タグ（mv/fam/unique/length）は手作業で入力していくため、当面は多くの行が未設定（NULL）。
+  // タグ条件にヒットしなければ旧来の重み列（quizzes.easy/normal/hard/expert）にフォールバックし、
+  // それも空なら無条件で全件を対象にする。
+  const getPersonCount = (q) =>
+    (q.correct_members || '').split(/[,、]/).map(s => s.trim()).filter(Boolean).length;
+
+  // occurrence（曲中で同じフレーズが複数回登場する場合に設定される既存タグ）が
+  // 設定されている＝曲中で繰り返し使われる歌詞、と判定する
+  const isRepeatedInSong = (q) => Array.isArray(q.occurrence) && q.occurrence.some(v => v != null);
+
+  // lengthは歌詞の文字数（「」()（）等の記号・スペース・改行を除いた実質文字数。
+  // 半角アルファベットは0.5文字換算。CountLyricChars関数と同じ数え方）。
+  // 文字数の分布（全歌詞をローマ字変換してカウントした実データ）をもとに、
+  // げきむず=0〜5文字、むずかしい=6〜12文字、ふつう=13文字以上、という区切りで判定する。
+  const TIER_TAG_FILTER = {
+    easy: (q) => q.unique === true && getPersonCount(q) === 1,
+    normal: (q) => (q.mv === true || q.fam === true) && q.length != null && q.length >= 13 && getPersonCount(q) === 1 && !isRepeatedInSong(q),
+    // 6〜12文字・1人または全員が対象
+    hard: (q, totalMembers) => {
+      if (q.length == null || q.length < 6 || q.length > 12) return false;
+      const c = getPersonCount(q);
+      return c === 1 || c === totalMembers;
+    },
+    // 5文字以下（0文字含む）・1人または全員が対象
+    superhard: (q, totalMembers) => {
+      if (q.length == null || q.length > 5) return false;
+      const c = getPersonCount(q);
+      return c === 1 || c === totalMembers;
+    },
+    expert: (q) => getPersonCount(q) >= 2,
+  };
+
+  // タグ条件がヒットしなかった場合に試す、旧重み列（優先順）
+  const TIER_FALLBACK_KEYS = {
+    easy: ['easy'],
+    normal: ['normal'],
+    hard: ['normal', 'easy'],
+    superhard: ['hard'],
+    expert: ['expert'],
+  };
+
+  // タグ一致プール内で出やすさに強弱をつけたいtierのみ定義。
+  // 未定義のtierはタグ一致プール内では完全ランダム（重みなし）。
+  // 文字数の範囲自体で難易度を区切っているため、範囲内は均等。全員で歌う歌詞だけ出にくくする。
+  // easyは、前後の歌詞や歌詞自体に歌い手の名前が入っていて簡単すぎるものを
+  // lyrics_dev.weight（デフォルト1、下げたい場合は0.1〜0.5など）で出にくくする。
+  const TIER_TAG_WEIGHT_FN = {
+    easy: (q) => (q.weight != null ? q.weight : 1),
+    hard: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.3 : 1),
+    superhard: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
+    expert: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
+  };
+
+  // weightKeyが文字列なら旧重み列(q[weightKey])、関数ならその戻り値を重みとして使う（非復元抽選）
+  const weightedSampleWithoutReplacement = (pool, weightKey, count) => {
+    const getWeight = typeof weightKey === 'function' ? weightKey : (q) => q[weightKey] || 0;
+    const selected = [];
+    const tempPool = [...pool];
+    for (let i = 0; i < count && tempPool.length > 0; i++) {
+      const totalWeight = tempPool.reduce((sum, q) => sum + getWeight(q), 0);
+      if (totalWeight <= 0) {
+        const idx = Math.floor(Math.random() * tempPool.length);
+        selected.push(tempPool[idx]);
+        tempPool.splice(idx, 1);
+        continue;
+      }
+      let random = Math.random() * totalWeight;
+      for (let j = 0; j < tempPool.length; j++) {
+        random -= getWeight(tempPool[j]);
+        if (random <= 0) {
+          selected.push(tempPool[j]);
+          tempPool.splice(j, 1);
+          break;
+        }
+      }
+    }
+    return selected;
+  };
+
+  // pool から指定tierの出題対象を解決する。
+  // 戻り値の weightKey が非nullなら旧重み列に比例した重み付き抽選、
+  // nullならタグ一致または無条件（uniform random）で選ぶ。
+  const resolveTierPool = (pool, tier, totalMembers) => {
+    const tagFilter = TIER_TAG_FILTER[tier];
+    if (tagFilter) {
+      const tagged = pool.filter(q => tagFilter(q, totalMembers));
+      if (tagged.length > 0) {
+        const weightFn = TIER_TAG_WEIGHT_FN[tier];
+        return { rows: tagged, weightKey: weightFn ? (q) => weightFn(q, totalMembers) : null };
+      }
+    }
+    for (const key of (TIER_FALLBACK_KEYS[tier] || [])) {
+      const fallback = pool.filter(q => (q[key] || 0) > 0);
+      if (fallback.length > 0) return { rows: fallback, weightKey: key };
+    }
+    return { rows: pool, weightKey: null };
   };
 
   const prefetchEndlessNext = (pool, nextQNum) => {
@@ -509,10 +608,28 @@ function App() {
       }
       qData = [...qData, ...groupData];
     }
-    const filtered = qData.filter(q =>
-      customSelectedSongs.has(`${q.group_name}::${q.song_name}`) &&
-      [...customDifficulties].some(diff => (q[diff] || 0) > 0)
-    );
+    const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
+    const memberMap = {};
+    (mData || []).forEach(m => {
+      if (!memberMap[m.group_name]) memberMap[m.group_name] = [];
+      memberMap[m.group_name].push(m);
+    });
+
+    // 選曲対象の曲に絞った上で、選択中の難易度タグの和集合→旧重み列の和集合→全件、の順で解決する
+    const songSelected = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
+    const selectedTiers = [...customDifficulties];
+    let filtered = songSelected.filter(q => {
+      const totalMembers = (memberMap[q.group_name] || []).length;
+      return selectedTiers.some(diff => TIER_TAG_FILTER[diff] && TIER_TAG_FILTER[diff](q, totalMembers));
+    });
+    if (filtered.length === 0) {
+      filtered = songSelected.filter(q =>
+        selectedTiers.some(diff => (TIER_FALLBACK_KEYS[diff] || []).some(key => (q[key] || 0) > 0))
+      );
+    }
+    if (filtered.length === 0) {
+      filtered = songSelected;
+    }
     if (filtered.length === 0) {
       setCustomIsLoading(false);
       setCustomDiffError(true);
@@ -520,12 +637,6 @@ function App() {
       return;
     }
     const shuffled = shuffle(filtered).map(addSurrounds);
-    const { data: mData } = await supabase.from('members').select('*').in('group_name', groups).order('sort_order');
-    const memberMap = {};
-    (mData || []).forEach(m => {
-      if (!memberMap[m.group_name]) memberMap[m.group_name] = [];
-      memberMap[m.group_name].push(m);
-    });
     customOriginalPoolRef.current = shuffled;
     customQueueRef.current = shuffled;
     setCustomMembersByGroup(memberMap);
@@ -581,16 +692,18 @@ function App() {
 
 
   const descriptions = {
-    easy:   ["有名な曲の特徴的な歌詞が選出されます","1人で歌う歌詞が選出されます"],
-    normal: ["MVがある曲の歌詞が選出されます","1人で歌う歌詞が選出されます"],
-    hard:   ["すべての曲の歌詞から選出されます","1人または全員で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します"],
-    expert: ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます", "曲中で繰り返し使われる歌詞も登場します"],
+    easy:      ["内容からだれが歌っているか分かりやすい歌詞が選出されます","1人で歌う歌詞が選出されます"],
+    normal:    ["MVがある曲、または有名な曲の歌詞が選出されます","長めの歌詞が選出されます","1人で歌う歌詞が選出されます"],
+    hard:      ["すべての曲の歌詞から選出されます","短めの歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
+    superhard: ["すべての曲の歌詞から選出されます","とても短い歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
+    expert:    ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます"],
   };
 
   const resultMessages = {
     easy: { zero: "え…？やる気ある...？<br>1つも当たらないのはある意味すごいかも。w", low: "本当にちゃんと聴いてるの…？<br>まずは曲をしっかり聴き込みましょう。", mid: "こんなんじゃまだまだ聴いたとは言えない！<br>「やさしい」なら全問正解を目指したいところ！", high: "初心者なら及第点！<br>次は全問正解に挑戦だ！", perfect: "全問正解！ナイスです！<br>「やさしい」はもう余裕かな？次の難易度にレッツゴー！" },
     normal: { zero: "全滅…だと…！？<br>泣きたい気持ちを抑えて、もう1回チャレンジ！", low: "まだまだ聴き込み不足！<br>曲をたくさん聴いて耳を鍛えよう。", mid: "まずまずの結果です。<br>さらに聴き込めばもっと正解できるはず！", high: "素晴らしい！<br>そろそろファンを名乗ってもいいかもね？", perfect: "全問正解！よくできました！<br>素晴らしい結果です！次は「むずかしい」に挑戦だ！" },
     hard: { zero: "全問不正解…。<br>「むずかしい」の壁はかなり高かったようだ。", low: "この難易度はまだ早かったかも…？<br>でも挑戦する姿勢は最高にかっこいいぜ。", mid: "大健闘！<br>「むずかしい」でこれだけ解ければ相当なもの。", high: "すごい！よくここまで正解できましたね！<br>全問正解までもうちょっと。もう一回チャレンジだ！", perfect: "全問正解！コングラッチュレーション！！<br>この難易度で満点はもはや職人の域ですな！" },
+    superhard: { zero: "全問不正解…！？<br>「げきむず」の名は伊達じゃなかったようだ。", low: "短い歌詞にやられた…！<br>でも挑む姿勢はマジでかっこいい。", mid: "大健闘！<br>この短さでここまで解けるのはなかなかの実力者！", high: "すごすぎ！あと一歩で満点だ！<br>もう一回挑戦してみよう！", perfect: "全問正解！お見事すぎる！！<br>短い歌詞まで完璧に聴き分けるとは…もはや達人！" },
     expert: { zero: "へんじがない。ただのしかばねのようだ。<br>0点でも泣かないで。当てる方がおかしいレベルですから。", low: "相手が悪すぎた…。<br>一筋縄ではいかないね。ドンマイドンマイ！", mid: "素晴らしい！<br>この難問揃いで半分解けるとは、なかなかやるな？", high: "素晴らしすぎて鳥肌ものです。<br>もしかしたら本人よりも詳しいかも…！？", perfect: "👼⛩️✨神、降臨✨⛩️👼。<br>あなたは一体何者…？まさか本人？？" }
   };
 
@@ -759,7 +872,8 @@ function App() {
       }
       if (allData.length > 0) setGroupCache(selectedGroup, allData);
     }
-    const qData = allData.filter(q => (q[selectedDiff] || 0) > 0);
+    const totalMembers = (mData || []).length;
+    const { rows: qData, weightKey } = resolveTierPool(allData, selectedDiff, totalMembers);
 
     if (!qData || qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
@@ -767,20 +881,10 @@ function App() {
       return false;
     }
 
-    const selectedQuizzes = [];
-    const tempPool = [...qData];
-    for (let i = 0; i < 10 && tempPool.length > 0; i++) {
-      const totalWeight = tempPool.reduce((sum, q) => sum + (q[selectedDiff] || 0), 0);
-      let random = Math.random() * totalWeight;
-      for (let j = 0; j < tempPool.length; j++) {
-        random -= tempPool[j][selectedDiff];
-        if (random <= 0) {
-          selectedQuizzes.push(tempPool[j]);
-          tempPool.splice(j, 1);
-          break;
-        }
-      }
-    }
+    const selectedQuizzes = weightKey
+      ? weightedSampleWithoutReplacement(qData, weightKey, 10)
+      : shuffle(qData).slice(0, 10);
+
     localStorage.setItem('debug_selected_quizzes', JSON.stringify(
       selectedQuizzes.map((q, i) => ({
         no: i + 1,
@@ -789,6 +893,7 @@ function App() {
         seq: q.seq,
         lyric: q.lyrics,
         easy: q.easy, normal: q.normal, hard: q.hard, expert: q.expert,
+        mv: q.mv, fam: q.fam, unique: q.unique, length: q.length,
       }))
     ));
     const quizzesWithSurrounds = selectedQuizzes.map(addSurrounds);
@@ -1349,7 +1454,7 @@ function App() {
           setTimeout(() => {
             setResultPhase('reveal');
             fireConfetti();
-            if (target === 10 && (quizState.difficulty === 'hard' || quizState.difficulty === 'expert')) {
+            if (target === 10 && (quizState.difficulty === 'superhard' || quizState.difficulty === 'expert')) {
               setEndlessUnlockedGroups(prev => {
                 if (prev.has(quizState.group)) return prev;
                 const next = new Set(prev);
@@ -1633,7 +1738,7 @@ function App() {
   };
 
   const isSingleSelectMode =
-    (gameMode === 'normal' && (quizState.difficulty === 'easy' || quizState.difficulty === 'normal'));
+    (gameMode === 'normal' && (quizState.difficulty === 'easy' || quizState.difficulty === 'normal' || quizState.difficulty === 'hard'));
 
   const toggleMember = (name) => {
     if (answered) return;
@@ -1879,7 +1984,7 @@ function App() {
           <div className="custom-diff-row">
             <span className="custom-diff-label">難易度</span>
             <div className="custom-diff-toggles">
-              {['easy', 'normal', 'hard', 'expert'].map(level => (
+              {['easy', 'normal', 'hard', 'superhard', 'expert'].map(level => (
                 <button
                   key={level}
                   className={`custom-diff-toggle custom-diff-toggle--${level}${customDifficulties.has(level) ? ' on' : ''}`}
@@ -1943,7 +2048,7 @@ function App() {
               : 'ボタンにカーソルを乗せて難易度の説明を確認してね'}
           </p>
           <div className="difficulty-grid">
-            {['easy', 'normal', 'hard', 'expert'].map((level, idx) => (
+            {['easy', 'normal', 'hard', 'superhard', 'expert'].map((level, idx) => (
               <div key={level} className="difficulty-item">
                 <button
                   className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}

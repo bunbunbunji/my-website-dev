@@ -1,15 +1,15 @@
-Sub ImportSoundsFromSupabase()
+Sub ImportQuizFullDevFromSupabase()
     Const SUPABASE_URL As String = "https://atinpqtedmrfrtdlkpkd.supabase.co"
     Const SUPABASE_KEY As String = "sb_publishable_SWT3WgKAN77Ujv_lbDSppg_gmedWl64"
-    Const QUERY_NAME   As String = "sounds_tags_data"
-    Const SHEET_NAME   As String = "sounds_tags"
+    Const QUERY_NAME   As String = "quiz_full_dev_data"
+    Const SHEET_NAME   As String = "quiz_full_dev"
     Const PAGE_SIZE    As Long = 1000
 
     Dim http As Object
     Set http = CreateObject("WinHttp.WinHttpRequest.5.1")
 
     ' --- 1. 総件数を取得 ---
-    http.Open "GET", SUPABASE_URL & "/rest/v1/sounds?select=*&limit=1", False
+    http.Open "GET", SUPABASE_URL & "/rest/v1/quiz_full_dev?select=*&limit=1", False
     http.setRequestHeader "apikey", SUPABASE_KEY
     http.setRequestHeader "Authorization", "Bearer " & SUPABASE_KEY
     http.setRequestHeader "Accept", "text/csv"
@@ -28,7 +28,7 @@ Sub ImportSoundsFromSupabase()
 
     ' --- 2. CSVファイル準備（BOM付きUTF-8） ---
     Dim csvPath As String
-    csvPath = ThisWorkbook.Path & "\sounds_tmp.csv"
+    csvPath = ThisWorkbook.Path & "\quiz_full_dev_tmp.csv"
 
     Dim bom(2) As Byte
     bom(0) = &HEF: bom(1) = &HBB: bom(2) = &HBF
@@ -45,7 +45,7 @@ Sub ImportSoundsFromSupabase()
     isFirstPage = True
 
     Do While offset < totalCount
-        http.Open "GET", SUPABASE_URL & "/rest/v1/sounds?select=*&order=group_name,song_name&limit=" & PAGE_SIZE & "&offset=" & offset, False
+        http.Open "GET", SUPABASE_URL & "/rest/v1/quiz_full_dev?select=*&order=sounds_id,seq&limit=" & PAGE_SIZE & "&offset=" & offset, False
         http.setRequestHeader "apikey", SUPABASE_KEY
         http.setRequestHeader "Authorization", "Bearer " & SUPABASE_KEY
         http.setRequestHeader "Accept", "text/csv"
@@ -119,7 +119,7 @@ Sub ImportSoundsFromSupabase()
     pqFormula = "let" & Chr(10) & _
         "    Source = Csv.Document(File.Contents(""" & Replace(csvPath, "\", "\\") & """),[Delimiter="","",Encoding=65001,QuoteStyle=QuoteStyle.Csv])," & Chr(10) & _
         "    Headers = Table.PromoteHeaders(Source,[PromoteAllScalars=true])," & Chr(10) & _
-        "    Reordered = Table.SelectColumns(Headers,{""id"",""group_name"",""song_name"",""mv"",""fam"",""bars_per_phrase"",""is_active""})" & Chr(10) & _
+        "    Reordered = Table.SelectColumns(Headers,{""id"",""easy"",""normal"",""hard"",""expert"",""lyrics"",""section_name"",""seq"",""lyrics_id"",""sounds_id"",""occurrence"",""lyric_col"",""col_space"",""group_name"",""song_name"",""correct_members"",""surround_prev_2"",""surround_prev_1"",""surround_next_1"",""surround_next_2"",""unique"",""length"",""mv"",""fam"",""bars_per_phrase"",""weight""})" & Chr(10) & _
         "in" & Chr(10) & _
         "    Reordered"
 

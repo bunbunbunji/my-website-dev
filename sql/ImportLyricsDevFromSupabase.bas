@@ -6,7 +6,7 @@ Sub ImportLyricsFromSupabase()
     Const PAGE_SIZE    As Long = 1000
 
     Const SOUNDS_FILTER     As String = ""
-    Const SOUNDS_NAME_COL  As Long = 3  ' Soundsシートの何列目がsong_nameか（A=1, B=2, C=3, ...）
+    Const SOUNDS_NAME_COL  As Long = 3  ' sounds_tagsシートの何列目がsong_nameか（A=1, B=2, C=3, ...）
 
     Dim filterParam As String
     If SOUNDS_FILTER <> "" Then
@@ -74,6 +74,11 @@ Sub ImportLyricsFromSupabase()
             Put #fNum, , pageBytes
             isFirstPage = False
         Else
+            ' 各ページのレスポンスは末尾に改行が付いていないため、
+            ' 前ページの最終行と今ページの先頭行が融合しないよう区切りの改行を先に書き込む
+            Dim lf(0) As Byte
+            lf(0) = 10
+            Put #fNum, , lf
             Dim i As Long
             For i = LBound(pageBytes) To UBound(pageBytes)
                 If pageBytes(i) = 10 Then
@@ -124,7 +129,7 @@ Sub ImportLyricsFromSupabase()
     pqFormula = "let" & Chr(10) & _
         "    Source = Csv.Document(File.Contents(""" & Replace(csvPath, "\", "\\") & """),[Delimiter="","",Encoding=65001,QuoteStyle=QuoteStyle.Csv])," & Chr(10) & _
         "    Headers = Table.PromoteHeaders(Source,[PromoteAllScalars=true])," & Chr(10) & _
-        "    Reordered = Table.SelectColumns(Headers,{""id"",""sounds_id"",""seq"",""section_name"",""lyric"",""occurrence"",""lyric_col"",""col_space"",""unique"",""length"",""is_active""})" & Chr(10) & _
+        "    Reordered = Table.SelectColumns(Headers,{""id"",""sounds_id"",""seq"",""section_name"",""lyric"",""occurrence"",""lyric_col"",""col_space"",""unique"",""length"",""weight"",""is_active""})" & Chr(10) & _
         "in" & Chr(10) & _
         "    Reordered"
 
@@ -154,9 +159,9 @@ Sub ImportLyricsFromSupabase()
         ws.Cells(1, 3).Value = "song_name"
 
         Dim lookupRange As String
-        lookupRange = "Sounds!$A:$" & Chr(64 + SOUNDS_NAME_COL)
+        lookupRange = "sounds_tags!$A:$" & Chr(64 + SOUNDS_NAME_COL)
         Dim nameFormula As String
-        nameFormula = "=IFERROR(VLOOKUP(VALUE(B2)," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
+        nameFormula = "=IFERROR(VLOOKUP(B2," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
         ws.Range(ws.Cells(2, 3), ws.Cells(lastRow, 3)).Formula = nameFormula
     End If
 
