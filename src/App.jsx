@@ -282,7 +282,7 @@ function App() {
   };
 
   const closeResumeModal = () => { setClosingResumeModal(true); setTimeout(() => { setShowResumeModal(false); setClosingResumeModal(false); }, 220); };
-  const closeSongModal = () => { setClosingSongModal(true); setTimeout(() => { setSongModal(null); setClosingSongModal(false); }, 220); };
+  const closeSongModal = () => { setClosingSongModal(true); setTimeout(() => { setSongModal(null); setClosingSongModal(false); setSongModalHighlightIds(null); }, 220); };
 
   const [quizState, setQuizState] = useState({
     group: null,
@@ -336,6 +336,8 @@ function App() {
   const [customRemaining, setCustomRemaining] = useState(0);
   const [customAnsweredTotal, setCustomAnsweredTotal] = useState(0);
   const [customWrongAnswers, setCustomWrongAnswers] = useState([]);
+  const [customAskedSongs, setCustomAskedSongs] = useState(new Set());
+  const [customQuitEarly, setCustomQuitEarly] = useState(false);
   const [customMembersByGroup, setCustomMembersByGroup] = useState({});
   const [customIsLoading, setCustomIsLoading] = useState(false);
   const [customDifficulties, setCustomDifficulties] = useState(new Set(['easy', 'normal', 'hard', 'superhard', 'expert']));
@@ -357,6 +359,7 @@ function App() {
   const [songModalData, setSongModalData] = useState([]);
   const [songModalMembers, setSongModalMembers] = useState([]);
   const [isLoadingSongModal, setIsLoadingSongModal] = useState(false);
+  const [songModalHighlightIds, setSongModalHighlightIds] = useState(null);
 
   const [sessionId, setSessionId] = useState(null);
   const [pendingResume, setPendingResume] = useState(null);
@@ -372,14 +375,15 @@ function App() {
   const [fullLyricsBlink, setFullLyricsBlink] = useState(false);
   const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
 
-  const openSongModal = async (title, groupName) => {
+  const openSongModal = async (title, groupName, highlightLyricsIds = null) => {
     setSongModal({ title, groupName });
     setSongModalData([]);
     setSongModalMembers([]);
+    setSongModalHighlightIds(highlightLyricsIds);
     setIsLoadingSongModal(true);
     const { data } = await supabase
       .from('quiz_full_dev')
-      .select('lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence, lyric_col, col_space')
+      .select('lyrics_id, lyrics, correct_members, seq, section_name, easy, normal, hard, expert, occurrence, lyric_col, col_space')
       .eq('group_name', groupName)
       .eq('song_name', title)
       .order('seq');
@@ -458,12 +462,17 @@ function App() {
   // げきむず=0〜5文字、むずかしい=6〜12文字、ふつう=13文字以上、という区切りで判定する。
   const TIER_TAG_FILTER = {
     easy: (q) => q.unique === true && getPersonCount(q) === 1,
-    normal: (q) => (q.mv === true || q.fam === true) && q.length != null && q.length >= 13 && getPersonCount(q) === 1 && !isRepeatedInSong(q),
-    // 6〜12文字・1人または全員が対象
+    // mv/famは必須条件にはしない（未設定の曲の長い歌詞が出題対象から漏れてしまうため）。
+    // 出やすさの重み付け（TIER_TAG_WEIGHT_FN.normal）だけに使う。
+    // 繰り返しフレーズはふつうには出さない（hardの救済枠で拾う）
+    normal: (q) => q.length != null && q.length >= 13 && getPersonCount(q) === 1 && !isRepeatedInSong(q),
+    // 6〜12文字・1人または全員が対象。
+    // ふつうで除外した13文字以上・1人の繰り返しフレーズも、受け皿としてここで拾う（出にくい重みを付ける）
     hard: (q, totalMembers) => {
-      if (q.length == null || q.length < 6 || q.length > 12) return false;
+      if (q.length == null) return false;
       const c = getPersonCount(q);
-      return c === 1 || c === totalMembers;
+      if (q.length >= 6 && q.length <= 12) return c === 1 || c === totalMembers;
+      return q.length >= 13 && c === 1 && isRepeatedInSong(q);
     },
     // 5文字以下（0文字含む）・1人または全員が対象
     superhard: (q, totalMembers) => {
@@ -490,7 +499,13 @@ function App() {
   // lyrics_dev.weight（デフォルト1、下げたい場合は0.1〜0.5など）で出にくくする。
   const TIER_TAG_WEIGHT_FN = {
     easy: (q) => (q.weight != null ? q.weight : 1),
-    hard: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.3 : 1),
+    // mv/famが付いている曲の歌詞は少し出やすく、付いていない曲は少し出にくくする（出題対象から外しはしない）
+    normal: (q) => (q.mv === true || q.fam === true ? 1 : 0.5),
+    hard: (q, totalMembers) => {
+      if (getPersonCount(q) === totalMembers) return 0.3;
+      if (q.length != null && q.length >= 13) return 0.2; // ふつうから除外した繰り返しフレーズの救済枠は出にくくする
+      return 1;
+    },
     superhard: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
     expert: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
   };
@@ -643,6 +658,8 @@ function App() {
     setCustomTotalQ(shuffled.length);
     setCustomRemaining(shuffled.length);
     setCustomWrongAnswers([]);
+    setCustomAskedSongs(new Set([`${shuffled[0].group_name}::${shuffled[0].song_name}`]));
+    setCustomQuitEarly(false);
     setQuizState(prev => ({ ...prev, quizzes: [shuffled[0]], currentIndex: 0, correctCount: 0 }));
     setSelectedMembers(new Set());
     setAnswered(false);
@@ -661,6 +678,7 @@ function App() {
     customQueueRef.current = newQueue;
     if (newQueue.length === 0) { customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ); setScreen('result'); return; }
     const nextQ = newQueue[0];
+    setCustomAskedSongs(prev => new Set(prev).add(`${nextQ.group_name}::${nextQ.song_name}`));
     if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
     setCustomRemaining(newQueue.length);
     setQuizState(prev => ({ ...prev, quizzes: [nextQ], currentIndex: 0 }));
@@ -684,6 +702,8 @@ function App() {
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
     setCustomWrongAnswers([]);
+    setCustomAskedSongs(new Set([`${shuffled[0].group_name}::${shuffled[0].song_name}`]));
+    setCustomQuitEarly(false);
     if (shuffled[0]?.sounds_id) await fetchSongLyrics(shuffled[0].sounds_id);
     setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
@@ -693,7 +713,7 @@ function App() {
 
   const descriptions = {
     easy:      ["内容からだれが歌っているか分かりやすい歌詞が選出されます","1人で歌う歌詞が選出されます"],
-    normal:    ["MVがある曲、または有名な曲の歌詞が選出されます","長めの歌詞が選出されます","1人で歌う歌詞が選出されます"],
+    normal:    ["長めの歌詞が選出されます","1人で歌う歌詞が選出されます","MVがある曲、または有名な曲の歌詞がやや出やすいです"],
     hard:      ["すべての曲の歌詞から選出されます","短めの歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
     superhard: ["すべての曲の歌詞から選出されます","とても短い歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
     expert:    ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます"],
@@ -1086,7 +1106,7 @@ function App() {
         setQuizState(prev => ({ ...prev, correctCount: prev.correctCount + 1 }));
         setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "correct" });
       } else {
-        setCustomWrongAnswers(prev => [...prev, { lyrics: current.lyrics, song_name: current.song_name, correct_members: current.correct_members, group_name: current.group_name, occurrence: current.occurrence }]);
+        setCustomWrongAnswers(prev => [...prev, { lyrics: current.lyrics, song_name: current.song_name, correct_members: current.correct_members, group_name: current.group_name, occurrence: current.occurrence, lyrics_id: current.lyrics_id }]);
         setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！😫</span><br><span style="font-size:0.8em">( 正解：${correctLabelCustom} )</span>`, type: "incorrect" });
       }
       setAnswered(true);
@@ -1331,6 +1351,7 @@ function App() {
     const blinkOffT = setTimeout(() => setFullLyricsBlink(false), 150 + 1500);
     return () => { clearTimeout(t); clearTimeout(blinkOffT); setFullLyricsBlink(false); };
   }, [showFullLyrics]);
+
 
   useEffect(() => {
     if (screen === 'result') {
@@ -2472,58 +2493,52 @@ function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
             <h2>クイズを終了しますか？</h2>
             <p style={{color: '#888', fontSize: '0.85rem', marginBottom: '10px'}}>現在の正解数でリザルトを表示します</p>
-            <button className="resume-continue-btn" onClick={() => { setCustomQuitModal(false); customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ - customRemaining); setScreen('result'); }}>はい</button>
+            <button className="resume-continue-btn" onClick={() => { setCustomQuitModal(false); customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ - customRemaining); setCustomQuitEarly(true); setScreen('result'); }}>はい</button>
             <button className="resume-discard-btn" style={{marginTop: '6px'}} onClick={() => setCustomQuitModal(false)}>いいえ</button>
           </div>
         </div>
       )}
 
-      {/* --- カスタムレビュー画面 --- */}
+      {/* --- カスタムレビュー画面（曲一覧） --- */}
       {screen === 'custom-review' && (() => {
-        const allMembersList = Object.values(customMembersByGroup).flat();
-        const memberColorLookup = {};
-        const memberLastNameLookup = {};
-        allMembersList.forEach(m => {
-          memberColorLookup[m.name] = memberColorCSS[m.color] || '#333';
-          memberLastNameLookup[m.name] = m.Last_name || m.name;
+        // 途中終了した場合は実際に出題された曲のみ、完走した場合は選択した曲全てを一覧表示する
+        const songKeys = customQuitEarly ? [...customAskedSongs] : [...customSelectedSongs];
+        const wrongIdsBySong = {};
+        const wrongCountBySong = {};
+        customWrongAnswers.forEach(w => {
+          const key = `${w.group_name}::${w.song_name}`;
+          (wrongIdsBySong[key] ??= []).push(w.lyrics_id);
+          wrongCountBySong[key] = (wrongCountBySong[key] || 0) + 1;
+        });
+        const songs = songKeys.map(key => {
+          const [group_name, song_name] = key.split('::');
+          return { key, group_name, song_name, wrongCount: wrongCountBySong[key] || 0 };
         });
         return (
           <div className="box custom-review-box zoom-in">
             <h2 className="title">不正解だった歌詞</h2>
+            <p className="custom-review-hint">曲を選ぶと歌詞全文が表示され、不正解だった歌詞に赤い下線が引かれます（他は薄く表示）</p>
             <div className="custom-review-list">
-              {customWrongAnswers.map((w, i) => {
-                const correctArr = w.correct_members.split(',').map(s => s.trim()).filter(Boolean);
-                const isSolo = correctArr.length === 1;
-                const lyricsColor = isSolo ? (memberColorLookup[correctArr[0]] || '#333') : '#333';
-                return (
-                  <div key={i} className="custom-review-item">
-                    <div className="custom-review-song">
-                      ♪ {w.song_name}
-                      <span className="custom-review-group">（{w.group_name}）</span>
-                    </div>
-                    <div className="custom-review-lyrics">
-                      {w.lyrics ? w.lyrics.replace(/##/g, ' ').split('\n').map((line, li) => {
-                        const occ = w.occurrence && w.occurrence[li];
-                        return (
-                          <Fragment key={li}>
-                            {li > 0 && '\n'}
-                            {renderLineWithAite(line, `cr-${li}`)}
-                            {occ != null && <span className="song-modal-occurrence">（{occ}回目）</span>}
-                          </Fragment>
-                        );
-                      }) : ''}
-                    </div>
-                    <div className="custom-review-answer">
-                      🎤 {correctArr.map((name, ni) => (
-                        <span key={ni}>
-                          {ni > 0 && <span style={{ color: '#888' }}>・</span>}
-                          <span style={{ color: memberColorLookup[name] || '#c2185b' }}>{memberLastNameLookup[name] || name}</span>
-                        </span>
-                      ))}
-                    </div>
+              {songs.map((s) => (
+                <div
+                  key={s.key}
+                  className="custom-review-item custom-review-item--clickable"
+                  onClick={() => openSongModal(s.song_name, s.group_name, wrongIdsBySong[s.key] || [])}
+                >
+                  <div className="custom-review-song">
+                    ♪ {s.song_name}
+                    <span className="custom-review-group">（{s.group_name}）</span>
                   </div>
-                );
-              })}
+                  <div className="custom-review-meta">
+                    {s.wrongCount > 0 ? (
+                      <span className="custom-review-answer">不正解：{s.wrongCount}問</span>
+                    ) : (
+                      <span className="custom-review-answer custom-review-answer--none">全問正解</span>
+                    )}
+                    <span className="custom-review-open-hint">歌詞を見る →</span>
+                  </div>
+                </div>
+              ))}
             </div>
             <button className="back-btn" onClick={() => setScreen('result')}>リザルトに戻る</button>
           </div>
@@ -2721,6 +2736,9 @@ function App() {
                       const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
                       return arr.length >= 2 && arr.length < songModalMembers.length;
                     };
+                    const hasHighlightFilter = !!songModalHighlightIds?.length;
+                    const partSmall = (r) => hasHighlightFilter && !songModalHighlightIds.includes(r.lyrics_id);
+                    const partMatch = (r) => hasHighlightFilter && songModalHighlightIds.includes(r.lyrics_id);
 
                     if (item.type === 'group') {
                       const i = item.baseIdx;
@@ -2729,10 +2747,12 @@ function App() {
                       const renderPartLines = (r, kp) => {
                         const color = partColor(r);
                         const bold = partBold(r);
+                        const small = partSmall(r);
+                        const match = partMatch(r);
                         return (r.lyrics ? r.lyrics.split('\n') : ['']).map((line, li) => (
                           <Fragment key={`${kp}-${li}`}>
                             {li > 0 && '\n'}
-                            <span style={{ color, fontWeight: bold ? 'bold' : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
+                            <span className={match ? 'song-modal-highlight-marker' : undefined} style={{ color, fontWeight: bold ? 'bold' : undefined, opacity: small ? 0.2 : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
                           </Fragment>
                         ));
                       };
@@ -2764,6 +2784,8 @@ function App() {
 
                         const baseColor = partColor(item.base);
                         const baseBold = partBold(item.base);
+                        const baseSmall = partSmall(item.base);
+                        const baseMatch = partMatch(item.base);
                         const baseLines = (item.base.lyrics || '').split('\n');
                         const nodes = [];
                         baseLines.forEach((line, li) => {
@@ -2772,7 +2794,7 @@ function App() {
                           parts.forEach((textPart, pi) => {
                             if (textPart) {
                               nodes.push(
-                                <span key={`t-${li}-${pi}`} style={{ color: baseColor, fontWeight: baseBold ? 'bold' : undefined }}>
+                                <span key={`t-${li}-${pi}`} className={baseMatch ? 'song-modal-highlight-marker' : undefined} style={{ color: baseColor, fontWeight: baseBold ? 'bold' : undefined, opacity: baseSmall ? 0.2 : undefined }}>
                                   {renderLineWithAite(textPart, `t-${li}-${pi}`)}
                                 </span>
                               );
@@ -2834,12 +2856,15 @@ function App() {
                     const hasAnnot = correctArr.length >= 2 && correctArr.length < songModalMembers.length;
                     const lyricColor = partColor(row);
                     const lyricBold = partBold(row);
+                    const lyricSmall = partSmall(row);
+                    const lyricMatch = partMatch(row);
                     const lyricLines = row.lyrics ? row.lyrics.split('\n') : [''];
                     const lyricText = row.lyrics || '';
+                    const lyricSpanClass = [hasAnnot ? 'song-modal-lyric-text' : null, lyricMatch ? 'song-modal-highlight-marker' : null].filter(Boolean).join(' ') || undefined;
                     return (
-                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor, fontWeight: lyricBold ? 'bold' : undefined }}>
+                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor, fontWeight: lyricBold ? 'bold' : undefined, opacity: lyricSmall ? 0.2 : undefined }}>
                         <span
-                          className={hasAnnot ? 'song-modal-lyric-text' : undefined}
+                          className={lyricSpanClass}
                           onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
                           onTouchEnd={hasAnnot ? () => hideTouchAnnot(true) : undefined}
                           onTouchCancel={hasAnnot ? () => hideTouchAnnot(true) : undefined}
