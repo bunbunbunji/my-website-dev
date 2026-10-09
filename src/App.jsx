@@ -309,6 +309,7 @@ function App() {
 
   // --- エンドレスモード ---
   const endlessPoolRef = useRef([]);
+  const endlessTotalMembersRef = useRef(0);
   const endlessPendingNotifRef = useRef(null);
   const [endlessQNum, setEndlessQNum] = useState(1);
   const [endlessLives, setEndlessLives] = useState(3);
@@ -426,23 +427,38 @@ function App() {
   const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", superhard: "げきむず", expert: "きちく" };
 
   // --- エンドレスモード補助関数 ---
-  const getEndlessEligiblePool = (pool, qNum) => {
-    const try_ = (fn) => { const r = pool.filter(fn); return r.length > 0 ? r : null; };
-    if (qNum <= 10)
-      return try_(q => q.easy > 0) || try_(q => q.normal > 0) || try_(q => q.hard > 0) || pool;
-    if (qNum <= 20)
-      return try_(q => q.easy > 0 || q.normal > 0) || try_(q => q.hard > 0) || pool;
-    if (qNum <= 35)
-      return try_(q => q.normal > 0) || try_(q => q.easy > 0) || try_(q => q.hard > 0) || pool;
-    if (qNum <= 50)
-      return try_(q => q.normal > 0 || q.hard > 0) || try_(q => q.expert > 0) || pool;
-    if (qNum <= 70)
-      return try_(q => q.hard > 0) || try_(q => q.normal > 0) || try_(q => q.expert > 0) || pool;
-    return try_(q => q.hard > 0 || q.expert > 0) || try_(q => q.normal > 0) || try_(q => q.easy > 0) || pool;
+  // 問題番号に応じて、やさしい〜きちくの5段階タグ（TIER_TAG_FILTER）を
+  // 複数組み合わせ、重み付きで出題する。該当が1件もなければ全件（無条件）にフォールバックする。
+  const ENDLESS_PROGRESSION = [
+    { max: 10, tiers: [{ tier: 'easy', weight: 1 }] },
+    { max: 20, tiers: [{ tier: 'easy', weight: 0.3 }, { tier: 'normal', weight: 1 }] },
+    { max: 35, tiers: [{ tier: 'normal', weight: 1 }] },
+    { max: 50, tiers: [{ tier: 'normal', weight: 0.3 }, { tier: 'hard', weight: 1 }] },
+    { max: 70, tiers: [{ tier: 'normal', weight: 0.15 }, { tier: 'hard', weight: 1 }, { tier: 'superhard', weight: 1 }] },
+    { max: 90, tiers: [{ tier: 'hard', weight: 0.3 }, { tier: 'superhard', weight: 1 }, { tier: 'expert', weight: 0.15 }] },
+  ];
+  const ENDLESS_PROGRESSION_LAST = [{ tier: 'superhard', weight: 1 }, { tier: 'expert', weight: 0.6 }];
+
+  const getEndlessEligiblePool = (pool, qNum, totalMembers) => {
+    const tiers = (ENDLESS_PROGRESSION.find(r => qNum <= r.max) || { tiers: ENDLESS_PROGRESSION_LAST }).tiers;
+    const weighted = pool
+      .map(q => {
+        const w = tiers.reduce((sum, t) => sum + (TIER_TAG_FILTER[t.tier](q, totalMembers) ? t.weight : 0), 0);
+        return w > 0 ? { q, w } : null;
+      })
+      .filter(Boolean);
+    return weighted.length > 0 ? weighted : pool.map(q => ({ q, w: 1 }));
   };
 
   const selectEndlessWeighted = (eligible) => {
-    return eligible[Math.floor(Math.random() * eligible.length)];
+    const total = eligible.reduce((s, e) => s + e.w, 0);
+    if (total <= 0) return eligible[Math.floor(Math.random() * eligible.length)].q;
+    let r = Math.random() * total;
+    for (const e of eligible) {
+      r -= e.w;
+      if (r <= 0) return e.q;
+    }
+    return eligible[eligible.length - 1].q;
   };
 
   // --- 難易度タグベースの出題プール解決（5段階） ---
@@ -556,7 +572,7 @@ function App() {
   };
 
   const prefetchEndlessNext = (pool, nextQNum) => {
-    const eligible = getEndlessEligiblePool(pool, nextQNum);
+    const eligible = getEndlessEligiblePool(pool, nextQNum, endlessTotalMembersRef.current);
     if (!eligible || eligible.length === 0) { setEndlessNextQ(null); setEndlessNextQLoading(false); return; }
     const selected = selectEndlessWeighted(eligible);
     const newPool = pool.filter(q => q.id !== selected.id);
@@ -832,6 +848,7 @@ function App() {
 
     endlessPoolRef.current = poolData;
     endlessPendingNotifRef.current = null;
+    endlessTotalMembersRef.current = (mData || []).length;
     setEndlessQNum(qNum);
     setEndlessLives(lives);
     setEndlessConsecutive(consecutive);
@@ -973,10 +990,11 @@ function App() {
       return;
     }
     setMembers(mData || []);
+    endlessTotalMembersRef.current = (mData || []).length;
     // Q1を選択してfullデータ取得
     if (qData.length > 999) qData = shuffle(qData).slice(0, 999);
     let pool = [...qData];
-    const eligible1 = getEndlessEligiblePool(pool, 1);
+    const eligible1 = getEndlessEligiblePool(pool, 1, endlessTotalMembersRef.current);
     const q1Meta = selectEndlessWeighted(eligible1);
     pool = pool.filter(q => q.id !== q1Meta.id);
     const q1 = addSurrounds(q1Meta);
