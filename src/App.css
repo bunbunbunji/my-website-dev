@@ -544,11 +544,6 @@ body::before {
   word-break: break-word;
 }
 
-.song-modal-occurrence {
-  font-size: 0.7rem;
-  color: #999;
-  margin-left: 4px;
-}
 
 .song-modal-members {
   font-size: 0.75rem;
@@ -2327,39 +2322,62 @@ body::before {
 .custom-review-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
   max-height: 60svh;
   overflow-y: auto;
   margin-bottom: 16px;
   padding: 2px;
 }
 .custom-review-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   background: #fff0f5;
   border: 1.5px solid #ffb6c1;
-  border-radius: 14px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 6px 10px;
 }
 .custom-review-song {
   font-size: 0.72rem;
   font-weight: bold;
   color: #ff69b2;
-  margin-bottom: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 .custom-review-group {
   font-size: 0.65rem;
   color: #aaa;
   font-weight: normal;
 }
-.custom-review-lyrics {
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-  margin-bottom: 6px;
-  line-height: 1.5;
+.custom-review-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 .custom-review-answer {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #c2185b;
   font-weight: bold;
+  white-space: nowrap;
+}
+.custom-review-hint {
+  font-size: 0.72rem;
+  color: #888;
+  margin: -6px 0 10px;
+  text-align: center;
+}
+.custom-review-item--clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.custom-review-item--clickable:hover,
+.custom-review-item--clickable:active {
+  background: #ffe4ed;
+  border-color: #ff8fab;
 }
 
 /* ===== 検定モード 新クイズフロー ===== */
@@ -2606,6 +2624,12 @@ body::before {
   padding: 1px 0;
   white-space: pre-wrap;
   position: relative;
+}
+/* 不正解レビューから開いた場合、該当の歌詞に赤い下線を引く */
+.song-modal-highlight-marker {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 .song-modal-annot-card-lyrics {
   margin-bottom: 4px;
