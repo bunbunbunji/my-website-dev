@@ -2364,14 +2364,11 @@ body::before {
   font-weight: bold;
   white-space: nowrap;
 }
-.custom-review-answer--none {
-  color: #aaa;
-  font-weight: normal;
-}
 .custom-review-hint {
   font-size: 0.72rem;
   color: #888;
   margin: -6px 0 10px;
+  text-align: center;
 }
 .custom-review-item--clickable {
   cursor: pointer;
@@ -2381,11 +2378,6 @@ body::before {
 .custom-review-item--clickable:active {
   background: #ffe4ed;
   border-color: #ff8fab;
-}
-.custom-review-open-hint {
-  font-size: 0.68rem;
-  color: #ff69b2;
-  white-space: nowrap;
 }
 
 /* ===== 検定モード 新クイズフロー ===== */

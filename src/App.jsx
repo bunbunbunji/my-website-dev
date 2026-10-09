@@ -652,6 +652,13 @@ function App() {
       return;
     }
     const shuffled = shuffle(filtered).map(addSurrounds);
+    console.log('カスタムモード 出題順:', shuffled.map((q, i) => ({
+      no: i + 1,
+      group_name: q.group_name,
+      song_name: q.song_name,
+      lyrics_id: q.lyrics_id,
+      lyric: q.lyrics,
+    })));
     customOriginalPoolRef.current = shuffled;
     customQueueRef.current = shuffled;
     setCustomMembersByGroup(memberMap);
@@ -676,7 +683,14 @@ function App() {
     const queue = customQueueRef.current;
     const newQueue = isSkip ? [...queue.slice(1), queue[0]] : queue.slice(1);
     customQueueRef.current = newQueue;
-    if (newQueue.length === 0) { customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ); setScreen('result'); return; }
+    if (newQueue.length === 0) {
+      customResultReadyRef.current = false;
+      // 実際に回答した数（正解+不正解）を使う。customTotalQはスキップで未回答のまま終わるケースがないため一致するはずだが、
+      // 回答直後に「次へ」を押さずに終了した場合との計算を統一するため、こちらを正とする。
+      setCustomAnsweredTotal(quizState.correctCount + customWrongAnswers.length);
+      setScreen('result');
+      return;
+    }
     const nextQ = newQueue[0];
     setCustomAskedSongs(prev => new Set(prev).add(`${nextQ.group_name}::${nextQ.song_name}`));
     if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
@@ -694,6 +708,13 @@ function App() {
   const restartCustomMode = async () => {
     customResultReadyRef.current = false;
     const shuffled = shuffle(customOriginalPoolRef.current);
+    console.log('カスタムモード 出題順（もう一回）:', shuffled.map((q, i) => ({
+      no: i + 1,
+      group_name: q.group_name,
+      song_name: q.song_name,
+      lyrics_id: q.lyrics_id,
+      lyric: q.lyrics,
+    })));
     customQueueRef.current = shuffled;
     setCustomRemaining(shuffled.length);
     setCustomTotalQ(shuffled.length);
@@ -2493,7 +2514,14 @@ function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'center'}}>
             <h2>クイズを終了しますか？</h2>
             <p style={{color: '#888', fontSize: '0.85rem', marginBottom: '10px'}}>現在の正解数でリザルトを表示します</p>
-            <button className="resume-continue-btn" onClick={() => { setCustomQuitModal(false); customResultReadyRef.current = false; setCustomAnsweredTotal(customTotalQ - customRemaining); setCustomQuitEarly(true); setScreen('result'); }}>はい</button>
+            <button className="resume-continue-btn" onClick={() => {
+              setCustomQuitModal(false);
+              customResultReadyRef.current = false;
+              // 回答直後に「次へ」を押さずに終了した場合も正しくカウントされるよう、実際の回答数（正解+不正解）を使う
+              setCustomAnsweredTotal(quizState.correctCount + customWrongAnswers.length);
+              setCustomQuitEarly(true);
+              setScreen('result');
+            }}>はい</button>
             <button className="resume-discard-btn" style={{marginTop: '6px'}} onClick={() => setCustomQuitModal(false)}>いいえ</button>
           </div>
         </div>
@@ -2510,14 +2538,16 @@ function App() {
           (wrongIdsBySong[key] ??= []).push(w.lyrics_id);
           wrongCountBySong[key] = (wrongCountBySong[key] || 0) + 1;
         });
-        const songs = songKeys.map(key => {
-          const [group_name, song_name] = key.split('::');
-          return { key, group_name, song_name, wrongCount: wrongCountBySong[key] || 0 };
-        });
+        const songs = songKeys
+          .map(key => {
+            const [group_name, song_name] = key.split('::');
+            return { key, group_name, song_name, wrongCount: wrongCountBySong[key] || 0 };
+          })
+          .filter(s => s.wrongCount > 0);
         return (
           <div className="box custom-review-box zoom-in">
             <h2 className="title">不正解だった歌詞</h2>
-            <p className="custom-review-hint">曲を選ぶと歌詞全文が表示され、不正解だった歌詞に赤い下線が引かれます（他は薄く表示）</p>
+            <p className="custom-review-hint">曲選択して、間違ってしまった歌詞を確認しましょう！</p>
             <div className="custom-review-list">
               {songs.map((s) => (
                 <div
@@ -2530,12 +2560,7 @@ function App() {
                     <span className="custom-review-group">（{s.group_name}）</span>
                   </div>
                   <div className="custom-review-meta">
-                    {s.wrongCount > 0 ? (
-                      <span className="custom-review-answer">不正解：{s.wrongCount}問</span>
-                    ) : (
-                      <span className="custom-review-answer custom-review-answer--none">全問正解</span>
-                    )}
-                    <span className="custom-review-open-hint">歌詞を見る →</span>
+                    <span className="custom-review-answer">不正解：{s.wrongCount}問</span>
                   </div>
                 </div>
               ))}
@@ -2752,7 +2777,7 @@ function App() {
                         return (r.lyrics ? r.lyrics.split('\n') : ['']).map((line, li) => (
                           <Fragment key={`${kp}-${li}`}>
                             {li > 0 && '\n'}
-                            <span className={match ? 'song-modal-highlight-marker' : undefined} style={{ color, fontWeight: bold ? 'bold' : undefined, opacity: small ? 0.2 : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
+                            <span className={match ? 'song-modal-highlight-marker' : undefined} style={{ color, fontWeight: (bold || match) ? 'bold' : undefined, opacity: small ? 0.2 : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
                           </Fragment>
                         ));
                       };
@@ -2794,7 +2819,7 @@ function App() {
                           parts.forEach((textPart, pi) => {
                             if (textPart) {
                               nodes.push(
-                                <span key={`t-${li}-${pi}`} className={baseMatch ? 'song-modal-highlight-marker' : undefined} style={{ color: baseColor, fontWeight: baseBold ? 'bold' : undefined, opacity: baseSmall ? 0.2 : undefined }}>
+                                <span key={`t-${li}-${pi}`} className={baseMatch ? 'song-modal-highlight-marker' : undefined} style={{ color: baseColor, fontWeight: (baseBold || baseMatch) ? 'bold' : undefined, opacity: baseSmall ? 0.2 : undefined }}>
                                   {renderLineWithAite(textPart, `t-${li}-${pi}`)}
                                 </span>
                               );
@@ -2862,7 +2887,7 @@ function App() {
                     const lyricText = row.lyrics || '';
                     const lyricSpanClass = [hasAnnot ? 'song-modal-lyric-text' : null, lyricMatch ? 'song-modal-highlight-marker' : null].filter(Boolean).join(' ') || undefined;
                     return (
-                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor, fontWeight: lyricBold ? 'bold' : undefined, opacity: lyricSmall ? 0.2 : undefined }}>
+                      <div key={i} className="song-modal-lyric-row" style={{ color: lyricColor, fontWeight: (lyricBold || lyricMatch) ? 'bold' : undefined, opacity: lyricSmall ? 0.2 : undefined }}>
                         <span
                           className={lyricSpanClass}
                           onTouchStart={hasAnnot ? (e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, correctArr, lyricText); } : undefined}
