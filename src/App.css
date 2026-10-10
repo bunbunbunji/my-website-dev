@@ -1331,14 +1331,41 @@ body::before {
   gap: 12px;
   width: 100%;
   padding: 4px 0;
+  position: relative;
 }
 
-/* 5番目（奇数個の最後）は2カラムぶち抜きで中央寄せし、片側だけ余らないようにする */
-.difficulty-item:nth-child(5):nth-last-child(1) {
+/* きちくボタン：グループ選択の5番目ボタンと同じく、2カラムぶち抜きで中央寄せ（むずかしいの下＝3行目） */
+.difficulty-item-expert {
   grid-column: 1 / -1;
-  max-width: calc(50% - 6px);
-  margin: 0 auto;
+  justify-self: center;
+  width: calc(50% - 6px);
 }
+
+/*
+【メモ】中央重ね配置に戻したい場合のCSS（2026-10-10時点で使用していたもの）
+.diff-btn の padding を clamp(14px, 2.4svh, 22px) 8px に縮小し、
+.difficulty-grid を下記に変更した上で使う（きちくの高さがrow-gapに収まることで
+横方向にも他ボタンと重ならない仕組み）。
+
+.difficulty-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 12px;
+  row-gap: clamp(64px, 11svh, 90px);
+  width: 100%;
+  padding: 4px 0;
+  position: relative;
+}
+.difficulty-item.difficulty-item-expert {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(50% - 6px);
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  margin: 0;
+}
+*/
 
 .difficulty-item {
   position: relative;
@@ -1370,10 +1397,11 @@ body::before {
 .diff-btn {
   font-family: 'Mochiy Pop One', sans-serif;
   width: 100%;
-  padding: clamp(20px, 3.5svh, 32px) 8px;
+  padding: clamp(16px, 3svh, 26px) 8px;
   border: 1.5px solid rgba(255,255,255,0.4);
   border-radius: 18px;
-  font-size: clamp(14px, 3.5vw, 19px);
+  font-size: clamp(12px, 3.2vw, 16px);
+  letter-spacing: 0.03em;
   color: white;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1402,9 +1430,6 @@ body::before {
   to   { width: 100%; }
 }
 
-@media (max-width: 540px) {
-  .diff-btn { font-size: clamp(18px, 4.8vw, 22px); }
-}
 @media (hover: hover) {
   .diff-btn:hover { transform: translateY(-3px) scale(1.03); box-shadow: 0 10px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3); }
 }
@@ -1416,8 +1441,8 @@ body::before {
 .diff-btn-easy      { background: linear-gradient(145deg, #81c784, #43a047); }
 .diff-btn-normal    { background: linear-gradient(145deg, #ffd54f, #ffb300); color: #5d4037; text-shadow: none; }
 .diff-btn-hard      { background: linear-gradient(145deg, #ef5350, #c62828); }
-.diff-btn-superhard { background: linear-gradient(145deg, #8e2140, #3a0a1b); }
-.diff-btn-expert    { background: linear-gradient(145deg, #ce93d8, #8e24aa); }
+.diff-btn-superhard { background: linear-gradient(145deg, #ce93d8, #8e24aa); }
+.diff-btn-expert    { background: linear-gradient(145deg, #8e2140, #3a0a1b); }
 
 .diff-longpress-hint {
   font-size: clamp(10px, 2.5vw, 12px);
@@ -2536,13 +2561,13 @@ body::before {
 /* 歌詞全体確認ボタン（問題画面内） */
 .lyrics-toggle-btn {
   display: block;
-  margin: 10px auto 4px;
-  padding: 6px 18px;
+  margin: 6px auto 10px;
+  padding: 3px 12px;
   background: transparent;
   color: #ff69b2;
-  border: 2px solid #ff69b2;
+  border: 1px solid #ff69b2;
   border-radius: 50px;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   cursor: pointer;
   transition: all 0.2s;
 }

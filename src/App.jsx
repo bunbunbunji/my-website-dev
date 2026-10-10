@@ -310,7 +310,6 @@ function App() {
   // --- エンドレスモード ---
   const endlessPoolRef = useRef([]);
   const endlessTotalMembersRef = useRef(0);
-  const endlessPendingNotifRef = useRef(null);
   const [endlessQNum, setEndlessQNum] = useState(1);
   const [endlessLives, setEndlessLives] = useState(3);
   const [endlessConsecutive, setEndlessConsecutive] = useState(0);
@@ -481,22 +480,22 @@ function App() {
     // mv/famは必須条件にはしない（未設定の曲の長い歌詞が出題対象から漏れてしまうため）。
     // 出やすさの重み付け（TIER_TAG_WEIGHT_FN.normal）だけに使う。
     // 繰り返しフレーズはふつうには出さない（hardの救済枠で拾う）
-    normal: (q) => q.length != null && q.length >= 13 && getPersonCount(q) === 1 && !isRepeatedInSong(q),
+    normal: (q) => !q.unique && q.length != null && q.length >= 13 && getPersonCount(q) === 1 && !isRepeatedInSong(q),
     // 6〜12文字・1人または全員が対象。
     // ふつうで除外した13文字以上・1人の繰り返しフレーズも、受け皿としてここで拾う（出にくい重みを付ける）
     hard: (q, totalMembers) => {
-      if (q.length == null) return false;
+      if (q.unique || q.length == null) return false;
       const c = getPersonCount(q);
       if (q.length >= 6 && q.length <= 12) return c === 1 || c === totalMembers;
       return q.length >= 13 && c === 1 && isRepeatedInSong(q);
     },
     // 5文字以下（0文字含む）・1人または全員が対象
     superhard: (q, totalMembers) => {
-      if (q.length == null || q.length > 5) return false;
+      if (q.unique || q.length == null || q.length > 5) return false;
       const c = getPersonCount(q);
       return c === 1 || c === totalMembers;
     },
-    expert: (q) => getPersonCount(q) >= 2,
+    expert: (q) => !q.unique && getPersonCount(q) >= 2,
   };
 
   // タグ条件がヒットしなかった場合に試す、旧重み列（優先順）
@@ -847,7 +846,6 @@ function App() {
     const qNum = s.current_step ?? 1;
 
     endlessPoolRef.current = poolData;
-    endlessPendingNotifRef.current = null;
     endlessTotalMembersRef.current = (mData || []).length;
     setEndlessQNum(qNum);
     setEndlessLives(lives);
@@ -870,6 +868,7 @@ function App() {
     setAnswered(false);
     setResultMsg({ text: '', type: '' });
     setGameMode('endless');
+    setShowFullLyrics(false);
     setScrollAnimPhase('scrolling');
     if (q1?.sounds_id) await fetchSongLyrics(q1.sounds_id);
     setQuizPhase('announce');
@@ -1000,7 +999,6 @@ function App() {
     const q1 = addSurrounds(q1Meta);
     // 状態を初期化
     endlessPoolRef.current = pool;
-    endlessPendingNotifRef.current = null;
     setEndlessQNum(1);
     setEndlessLives(3);
     setEndlessConsecutive(0);
@@ -1120,7 +1118,8 @@ function App() {
         setEndlessConsecutive(newConsec);
         if (newConsec % 5 === 0) {
           const bonus = newConsec / 5;
-          endlessPendingNotifRef.current = { type: 'bonus', amount: bonus, lifeDelta: bonus };
+          setEndlessLives(prev => prev + bonus);
+          setEndlessLifeBonus({ type: 'bonus', amount: bonus, key: Date.now() });
         }
         setResultMsg({ text: `<span style="font-size:1.15em">⭕ 正解！😄</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "correct" });
       } else {
@@ -1128,7 +1127,8 @@ function App() {
         if (endlessLives === 0) {
           setEndlessIsOver(true);
         } else {
-          endlessPendingNotifRef.current = { type: 'penalty', amount: 1, lifeDelta: -1 };
+          setEndlessLives(prev => prev - 1);
+          setEndlessLifeBonus({ type: 'penalty', amount: 1, key: Date.now() });
         }
         setResultMsg({ text: `<span style="font-size:1.15em">❌ 不正解！💔</span><br><span style="font-size:0.8em">( 正解：${correctLabel} )</span>`, type: "incorrect" });
       }
@@ -1208,25 +1208,18 @@ function App() {
       return;
     }
     if (!endlessNextQ) return; // まだ先読み中（ボタンはdisabledのため通常ここには来ない）
-    // 予約済みの通知とライフ増減を次の問題画面で適用
-    const pending = endlessPendingNotifRef.current;
-    endlessPendingNotifRef.current = null;
-    const newLives = (pending?.lifeDelta) ? endlessLives + pending.lifeDelta : endlessLives;
-    if (pending) {
-      setEndlessLives(newLives);
-      setEndlessLifeBonus({ type: pending.type, amount: pending.amount, key: Date.now() });
-    } else {
-      setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
-    }
-    const newQNum = endlessQNum + 1;
-    setEndlessQNum(newQNum);
+    // ライフ増減は回答時に適用済みなので、ここでは前回のポップアップ表示をクリアするだけ
+    setEndlessLifeBonus({ type: 'none', amount: 0, key: 0 });
     const nextQ = endlessNextQ;
     if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
+    const newQNum = endlessQNum + 1;
+    setEndlessQNum(newQNum);
     setQuizState(prev => ({ ...prev, quizzes: [nextQ], currentIndex: 0 }));
     setEndlessNextQ(null);
     setAnswered(false);
     setSelectedMembers(new Set());
     setResultMsg({ text: "", type: "" });
+    setShowFullLyrics(false);
     setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1238,7 +1231,7 @@ function App() {
         quiz_ids: {
           current: nextQ.id,
           pool: endlessPoolRef.current.map(q => q.id),
-          lives: newLives,
+          lives: endlessLives,
           consecutive: endlessConsecutive
         }
       }).eq('session_id', sessionId).then(() => {});
@@ -2109,7 +2102,7 @@ function App() {
           </p>
           <div className="difficulty-grid">
             {['easy', 'normal', 'hard', 'superhard', 'expert'].map((level, idx) => (
-              <div key={level} className="difficulty-item">
+              <div key={level} className={`difficulty-item${level === 'expert' ? ' difficulty-item-expert' : ''}`}>
                 <button
                   className={`diff-btn diff-btn-${level}${timerLevel === level ? ' is-pressing' : ''}`}
                   onClick={() => {
@@ -2166,7 +2159,7 @@ function App() {
                   }}
                   onContextMenu={(e) => e.preventDefault()}
                 >
-                  {difficultyLabel[level]}
+                  {level === 'expert' ? '👹きちく👹' : difficultyLabel[level]}
                   {timerLevel === level && (
                     <span key={timerKey} className="diff-btn-timer" />
                   )}
@@ -2344,15 +2337,16 @@ function App() {
               <span className={`quiz-qtimer-num${questionTimer <= 10 ? ' danger' : ''}`}>{questionTimer}秒</span>
             </div>
           )}
-          {/* 検定・カスタムモード：歌詞全体確認ボタン */}
-          {(gameMode === 'normal' || gameMode === 'custom') && (
+          <h2 className="title quiz-title">だれが歌ってる？</h2>
+
+          <p id="lyrics" ref={lyricsRef}>{renderLyricsWithAite(quizCurr?.lyrics)}</p>
+
+          {/* 検定・カスタム・エンドレスモード：歌詞全体確認ボタン */}
+          {(gameMode === 'normal' || gameMode === 'custom' || gameMode === 'endless') && (
             <button className="lyrics-toggle-btn" onClick={() => setShowFullLyrics(v => !v)}>
               {showFullLyrics ? '問題の歌詞に戻る' : '歌詞全体を確認する'}
             </button>
           )}
-          <h2 className="title quiz-title">だれが歌ってる？</h2>
-
-          <p id="lyrics" ref={lyricsRef}>{renderLyricsWithAite(quizCurr?.lyrics)}</p>
 
           <div className="members">
             {displayMembers.map(m => (
@@ -2396,8 +2390,8 @@ function App() {
         </div>
       )}
 
-      {/* --- 検定・カスタムモード：全歌詞モーダル --- */}
-      {screen === 'quiz' && (gameMode === 'normal' || gameMode === 'custom') && quizPhase === 'question' && showFullLyrics && (
+      {/* --- 検定・カスタム・エンドレスモード：全歌詞モーダル --- */}
+      {screen === 'quiz' && (gameMode === 'normal' || gameMode === 'custom' || gameMode === 'endless') && quizPhase === 'question' && showFullLyrics && (
         <div className="modal-overlay" onClick={() => setShowFullLyrics(false)}>
           <div className="modal-content song-lyrics-modal" onClick={e => e.stopPropagation()}>
             <h2>{quizCurr?.song_name}</h2>
