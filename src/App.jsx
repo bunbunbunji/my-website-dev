@@ -93,6 +93,7 @@ const groupLyricRows = (rows) => {
 // baseClass: 通常行のクラス名, targetClass: 問題行のクラス名
 // targetLyricsId: グループ内のどの歌詞を点滅させるかを指定するID
 const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-lyric-row', targetClass = 'scrolling-lyric-target', targetLyricsId = null) => {
+  // col_space='break'は改行（<br/>）として扱うため、スペース文字としては空文字を返す
   const spaceChar = (sp) => sp === 'half' ? ' ' : sp === 'full' ? '　' : '';
   const cls = `${baseClass}${isTarget ? ` ${targetClass}` : ''}`;
 
@@ -180,12 +181,15 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
           const prevRow = ai === 0 ? group.base : group.appends[ai - 1];
           const apIsTarget = isTarget && targetLyricsId != null && ap.lyrics_id === targetLyricsId;
           return (
-            <span key={`ov-${ai}`} className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
-              {spaceChar(prevRow.col_space)}
-              {apIsTarget
-                ? <span className="lyric-blink-text">{ap.lyrics}</span>
-                : ap.lyrics}
-            </span>
+            <Fragment key={`ov-${ai}`}>
+              {prevRow.col_space === 'break' && <><br /><br /></>}
+              <span className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
+                {spaceChar(prevRow.col_space)}
+                {apIsTarget
+                  ? <span className="lyric-blink-text">{ap.lyrics}</span>
+                  : ap.lyrics}
+              </span>
+            </Fragment>
           );
         })}
       </>
@@ -215,12 +219,15 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
         const prevRow = ai === 0 ? group.base : group.appends[ai - 1];
         const apIsTarget = isTarget && targetLyricsId != null && ap.lyrics_id === targetLyricsId;
         return (
-          <span key={ai} className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
-            {spaceChar(prevRow.col_space)}
-            {apIsTarget
-              ? <span className="lyric-blink-text">{ap.lyrics}</span>
-              : ap.lyrics}
-          </span>
+          <Fragment key={ai}>
+            {prevRow.col_space === 'break' && <><br /><br /></>}
+            <span className={`lyric-inline-append${shouldDimOthers && !apIsTarget ? ' lyric-group-dim' : ''}`}>
+              {spaceChar(prevRow.col_space)}
+              {apIsTarget
+                ? <span className="lyric-blink-text">{ap.lyrics}</span>
+                : ap.lyrics}
+            </span>
+          </Fragment>
         );
       })}
     </>
@@ -2205,7 +2212,7 @@ function App() {
             </>) : (<>
               <p className="confirm-rules-title">📋 ルール　📋</p>
               <ul>
-                <li>時間制限なし、じっくり考えてください</li>
+                <li>時間制限はありません</li>
                 <li>難易度が段階的に上がります</li>
                 <li><span style={{color:'#e53935'}}>♥</span> がなくると終了、連続正解で <span style={{color:'#e53935'}}>♥</span> を獲得</li>
                 <li>いつでも中断OK、続きから再開できます</li>
@@ -2846,6 +2853,7 @@ function App() {
                         item.appends.slice(apIdx).forEach((apWrap, relIdx) => {
                           const ai = apIdx + relIdx;
                           const prevRow = ai === 0 ? item.base : item.appends[ai - 1].row;
+                          if (prevRow.col_space === 'break') { nodes.push(<br key={`br1-${ai}`} />); nodes.push(<br key={`br2-${ai}`} />); }
                           nodes.push(<Fragment key={`sp-${ai}`}>{spaceChar(prevRow.col_space)}</Fragment>);
                           nodes.push(renderPart(apWrap.row, `ov-${ai}`));
                         });
@@ -2865,6 +2873,7 @@ function App() {
                             const isPartMulti = arr.length >= 2 && arr.length < songModalMembers.length;
                             return (
                               <Fragment key={ri}>
+                                {ri > 0 && prev.col_space === 'break' && <><br /><br /></>}
                                 {ri > 0 && spaceChar(prev.col_space)}
                                 {isPartMulti ? (
                                   <span
