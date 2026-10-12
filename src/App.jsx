@@ -815,18 +815,18 @@ function App() {
 
 
   const descriptions = {
-    easy:      ["有名な曲の歌詞が選出されます","特に長い歌詞、または特徴的な歌詞が選出されます","1人で歌う歌詞が選出されます"],
-    normal:    ["MVがある曲の歌詞が選出されます","長めの歌詞が選出されます","1人で歌う歌詞が選出されます"],
-    hard:      ["すべての曲の歌詞から選出されます","短めの歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
-    superhard: ["すべての曲の歌詞から選出されます","とても短い歌詞が選出されます","1人または全員で歌う歌詞が選出されます"],
-    expert:    ["すべての曲の歌詞から選出されます","2人以上で歌う歌詞が選出されます"],
+    easy:      ["有名な曲から、とても長いフレーズ または 特徴的な歌詞が登場します","1人で歌う歌詞が登場します"],
+    normal:    ["MVがある曲から、長いフレーズが登場します","1人で歌う歌詞が登場します"],
+    hard:      ["すべての曲から、短めの歌詞が登場します","1人 または 全員で歌う歌詞が登場します"],
+    superhard: ["すべての曲から、とても短い歌詞が登場します","1人 または 全員で歌う歌詞が登場します"],
+    expert:    ["すべての曲から、2人以上で歌う歌詞が登場します"],
   };
 
   const resultMessages = {
     easy: { zero: "え…？やる気ある...？<br>1つも当たらないのはある意味すごいかも。w", low: "本当にちゃんと聴いてるの…？<br>まずは曲をしっかり聴き込みましょう。", mid: "こんなんじゃまだまだ聴いたとは言えない！<br>「やさしい」なら全問正解を目指したいところ！", high: "初心者なら及第点！<br>次は全問正解に挑戦だ！", perfect: "全問正解！ナイスです！<br>「やさしい」はもう余裕かな？次の難易度にレッツゴー！" },
     normal: { zero: "全滅…だと…！？<br>泣きたい気持ちを抑えて、もう1回チャレンジ！", low: "まだまだ聴き込み不足！<br>曲をたくさん聴いて耳を鍛えよう。", mid: "まずまずの結果です。<br>さらに聴き込めばもっと正解できるはず！", high: "素晴らしい！<br>そろそろファンを名乗ってもいいかもね？", perfect: "全問正解！よくできました！<br>素晴らしい結果です！次は「むずかしい」に挑戦だ！" },
-    hard: { zero: "全問不正解…。壁はかなり高かったようだ。", low: "この難易度はまだ早かったかも…？<br>でも挑戦する姿勢は最高にかっこいいぜ。", mid: "大健闘！<br>「むずかしい」でこれだけ解ければ相当なもの。", high: "すごい！よくここまで正解できましたね！<br>全問正解までもうちょっと。もう一回チャレンジだ！", perfect: "全問正解！コングラッチュレーション！！<br>この難易度で満点はもはや職人の域ですな！" },
-    superhard: { zero: "全問不正解。<br>「げきむず」の名は伊達じゃなかったようだ。", low: "短い歌詞にやられた…！<br>でも挑む姿勢はマジでかっこいい。", mid: "大健闘！<br>この短さでここまで解けるのはなかなかの実力者！", high: "すごすぎ！あと一歩で満点だ！<br>もう一回挑戦してみよう！", perfect: "全問正解！お見事すぎる！！<br>短い歌詞まで完璧に聴き分けるとは…もはや達人！" },
+    hard: { zero: "全問不正解！壁はかなり高かったみたい。", low: "この難易度はまだ早かったかも…？<br>でも挑戦する姿勢は最高にかっこいい！", mid: "大健闘！<br>「むずかしい」でこれだけ解ければ相当なもの。", high: "すごい！よくここまで正解できましたね！<br>全問正解までもうちょっと。もう一回チャレンジ！", perfect: "全問正解！コングラッチュレーション！！<br>この難易度で満点はもはや職人の域ですな！" },
+    superhard: { zero: "全問不正解…「げきむず」の名は伊達じゃないね。", low: "厳しい戦いだ…！<br>あきらめないで、何度だってチャレンジだ。", mid: "よくできました！<br>ここまで解けるのはなかなかの実力者！", high: "すごすぎ！あと一歩で満点だ！<br>もう一回挑戦してみよう！", perfect: "全問正解！お見事すぎる！！<br>こんなに完璧に聴き分けるとは…もはや達人では！？" },
     expert: { zero: "へんじがない。ただのしかばねのようだ。<br>0点でも泣かないで。当てる方がおかしいレベルですから。", low: "相手が悪すぎた…。<br>一筋縄ではいかないね。ドンマイドンマイ！", mid: "素晴らしい！<br>この難問揃いで半分解けるとは、なかなかやるな？", high: "素晴らしすぎて鳥肌ものです。<br>もしかしたら本人よりも詳しいかも…！？", perfect: "👼⛩️✨神、降臨✨⛩️👼。<br>あなたは一体何者…？まさか本人？？" }
   };
 
@@ -1286,6 +1286,18 @@ function App() {
     const nextQ = endlessNextQ;
     if (nextQ?.sounds_id) await fetchSongLyrics(nextQ.sounds_id);
     const newQNum = endlessQNum + 1;
+    // ENDLESS_PROGRESSIONの区切り（各maxの次の問題番号）で難易度UPを通知する
+    const DIFF_THRESHOLDS = {
+      11: { text: '難易度UP！',   desc: '長い歌詞が登場するようになります！' },
+      21: { text: '難易度UP！',   desc: '特徴的な歌詞が登場しなくなります！' },
+      36: { text: '難易度UP！',   desc: '短い歌詞が登場するようになります！' },
+      51: { text: '難易度UP！',   desc: 'とても短い歌詞が登場するようになります！' },
+      71: { text: '難易度UP！',   desc: 'すべての歌詞が登場します！' },
+      91: { text: '難易度MAX！！', desc: '複数人で歌う歌詞の頻度が上がります！' },
+    };
+    const diffNotif = DIFF_THRESHOLDS[newQNum];
+    if (diffNotif) setEndlessDiffNotif({ ...diffNotif, key: Date.now() });
+    else setEndlessDiffNotif({ text: '', key: 0 });
     setEndlessQNum(newQNum);
     setQuizState(prev => ({ ...prev, quizzes: [nextQ], currentIndex: 0 }));
     setEndlessNextQ(null);
@@ -1293,6 +1305,7 @@ function App() {
     setSelectedMembers(new Set());
     setResultMsg({ text: "", type: "" });
     setShowFullLyrics(false);
+    // アナウンス（全歌詞表示）画面へは即時に切り替え、難易度UPは上に重ねて表示する
     setScrollAnimPhase('scrolling');
     setQuizPhase('announce');
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1362,10 +1375,11 @@ function App() {
     }
   }, [questionTimer, gameMode, screen, answered, members]);
 
-  // --- アナウンス画面：2秒後にスクロール画面へ ---
+  // --- アナウンス画面：2秒後にスクロール画面へ（難易度UPアニメーション表示中は+1秒) ---
   useEffect(() => {
     if (quizPhase !== 'announce') return;
-    const t = setTimeout(() => setQuizPhase('scrolling'), 2000);
+    const duration = (gameMode === 'endless' && endlessDiffNotif.text) ? 5000 : 2000;
+    const t = setTimeout(() => setQuizPhase('scrolling'), duration);
     return () => clearTimeout(t);
   }, [quizPhase, quizState.currentIndex, gameMode]);
 
@@ -2492,6 +2506,16 @@ function App() {
         </div>
       )}
 
+      {/* --- 難易度UPオーバーレイ --- */}
+      {screen === 'quiz' && gameMode === 'endless' && endlessDiffNotif.text && (
+        <div key={endlessDiffNotif.key} className="endless-diffup-overlay">
+          <div className={`endless-diffup-card${endlessDiffNotif.text === '難易度MAX！！' ? ' endless-diffup-max' : ''}`}>
+            <div className="endless-diffup-label">{endlessDiffNotif.text}</div>
+            {endlessDiffNotif.desc && <div className="endless-diffup-desc">{endlessDiffNotif.desc}</div>}
+          </div>
+        </div>
+      )}
+
       {/* --- エンドレスゲームオーバーオーバーレイ --- */}
       {screen === 'quiz' && gameMode === 'endless' && endlessIsOver && (
         <div className="endless-gameover-overlay">
@@ -2661,6 +2685,7 @@ function App() {
       {/* --- エンドレスリザルト画面 --- */}
       {screen === 'result' && gameMode === 'endless' && resultPhase === 'reveal' && (
         <div className="box result-box zoom-in">
+          <p className="endless-result-thanks">おつかれさまでした！</p>
           <p className="result-label">エンドレスの結果は…</p>
           <div className="endless-result-hero">
             <span className="endless-result-num">{quizState.correctCount}</span>
@@ -3136,7 +3161,7 @@ function App() {
             <div className="debug-label" style={{color:'#81c784'}}>▶ エンドレス専用</div>
             <div className="debug-label" style={{marginTop:'6px'}}>問題番号セット <span style={{color:'#aaa', fontSize:'0.7rem'}}>(現在: {endlessQNum})</span></div>
             <div className="debug-btn-group">
-              {[10, 20, 35, 50, 70].map(v => (
+              {[10, 20, 35, 50, 70, 90].map(v => (
                 <button key={v}
                   className={`debug-btn ${endlessQNum === v ? 'on' : ''}`}
                   onClick={() => setEndlessQNum(v)}>{v}</button>

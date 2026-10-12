@@ -830,6 +830,13 @@ body::before {
 /* --- リザルト画面 --- */
 .result-label { color: #aaa; font-size: 0.8rem; margin-bottom: 8px; letter-spacing: 0.05em; }
 
+.endless-result-thanks {
+  font-family: 'Mochiy Pop One', sans-serif;
+  font-size: clamp(1.1rem, 4.5vw, 1.4rem);
+  color: #ff69b2;
+  margin-bottom: 6px;
+}
+
 .result-hero {
   display: flex;
   align-items: center;
@@ -2004,17 +2011,18 @@ body::before {
 }
 
 /* ===== 難易度UPオーバーレイ ===== */
+/* 入場・退場の速さは1.6s版と同じ絶対時間を維持し、ホールド区間だけを延長して合計2.6sにしている */
 @keyframes diffupOverlayAnim {
   0%   { opacity: 0; }
-  12%  { opacity: 1; }
-  72%  { opacity: 1; }
+  7%   { opacity: 1; }
+  83%  { opacity: 1; }
   100% { opacity: 0; }
 }
 @keyframes diffupCardAnim {
   0%   { transform: scale(0.4); opacity: 0; }
-  18%  { transform: scale(1.12); opacity: 1; }
-  30%  { transform: scale(1);    opacity: 1; }
-  72%  { transform: scale(1);    opacity: 1; }
+  11%  { transform: scale(1.12); opacity: 1; }
+  18%  { transform: scale(1);    opacity: 1; }
+  83%  { transform: scale(1);    opacity: 1; }
   100% { transform: scale(1.04); opacity: 0; }
 }
 /* ===== エンドレスモード解放フラッシュ ===== */
@@ -2066,13 +2074,13 @@ body::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 8500;
   pointer-events: none;
-  animation: diffupOverlayAnim 1.6s ease-out forwards;
+  animation: diffupOverlayAnim 2.6s ease-out forwards;
 }
 .endless-diffup-card {
   text-align: center;
-  animation: diffupCardAnim 1.6s ease-out forwards;
+  animation: diffupCardAnim 2.6s ease-out forwards;
 }
 .endless-diffup-label {
   font-family: 'Mochiy Pop One', sans-serif;
@@ -2085,7 +2093,7 @@ body::before {
   text-shadow: 0 0 28px rgba(255, 82, 82, 0.95), 0 2px 8px rgba(0,0,0,0.5);
 }
 .endless-diffup-desc {
-  margin-top: 8px;
+  margin-top: 28px;
   font-size: clamp(0.85rem, 4vw, 1.1rem);
   color: #fff;
   text-shadow: 0 1px 6px rgba(0,0,0,0.6);
