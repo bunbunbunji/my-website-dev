@@ -152,7 +152,7 @@ Sub ImportLyricsFromSupabase()
 
     ' --- 8. song_name列をVLOOKUPで追加（sounds_idの右隣・C列に挿入） ---
     Dim lastRow As Long
-    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    lastRow = ws.Cells(ws.Rows.count, "A").End(xlUp).Row
 
     If lastRow >= 2 Then
         ws.Columns(3).Insert Shift:=xlToRight
@@ -162,10 +162,30 @@ Sub ImportLyricsFromSupabase()
         lookupRange = "sounds_tags!$A:$" & Chr(64 + SOUNDS_NAME_COL)
         Dim nameFormula As String
         nameFormula = "=IFERROR(VLOOKUP(B2," & lookupRange & "," & SOUNDS_NAME_COL & ",FALSE),"""")"
-        ws.Range(ws.Cells(2, 3), ws.Cells(lastRow, 3)).Formula = nameFormula
+        ws.range(ws.Cells(2, 3), ws.Cells(lastRow, 3)).Formula = nameFormula
+    End If
+
+    ' --- 9. lyric列を折り返して全体を表示する（複数行の歌詞が1行で潰れないように） ---
+    Dim lastCol As Long
+    lastCol = ws.Cells(1, ws.Columns.count).End(xlToLeft).Column
+    Dim lyricCol As Long
+    lyricCol = 0
+    Dim colIdx As Long
+    For colIdx = 1 To lastCol
+        If ws.Cells(1, colIdx).Value = "lyric" Then
+            lyricCol = colIdx
+            Exit For
+        End If
+    Next colIdx
+
+    If lyricCol > 0 And lastRow >= 2 Then
+        ws.range(ws.Cells(2, lyricCol), ws.Cells(lastRow, lyricCol)).WrapText = True
+        ws.Rows("2:" & lastRow).AutoFit
     End If
 
     MsgBox "取得完了: " & totalCount & " 件"
 End Sub
+
+
 
 

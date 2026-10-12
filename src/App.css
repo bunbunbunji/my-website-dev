@@ -370,6 +370,28 @@ body::before {
 .group-btn-cs { background: linear-gradient(145deg, #f06292, #e91e8c); }
 .group-btn-ms { background: linear-gradient(145deg, #9575cd, #5e35b1); }
 
+/* 工事中（イレギュラー対応中）のグループ：色を上書きしてグレーにし、押せないようにする */
+.group-card-btn.group-btn-construction {
+  background: linear-gradient(145deg, #bdbdbd, #757575);
+  color: #eee;
+  text-shadow: none;
+  cursor: not-allowed;
+}
+.group-card-btn.group-btn-construction:hover,
+.group-card-btn.group-btn-construction:active {
+  transform: none;
+  box-shadow:
+    0 7px 0 rgba(0,0,0,0.28),
+    0 10px 20px rgba(0,0,0,0.2),
+    inset 0 1px 0 rgba(255,255,255,0.38);
+}
+.group-construction-label {
+  display: block;
+  font-size: 0.75em;
+  margin-top: 2px;
+  letter-spacing: 0.1em;
+}
+
 .back-btn-group {
   font-family: 'Mochiy Pop One', sans-serif;
   width: 85%;
