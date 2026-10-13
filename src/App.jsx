@@ -489,23 +489,24 @@ function App() {
   const MIN_POOL_SIZE = 30;
 
   // 難易度ごとの主条件の文字数範囲と、文字数以外の条件（人数・mv・繰り返し等）
+  // unique=trueの歌詞はやさしい専用のため、ふつう/むずかしい/げきむずでは除外する（expertと同様）
   const TIER_LENGTH_CONFIG = {
     // 主条件: 14〜24文字。mvがある曲・1人で歌う・繰り返しフレーズでない歌詞が対象
     normal: {
       range: [14, 24],
-      extra: (q) => q.mv === true && getPersonCount(q) === 1 && !isRepeatedInSong(q),
+      extra: (q) => !q.unique && q.mv === true && getPersonCount(q) === 1 && !isRepeatedInSong(q),
       weightMultiplier: () => 1,
     },
     // 主条件: 6〜13文字。1人または全員で歌う歌詞が対象（全員で歌う歌詞は出にくくする）
     hard: {
       range: [6, 13],
-      extra: (q, totalMembers) => { const c = getPersonCount(q); return c === 1 || c === totalMembers; },
+      extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
       weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.3 : 1),
     },
     // 主条件: 5文字以下。1人または全員で歌う歌詞が対象（全員で歌う歌詞は出にくくする）
     superhard: {
       range: [0, 5],
-      extra: (q, totalMembers) => { const c = getPersonCount(q); return c === 1 || c === totalMembers; },
+      extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
       weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
     },
   };
@@ -815,11 +816,11 @@ function App() {
 
 
   const descriptions = {
-    easy:      ["有名な曲から、とても長いフレーズ または 特徴的な歌詞が登場します","1人で歌う歌詞が登場します"],
-    normal:    ["MVがある曲から、長いフレーズが登場します","1人で歌う歌詞が登場します"],
-    hard:      ["すべての曲から、短めの歌詞が登場します","1人 または 全員で歌う歌詞が登場します"],
-    superhard: ["すべての曲から、とても短い歌詞が登場します","1人 または 全員で歌う歌詞が登場します"],
-    expert:    ["すべての曲から、2人以上で歌う歌詞が登場します"],
+    easy:      ["有名な曲から、とても長いフレーズの歌詞が登場します","特徴的な歌詞が登場します","1人で歌う歌詞が登場します"],
+    normal:    ["MVがある曲から、長いフレーズの歌詞が登場します","1人で歌う歌詞が登場します"],
+    hard:      ["すべての曲から、短めのフレーズの歌詞が登場します","1人 または 全員で歌う歌詞が登場します","曲中で繰り返し使われる歌詞が登場します"],
+    superhard: ["すべての曲から、とても短いフレーズの歌詞が登場します","1人 または 全員で歌う歌詞が登場します","曲中で繰り返し使われる歌詞が登場します"],
+    expert:    ["すべての曲から、すべての歌詞が登場します。","2人以上で歌う歌詞が登場します"],
   };
 
   const resultMessages = {
@@ -1293,7 +1294,7 @@ function App() {
       36: { text: '難易度UP！',   desc: '短い歌詞が登場するようになります！' },
       51: { text: '難易度UP！',   desc: 'とても短い歌詞が登場するようになります！' },
       71: { text: '難易度UP！',   desc: 'すべての歌詞が登場します！' },
-      91: { text: '難易度MAX！！', desc: '複数人で歌う歌詞の頻度が上がります！' },
+      91: { text: '難易度MAX！！', desc: '複数人で歌う歌詞の出題頻度が上がります！' },
     };
     const diffNotif = DIFF_THRESHOLDS[newQNum];
     if (diffNotif) setEndlessDiffNotif({ ...diffNotif, key: Date.now() });
@@ -2261,7 +2262,7 @@ function App() {
                 {tooltipLevel === level && (
                   <div
                     ref={diffTooltipRef}
-                    className={`diff-tooltip diff-tooltip--${idx % 2 === 0 ? 'left' : 'right'}${tooltipClosing ? ' closing' : ''}`}
+                    className={`diff-tooltip${level === 'expert' ? '' : ` diff-tooltip--${idx % 2 === 0 ? 'left' : 'right'}`}${tooltipClosing ? ' closing' : ''}`}
                     onMouseEnter={() => {
                       clearTimeout(tooltipCloseTimerRef.current);
                       setTooltipClosing(false);

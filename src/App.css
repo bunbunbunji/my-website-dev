@@ -1535,9 +1535,16 @@ body::before {
     /* 最大幅 = 左列左端〜右列右端 = グリッド全幅。幅は内容に合わせて可変 */
     width: max-content;
     max-width: calc(100vw - 70px);
+  }
+  /* 中央配置（きちくなど左右モディファイアなし）は transform: translateX(-50%) で
+     中央寄せしたままにする必要があるため、tooltipInFlat（transform: none で終わる）
+     は左右揃えのボタン用にのみ適用する */
+  .diff-tooltip--left,
+  .diff-tooltip--right {
     animation: tooltipInFlat 0.18s ease-out forwards;
   }
-  .diff-tooltip.closing {
+  .diff-tooltip--left.closing,
+  .diff-tooltip--right.closing {
     animation: tooltipOutFlat 0.18s ease-in forwards;
   }
   .diff-tooltip--left {
