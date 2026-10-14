@@ -1065,7 +1065,6 @@ function App() {
     setMembers(mData || []);
     endlessTotalMembersRef.current = (mData || []).length;
     // Q1を選択してfullデータ取得
-    if (qData.length > 999) qData = shuffle(qData).slice(0, 999);
     let pool = [...qData];
     const eligible1 = getEndlessEligiblePool(pool, 1, endlessTotalMembersRef.current);
     const q1Meta = selectEndlessWeighted(eligible1);
@@ -2287,7 +2286,9 @@ function App() {
           <h2 className="title">出題内容の確認</h2>
           <div className="info-card">
             <div className="confirm-item"><span className="confirm-label">グループ</span><span className="confirm-value">{quizState.group}</span></div>
-            <div className="confirm-item"><span className="confirm-label">難易度</span><span className="confirm-value">{gameMode === 'endless' ? '全難易度' : difficultyLabel[quizState.difficulty]}</span></div>
+            {gameMode !== 'endless' && (
+              <div className="confirm-item"><span className="confirm-label">難易度</span><span className="confirm-value">{difficultyLabel[quizState.difficulty]}</span></div>
+            )}
             <p className="preparing-status">{statusMsg}</p>
           </div>
           <div className="confirm-rules">
