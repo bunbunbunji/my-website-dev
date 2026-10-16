@@ -1866,15 +1866,23 @@ function App() {
     return 'zero';
   };
 
+  const openTweetUrl = (text) => {
+    const isXInApp = /Twitter/i.test(navigator.userAgent);
+    const url = isXInApp
+      ? `twitter://post?message=${text}`
+      : `https://twitter.com/intent/tweet?text=${text}`;
+    window.open(url, '_blank');
+  };
+
   const shareEndlessOnX = () => {
     const text = encodeURIComponent(`エンドレスモードの結果！\n【${endlessQNum}問中${quizState.correctCount}問正解】\n${quizState.group}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    openTweetUrl(text);
   };
 
   const shareOnX = () => {
     const rank = getRank(quizState.correctCount);
-    const text = encodeURIComponent(`歌割り検定の結果は…\n【${rank}】でした！(正解：${quizState.correctCount}/10問)\n難易度：${difficultyLabel[quizState.difficulty]}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
-    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+    const text = encodeURIComponent(`歌割り検定の結果は…\n【${rank}】でした！(正解：${quizState.correctCount}/10問)\n難易度：${difficultyLabel[quizState.difficulty]}\n${quizState.group}\n#KAWAIILAB歌割り検定\nhttps://kawalab-utaken.jp/`);
+    openTweetUrl(text);
   };
 
   const isSingleSelectMode =
