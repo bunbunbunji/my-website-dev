@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>HTMLテキスト抽出・整形ツール</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    h2 { margin-bottom: 10px; }
+    textarea {
+      width: 100%;
+      height: 220px;
+      margin-bottom: 15px;
+      font-size: 14px;
+      padding: 10px;
+      box-sizing: border-box;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    button {
+      padding: 10px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #0056b3; }
+    .output-container { margin-top: 25px; }
+  </style>
+</head>
+<body>
+  <h2>HTMLテキスト抽出・整形ツール</h2>
+  <label for="input">入力 HTML/テキスト:</label>
+  <textarea id="input" placeholder="<div jsname=...>などのHTMLコードをそのまま貼り付けてください"></textarea>
+  
+  <button onclick="processText()">整形して抽出</button>
+  
+  <div class="output-container">
+    <label for="output">結果:</label>
+    <textarea id="output" readonly placeholder="整形後のテキストがここに表示されます"></textarea>
+  </div>
+
+  <script>
+    function processText() {
+      const rawInput = document.getElementById('input').value;
+
+      // 一時的なDOMエレメントを作成してHTML構造を解析
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = rawInput;
+
+      // 行要素になり得るタグ（div, p, br）の前後で改行処理を施すためテキストを再構築
+      // spanタグ等のテキストノードを1行ずつ集計
+      let lines = [];
+
+      // spanなどのテキスト要素を取得
+      const spans = tempDiv.querySelectorAll('span');
+
+      if (spans.length > 0) {
+        spans.forEach(span => {
+          const txt = span.textContent.trim();
+          if (txt.length > 0) {
+            lines.push(txt);
+          }
+        });
+      } else {
+        // span構造がない場合は従来の正規表現でタグ除去と<br>改行処理
+        let formatted = rawInput
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/div>/gi, '\n')
+          .replace(/<\/?[^>]+(>|$)/g, '');
+
+        lines = formatted
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+      }
+
+      document.getElementById('output').value = lines.join('\n');
+    }
+  </script>
+</body>
+</html>

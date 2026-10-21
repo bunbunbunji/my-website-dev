@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>テキスト整形ツール</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+    textarea { width: 100%; height: 200px; margin-bottom: 10px; font-size: 14px; }
+    button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    .output-container { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h2>HTMLタグ除去・空行削除ツール</h2>
+  <label for="input">入力テキスト（HTMLタグ含む）:</label>
+  <textarea id="input" placeholder="ここにテキストを貼り付けてください"></textarea>
+  
+  <button onclick="processText()">整形する</button>
+  
+  <div class="output-container">
+    <label for="output">結果:</label>
+    <textarea id="output" readonly></textarea>
+  </div>
+
+  <script>
+    function processText() {
+      let text = document.getElementById('input').value;
+
+      // <br> タグを改行コード \n に置換
+      text = text.replace(/<br\s*\/?>/gi, '\n');
+
+      // その他のHTMLタグを除去
+      text = text.replace(/<\/?[^>]+(>|$)/g, '');
+
+      // 各行を配列にし、前後の空白を除去した上で空行（長さ0）をフィルタリング
+      let lines = text.split('\n')
+                      .map(line => line.trim())
+                      .filter(line => line.length > 0);
+
+      // 改行で連結して出力
+      document.getElementById('output').value = lines.join('\n');
+    }
+  </script>
+</body>
+</html>
