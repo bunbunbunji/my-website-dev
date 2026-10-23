@@ -357,6 +357,25 @@ def _extend_trailing_punct(unit_text: str, end_orig: int, global_text: str) -> i
     return extended
 
 
+def _extend_leading_punct(unit_text: str, start_orig: int, global_text: str) -> int:
+    """_extend_trailing_punctの対になる関数。正規化で除去された先頭の
+    括弧・引用符等(「（」など)がspanの先頭から漏れ落ちる問題を防ぐため、
+    unit_textの先頭が記号で始まる場合、global_text側でも同じ記号が
+    直前に続く限りstart_origを前方に拡張する。"""
+    lead = 0
+    for ch in unit_text:
+        if _TRAILING_PUNCT_RE.match(ch):
+            lead += 1
+        else:
+            break
+    extended = start_orig
+    count = 0
+    while count < lead and extended > 0 and _TRAILING_PUNCT_RE.match(global_text[extended - 1]):
+        extended -= 1
+        count += 1
+    return extended
+
+
 def _normalize(s: str) -> str:
     return _STRIP_CHARS_RE.sub('', s).lower()
 
@@ -528,6 +547,7 @@ def reconstruct_from_edited(records: List[Dict], target_lines: List[str]) -> Tup
                 start_orig = orig_idx[pos]
                 end_orig = orig_idx[pos + L - 1] + 1
                 end_orig = _extend_trailing_punct(unit['text'], end_orig, global_text)
+                start_orig = _extend_leading_punct(unit['text'], start_orig, global_text)
                 spans.append((start_orig, end_orig))
             pos += L
             i += 1

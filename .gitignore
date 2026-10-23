@@ -30,3 +30,6 @@ dist-ssr
 
 # Claude settings
 .claude/
+
+# Python
+__pycache__/
