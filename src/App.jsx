@@ -240,6 +240,104 @@ const renderLyricGroup = (group, isTarget, refProp = {}, baseClass = 'scrolling-
   );
 };
 
+// lyric_colでグループ化された行が、実際の画面幅で自然に折り返されてしまう場合、
+// ブラウザが実際に折り返した境目（＝2行目に落ちた最初のレコード）を実測で特定し、
+// そこに強制的に改行を入れる。これにより「4,5と続くところ4で折り返されるなら、
+// 4以降をまとめて次の行に送る」という見た目になる。幅はデバイスごとに変わるため、
+// 描画後の各レコードの位置を実測して判定する。
+const SongModalGroupRow = ({
+  groupKey,
+  allParts,
+  memberLookup,
+  totalMembers,
+  highlightIds,
+  showTouchAnnot,
+  hideTouchAnnot,
+  annotTouchEndedRef,
+}) => {
+  const rowRef = useRef(null);
+  const partRefs = useRef([]);
+  const [breakIndex, setBreakIndex] = useState(null);
+
+  useLayoutEffect(() => {
+    const els = partRefs.current;
+    const base = els[0];
+    if (!base) { setBreakIndex(null); return; }
+    const baseTop = base.offsetTop;
+    const lineHeight = parseFloat(getComputedStyle(base).lineHeight) || 0;
+    let idx = null;
+    for (let i = 1; i < els.length; i++) {
+      const el = els[i];
+      if (!el) continue;
+      // そのレコードが2行目以降から始まっている（直前までで折り返し済み）
+      const startedNewLine = el.offsetTop > baseTop + 1;
+      // そのレコード自身の文字数が長く、1行目に途中まで乗った上で単独で折り返している
+      const wrapsInternally = lineHeight > 0 && el.offsetHeight > lineHeight * 1.5;
+      if (startedNewLine || wrapsInternally) { idx = i; break; }
+    }
+    setBreakIndex(idx);
+  }, [allParts]);
+
+  const spaceChar = (sp) => sp === 'half' ? ' ' : sp === 'full' ? '　' : '';
+  const partColor = (r) => {
+    const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+    return arr.length === 1 ? (memberLookup[arr[0]]?.color || '#333') : '#333';
+  };
+  const partBold = (r) => {
+    const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+    return arr.length >= 2 && arr.length < totalMembers;
+  };
+  const hasHighlightFilter = !!highlightIds?.length;
+  const partSmall = (r) => hasHighlightFilter && !highlightIds.includes(r.lyrics_id);
+  const partMatch = (r) => hasHighlightFilter && highlightIds.includes(r.lyrics_id);
+
+  const renderPartLines = (r, kp) => {
+    const color = partColor(r);
+    const bold = partBold(r);
+    const small = partSmall(r);
+    const match = partMatch(r);
+    return (r.lyrics ? r.lyrics.split('\n') : ['']).map((line, li) => (
+      <Fragment key={`${kp}-${li}`}>
+        {li > 0 && '\n'}
+        <span className={match ? 'song-modal-highlight-marker' : undefined} style={{ color, fontWeight: (bold || match) ? 'bold' : undefined, opacity: small ? 0.2 : undefined }}>{renderLineWithAite(line, `${kp}-${li}`)}</span>
+      </Fragment>
+    ));
+  };
+
+  return (
+    <div ref={rowRef} className="song-modal-lyric-row">
+      {allParts.map((r, ri) => {
+        const prev = ri === 0 ? null : allParts[ri - 1];
+        const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
+        const isPartMulti = arr.length >= 2 && arr.length < totalMembers;
+        const didForceBreak = ri === breakIndex && prev.col_space !== 'break';
+        return (
+          <Fragment key={ri}>
+            {ri > 0 && prev.col_space === 'break' && <><br /><br /></>}
+            {didForceBreak && <br />}
+            {ri > 0 && !didForceBreak && spaceChar(prev.col_space)}
+            <span ref={(el) => { partRefs.current[ri] = el; }}>
+              {isPartMulti ? (
+                <span
+                  className="song-modal-lyric-text"
+                  onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                  onTouchEnd={() => hideTouchAnnot(true)}
+                  onTouchCancel={() => hideTouchAnnot(true)}
+                  onMouseEnter={(e) => { if (annotTouchEndedRef.current) return; const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
+                  onMouseLeave={hideTouchAnnot}
+                >
+                  {renderPartLines(r, `sm-g-${groupKey}-${ri}`)}
+                </span>
+              ) : (
+                renderPartLines(r, `sm-g-${groupKey}-${ri}`)
+              )}
+            </span>
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+};
 
 function App() {
   const [termsAgreed, setTermsAgreed] = useState(() =>
@@ -2970,33 +3068,17 @@ function App() {
                       }
 
                       return (
-                        <div key={i} className="song-modal-lyric-row">
-                          {allParts.map((r, ri) => {
-                            const prev = ri === 0 ? null : allParts[ri - 1];
-                            const arr = (r.correct_members || '').split(',').map(s => s.trim()).filter(Boolean);
-                            const isPartMulti = arr.length >= 2 && arr.length < songModalMembers.length;
-                            return (
-                              <Fragment key={ri}>
-                                {ri > 0 && prev.col_space === 'break' && <><br /><br /></>}
-                                {ri > 0 && spaceChar(prev.col_space)}
-                                {isPartMulti ? (
-                                  <span
-                                    className="song-modal-lyric-text"
-                                    onTouchStart={(e) => { const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
-                                    onTouchEnd={() => hideTouchAnnot(true)}
-                                    onTouchCancel={() => hideTouchAnnot(true)}
-                                    onMouseEnter={(e) => { if (annotTouchEndedRef.current) return; const rect = e.currentTarget.getBoundingClientRect(); showTouchAnnot(rect.top, rect.bottom, rect.left, arr, r.lyrics || ''); }}
-                                    onMouseLeave={hideTouchAnnot}
-                                  >
-                                    {renderPartLines(r, `sm-g-${i}-${ri}`)}
-                                  </span>
-                                ) : (
-                                  renderPartLines(r, `sm-g-${i}-${ri}`)
-                                )}
-                              </Fragment>
-                            );
-                          })}
-                        </div>
+                        <SongModalGroupRow
+                          key={i}
+                          groupKey={i}
+                          allParts={allParts}
+                          memberLookup={memberLookup}
+                          totalMembers={songModalMembers.length}
+                          highlightIds={songModalHighlightIds}
+                          showTouchAnnot={showTouchAnnot}
+                          hideTouchAnnot={hideTouchAnnot}
+                          annotTouchEndedRef={annotTouchEndedRef}
+                        />
                       );
                     }
 
