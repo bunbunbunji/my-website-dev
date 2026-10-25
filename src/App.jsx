@@ -263,8 +263,13 @@ const SongModalGroupRow = ({
     const els = partRefs.current;
     const base = els[0];
     if (!base) { setBreakIndex(null); return; }
-    const baseTop = base.offsetTop;
     const lineHeight = parseFloat(getComputedStyle(base).lineHeight) || 0;
+    // base自体が内部改行で複数行にまたがる場合があるため、base先頭行ではなく
+    // base最終行の位置を基準にする（先頭行基準だと、appendは常にbaseの下に
+    // 来るため「折り返した」と誤判定されてしまう）
+    const baseTop = lineHeight > 0
+      ? base.offsetTop + base.offsetHeight - lineHeight
+      : base.offsetTop;
     let idx = null;
     for (let i = 1; i < els.length; i++) {
       const el = els[i];
