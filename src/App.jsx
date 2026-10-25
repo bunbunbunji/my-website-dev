@@ -264,20 +264,22 @@ const SongModalGroupRow = ({
     const base = els[0];
     if (!base) { setBreakIndex(null); return; }
     const lineHeight = parseFloat(getComputedStyle(base).lineHeight) || 0;
-    // base自体が内部改行で複数行にまたがる場合があるため、base先頭行ではなく
-    // base最終行の位置を基準にする（先頭行基準だと、appendは常にbaseの下に
-    // 来るため「折り返した」と誤判定されてしまう）
-    const baseTop = lineHeight > 0
-      ? base.offsetTop + base.offsetHeight - lineHeight
-      : base.offsetTop;
+    // inline要素のoffsetTop/offsetHeightは、内部改行で複数行にまたがる場合
+    // ブラウザによって挙動が不安定なため、getClientRects()で行ごとの矩形を
+    // 直接取得し、base最終行（＝最後のrect）の上端を基準にする
+    const baseRects = base.getClientRects();
+    const baseLastRect = baseRects.length > 0 ? baseRects[baseRects.length - 1] : base.getBoundingClientRect();
+    const baseTop = baseLastRect.top;
     let idx = null;
     for (let i = 1; i < els.length; i++) {
       const el = els[i];
       if (!el) continue;
+      const elRects = el.getClientRects();
+      const elFirstRect = elRects.length > 0 ? elRects[0] : el.getBoundingClientRect();
       // そのレコードが2行目以降から始まっている（直前までで折り返し済み）
-      const startedNewLine = el.offsetTop > baseTop + 1;
+      const startedNewLine = elFirstRect.top > baseTop + 1;
       // そのレコード自身の文字数が長く、1行目に途中まで乗った上で単独で折り返している
-      const wrapsInternally = lineHeight > 0 && el.offsetHeight > lineHeight * 1.5;
+      const wrapsInternally = lineHeight > 0 && elRects.length > 1;
       if (startedNewLine || wrapsInternally) { idx = i; break; }
     }
     setBreakIndex(idx);
