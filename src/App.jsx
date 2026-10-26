@@ -589,6 +589,52 @@ function App() {
   // 設定されている＝曲中で繰り返し使われる歌詞、と判定する
   const isRepeatedInSong = (q) => Array.isArray(q.occurrence) && q.occurrence.some(v => v != null);
 
+  // 繰り返し歌詞の重み係数（やさしい/ふつうでは除外するが、むずかしい/げきむず/きちくでは
+  // 完全除外ではなく出現しづらくする程度に留める）。
+  // occurrenceは各レコード（複数行の場合は行ごと）に「このフレーズが曲中で何回目の
+  // 出現か」を記録したタグで、同じフレーズの全出現箇所を合わせると1,2,3...と連番になる。
+  // そのため、同じ歌詞テキストを持つ全レコードの中でのoccurrenceの最大値が、その
+  // フレーズの「合計出現回数」になる。これをpool全体から事前に集計し、合計出現回数が
+  // 多いフレーズほど（そのフレーズを含む行すべてに同じ重みで）出現しづらくする。
+  // 2回使われるフレーズなら×0.8、3回なら×0.7…という具合に0.1刻みで下げ、0.3を下限にする。
+  const REPEAT_WEIGHT_FLOOR = 0.3;
+  const splitLyricLines = (lyric) => (lyric || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+
+  // pool全体から「sounds_id + フレーズ本文」ごとの合計出現回数（occurrenceの最大値）を集計する
+  const buildRepeatTotalMap = (pool) => {
+    const map = new Map();
+    pool.forEach((q) => {
+      if (!Array.isArray(q.occurrence)) return;
+      const lines = splitLyricLines(q.lyric);
+      q.occurrence.forEach((occ, idx) => {
+        if (occ == null) return;
+        const key = `${q.sounds_id}\u0000${lines[idx]}`;
+        if (!map.has(key) || map.get(key) < occ) map.set(key, occ);
+      });
+    });
+    return map;
+  };
+
+  // 1レコード（複数行なら行ごと）の中で最も出現回数が多いフレーズの合計出現回数を返す
+  const repeatTotalForRow = (q, repeatTotalMap) => {
+    if (!Array.isArray(q.occurrence)) return 0;
+    const lines = splitLyricLines(q.lyric);
+    let total = 0;
+    q.occurrence.forEach((occ, idx) => {
+      if (occ == null) return;
+      const key = `${q.sounds_id}\u0000${lines[idx]}`;
+      const t = repeatTotalMap.get(key) || occ;
+      if (t > total) total = t;
+    });
+    return total;
+  };
+
+  const repeatWeightMultiplier = (q, repeatTotalMap) => {
+    const n = repeatTotalForRow(q, repeatTotalMap);
+    if (n <= 1) return 1;
+    return Math.max(REPEAT_WEIGHT_FLOOR, 1 - 0.1 * n);
+  };
+
   // lengthは歌詞の文字数（「」()（）等の記号・スペース・改行を除いた実質文字数。
   // 半角アルファベットは0.5文字換算。CountLyricChars関数と同じ数え方）。
   const MIN_POOL_SIZE = 30;
@@ -606,13 +652,15 @@ function App() {
     hard: {
       range: [6, 13],
       extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
-      weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.3 : 1),
+      // 全員で歌う歌詞は固定で0.3（繰り返し係数は掛けない。全員係数が優先）
+      weightMultiplier: (q, totalMembers, repeatTotalMap) => (getPersonCount(q) === totalMembers ? 0.3 : repeatWeightMultiplier(q, repeatTotalMap)),
     },
     // 主条件: 5文字以下。1人または全員で歌う歌詞が対象（全員で歌う歌詞は出にくくする）
     superhard: {
       range: [0, 5],
       extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
-      weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
+      // 全員で歌う歌詞は固定で0.1（繰り返し係数は掛けない。全員係数が優先）
+      weightMultiplier: (q, totalMembers, repeatTotalMap) => (getPersonCount(q) === totalMembers ? 0.1 : repeatWeightMultiplier(q, repeatTotalMap)),
     },
   };
 
@@ -625,10 +673,11 @@ function App() {
   const resolveLengthCascade = (pool, tierKey, totalMembers) => {
     const config = TIER_LENGTH_CONFIG[tierKey];
     const [lo, hi] = config.range;
+    const repeatTotalMap = buildRepeatTotalMap(pool);
     const eligible = pool.filter((q) => q.length != null && config.extra(q, totalMembers));
 
     const primary = eligible.filter((q) => q.length >= lo && q.length <= hi);
-    const result = primary.map((row) => ({ row, weight: config.weightMultiplier(row, totalMembers) }));
+    const result = primary.map((row) => ({ row, weight: config.weightMultiplier(row, totalMembers, repeatTotalMap) }));
 
     if (result.length < MIN_POOL_SIZE) {
       const rest = eligible
@@ -636,7 +685,7 @@ function App() {
         .sort((a, b) => lengthGapFromRange(a.length, config.range) - lengthGapFromRange(b.length, config.range))
         .slice(0, MIN_POOL_SIZE - result.length);
       rest.forEach((row) => {
-        result.push({ row, weight: 0.3 * config.weightMultiplier(row, totalMembers) });
+        result.push({ row, weight: 0.3 * config.weightMultiplier(row, totalMembers, repeatTotalMap) });
       });
     }
     return result;
@@ -661,7 +710,8 @@ function App() {
     expert: (q) => !q.unique && getPersonCount(q) >= 2,
   };
   const TIER_TAG_WEIGHT_FN = {
-    expert: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : 1),
+    // 全員で歌う歌詞は固定で0.1（繰り返し係数は掛けない。全員係数が優先）
+    expert: (q, totalMembers, repeatTotalMap) => (getPersonCount(q) === totalMembers ? 0.1 : repeatWeightMultiplier(q, repeatTotalMap)),
   };
   // タグ条件が1件もヒットしなかった場合に試す、旧重み列
   const TIER_FALLBACK_KEYS = {
@@ -723,7 +773,8 @@ function App() {
       const tagged = pool.filter(q => tagFilter(q, totalMembers));
       if (tagged.length > 0) {
         const weightFn = TIER_TAG_WEIGHT_FN[tier];
-        return { rows: tagged, weightKey: weightFn ? (q) => weightFn(q, totalMembers) : null };
+        const repeatTotalMap = buildRepeatTotalMap(pool);
+        return { rows: tagged, weightKey: weightFn ? (q) => weightFn(q, totalMembers, repeatTotalMap) : null };
       }
     }
     for (const key of (TIER_FALLBACK_KEYS[tier] || [])) {
