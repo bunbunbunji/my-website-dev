@@ -760,7 +760,7 @@ function App() {
     let from = 0;
     let hasMore = true;
     while (hasMore) {
-      const { data } = await supabase.from('quiz_full_dev').select('group_name, song_name').in('group_name', groups).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
+      const { data } = await supabase.from('quiz_full_dev').select('group_name, song_name').in('group_name', groups).in('sounds_id', activeSoundsIdsRef.current).order('lyrics_id', { ascending: true }).range(from, from + 999);
       if (!data || data.length === 0) { hasMore = false; }
       else { allData = [...allData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
     }
@@ -793,7 +793,7 @@ function App() {
         let from = 0;
         let hasMore = true;
         while (hasMore) {
-          const { data } = await supabase.from('quiz_full_dev').select('*').eq('group_name', group).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
+          const { data } = await supabase.from('quiz_full_dev').select('*').eq('group_name', group).in('sounds_id', activeSoundsIdsRef.current).order('lyrics_id', { ascending: true }).range(from, from + 999);
           if (!data || data.length === 0) { hasMore = false; }
           else { groupData = [...groupData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
         }
@@ -1100,7 +1100,7 @@ function App() {
       allData = [];
       let from = 0;
       while (true) {
-        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).order('lyrics_id', { ascending: true }).range(from, from + 999);
         if (!data || data.length === 0) break;
         allData = allData.concat(data);
         if (data.length < 1000) break;
@@ -1155,7 +1155,7 @@ function App() {
       let from = 0;
       let hasMore = true;
       while (hasMore) {
-        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).range(from, from + 999);
+        const { data } = await supabase.from("quiz_full_dev").select("*").eq("group_name", selectedGroup).in('sounds_id', activeSoundsIdsRef.current).order('lyrics_id', { ascending: true }).range(from, from + 999);
         if (!data || data.length === 0) { hasMore = false; }
         else { qData = [...qData, ...data]; from += 1000; if (data.length < 1000) hasMore = false; }
       }
@@ -1221,6 +1221,7 @@ function App() {
           .from('quiz_full_dev')
           .select('group_name, song_name')
           .in('sounds_id', activeSoundsIdsRef.current)
+          .order('lyrics_id', { ascending: true })
           .range(from, from + 999);
 
         if (error) throw error;
@@ -2962,7 +2963,7 @@ function App() {
                     {songModalMembers.length > 0 && <>
                       <span className="song-modal-legend-item">
                         <span className="song-modal-legend-dot" style={{ background: '#444' }} />
-                        <span style={{ color: '#444', fontWeight: 'bold' }}>複数</span>
+                        <span style={{ color: '#444', fontWeight: 'bold', textDecoration: 'underline', textDecorationColor: 'rgba(255, 105, 178, 0.5)', textUnderlineOffset: '3px' }}>複数</span>
                       </span>
                       <span className="song-modal-legend-item">
                         <span className="song-modal-legend-dot" style={{ background: '#333' }} />
