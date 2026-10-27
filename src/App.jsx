@@ -834,7 +834,7 @@ function App() {
 
     // 選曲対象の曲に絞った上で、選択中の難易度タグの和集合→旧重み列の和集合→全件、の順で解決する
     // 難易度の判定（文字数カスケード）はグループ全体のプールを基準に行う（曲単体だと件数が不安定なため）
-    const songSelected = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`));
+    const songSelected = qData.filter(q => customSelectedSongs.has(`${q.group_name}::${q.song_name}`) && !q.exclude_from_quiz);
     const selectedTiers = [...customDifficulties];
     const membershipByGroupTier = {};
     const getMembership = (group, tier) => {
@@ -1041,7 +1041,7 @@ function App() {
         ? supabase.from('quiz_full_dev').select('*').in('id', saved.pool)
         : Promise.resolve({ data: [] }),
     ]);
-    const poolData = pData || [];
+    const poolData = (pData || []).filter(q => !q.exclude_from_quiz);
     const q1 = addSurrounds(qData);
 
     const lives = saved.lives ?? 3;
@@ -1133,7 +1133,7 @@ function App() {
       if (allData.length > 0) setGroupCache(selectedGroup, allData);
     }
     const totalMembers = (mData || []).length;
-    const { rows: qData, weightKey } = resolveTierPool(allData, selectedDiff, totalMembers);
+    const { rows: qData, weightKey } = resolveTierPool(allData.filter(q => !q.exclude_from_quiz), selectedDiff, totalMembers);
 
     if (!qData || qData.length === 0) {
       setStatusMsg("問題が見つかりませんでした");
@@ -1194,7 +1194,7 @@ function App() {
     setMembers(mData || []);
     endlessTotalMembersRef.current = (mData || []).length;
     // Q1を選択してfullデータ取得
-    let pool = [...qData];
+    let pool = qData.filter(q => !q.exclude_from_quiz);
     const eligible1 = getEndlessEligiblePool(pool, 1, endlessTotalMembersRef.current);
     const q1Meta = selectEndlessWeighted(eligible1);
     pool = pool.filter(q => q.id !== q1Meta.id);
