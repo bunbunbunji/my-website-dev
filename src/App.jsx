@@ -2464,7 +2464,7 @@ function App() {
 
       {/* --- アナウンス画面 --- */}
       {screen === 'quiz' && quizPhase === 'announce' && (
-        <div className="quiz-announce-overlay">
+        <div className="quiz-announce-overlay" onClick={() => setQuizPhase('question')}>
           <div className="announce-main">
             <p className="announce-question-num">
               {gameMode === 'endless' ? `第${endlessQNum}問` :
@@ -2477,16 +2477,14 @@ function App() {
               <span className="announce-from-suffix">からの出題です！</span>
             </p>
           </div>
-          <button className="announce-skip-btn-overlay" onClick={() => setQuizPhase('question')}>スキップ →</button>
         </div>
       )}
 
       {/* --- 全歌詞スクロール画面（アナウンス時はバック表示） --- */}
       {screen === 'quiz' && (quizPhase === 'announce' || quizPhase === 'scrolling') && (
-        <div className="box quiz-scrolling-card">
+        <div className="box quiz-scrolling-card" onClick={() => setQuizPhase('question')}>
           <div className="scrolling-topbar">
             <p className="scrolling-song-name">{quizCurr?.song_name}</p>
-            <button className="scrolling-skip-btn" onClick={() => setQuizPhase('question')}>スキップ →</button>
           </div>
           <div ref={lyricBodyRef} className="scrolling-lyrics-body">
             {isLoadingLyrics && quizPhase === 'scrolling' ? (
