@@ -2477,6 +2477,7 @@ function App() {
               <span className="announce-from-suffix">からの出題です！</span>
             </p>
           </div>
+          <p className="skip-hint">クリックまたはタップしてスキップ</p>
         </div>
       )}
 
@@ -2485,6 +2486,7 @@ function App() {
         <div className="box quiz-scrolling-card" onClick={() => setQuizPhase('question')}>
           <div className="scrolling-topbar">
             <p className="scrolling-song-name">{quizCurr?.song_name}</p>
+            <p className="skip-hint scrolling-skip-hint">クリックまたはタップしてスキップ</p>
           </div>
           <div ref={lyricBodyRef} className="scrolling-lyrics-body">
             {isLoadingLyrics && quizPhase === 'scrolling' ? (
