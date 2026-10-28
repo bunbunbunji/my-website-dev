@@ -2271,28 +2271,37 @@ body::before {
 .custom-song-group-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
+  gap: clamp(3px, 1.5vw, 6px);
+  font-size: clamp(0.68rem, 2.8vw, 0.85rem);
   font-weight: bold;
   color: #ff69b2;
   padding: 6px 8px 2px;
   letter-spacing: 0.05em;
+  cursor: pointer;
+  user-select: none;
 }
-.custom-group-select-all { width: 14px; height: 14px; accent-color: #ff69b2; cursor: pointer; flex-shrink: 0; }
-.custom-song-group-name { flex-shrink: 0; }
-.custom-group-selected-count { margin-left: auto; font-size: 0.68rem; color: #aaa; font-weight: normal; letter-spacing: 0; }
+.custom-group-collapse-arrow {
+  flex-shrink: 0;
+  font-size: 0.6rem;
+  color: #ff9ec4;
+  transition: transform 0.15s;
+}
+.custom-group-collapse-arrow.collapsed { transform: rotate(-90deg); }
+.custom-group-select-all { width: 15px; height: 15px; accent-color: #ff69b2; cursor: pointer; flex-shrink: 0; }
+.custom-song-group-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.custom-group-selected-count { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; color: #aaa; font-weight: normal; letter-spacing: 0; white-space: nowrap; }
 .custom-song-item {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 7px 10px;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   cursor: pointer;
   color: #555;
   transition: background 0.1s;
 }
-.custom-song-item input[type="checkbox"] { width: 15px; height: 15px; accent-color: #ff69b2; cursor: pointer; flex-shrink: 0; }
+.custom-song-item input[type="checkbox"] { width: 14px; height: 14px; accent-color: #ff69b2; cursor: pointer; flex-shrink: 0; }
 .custom-song-item.selected { background: #fce4ec; color: #c2185b; font-weight: bold; }
 .custom-song-item:hover { background: #fce4ec44; }
 
@@ -2311,14 +2320,14 @@ body::before {
 }
 .custom-diff-toggles {
   display: flex;
-  gap: 3px;
+  gap: clamp(1px, 0.8vw, 5px);
   flex-wrap: nowrap;
 }
 .custom-diff-toggle {
-  padding: 3px 6px;
+  padding: clamp(2px, 0.9vw, 6px) clamp(3px, 2vw, 10px);
   border-radius: 20px;
   border: none;
-  font-size: 0.6rem;
+  font-size: clamp(0.5rem, 2vw, 0.75rem);
   font-weight: bold;
   cursor: pointer;
   opacity: 0.28;
@@ -2352,15 +2361,19 @@ body::before {
 }
 .custom-order-toggles {
   display: flex;
-  gap: 5px;
+  gap: clamp(1px, 0.8vw, 5px);
+  flex-wrap: nowrap;
 }
 .custom-order-toggle {
-  padding: 4px 11px;
+  padding: clamp(2px, 0.9vw, 6px) clamp(3px, 2vw, 10px);
   border-radius: 20px;
   border: none;
-  font-size: 0.7rem;
+  font-size: clamp(0.5rem, 2vw, 0.75rem);
   font-weight: bold;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
   background: #f0f0f0;
   color: #999;
   transition: background 0.15s, color 0.15s, transform 0.1s;

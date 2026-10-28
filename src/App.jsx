@@ -456,6 +456,7 @@ function App() {
   const [customDiffError, setCustomDiffError] = useState(false);
   const [customSongOrder, setCustomSongOrder] = useState('random'); // 'top' | 'bottom' | 'random'
   const [customLyricOrder, setCustomLyricOrder] = useState('random'); // 'top' | 'bottom' | 'random'
+  const [customCollapsedGroups, setCustomCollapsedGroups] = useState(new Set());
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
   const [customUnlocked, setCustomUnlocked] = useState(() => localStorage.getItem('kawaii_custom_unlocked') === 'true');
@@ -2261,13 +2262,25 @@ function App() {
               const groupKeys = groupSongs.map(s => `${s.group_name}::${s.song_name}`);
               const groupSelectedCount = groupKeys.filter(key => customSelectedSongs.has(key)).length;
               const allGroupSelected = groupSelectedCount === groupKeys.length;
+              const isCollapsed = customCollapsedGroups.has(groupName);
               return (
                 <div key={groupName}>
-                  <div className="custom-song-group-header">
+                  <div
+                    className="custom-song-group-header"
+                    onClick={() => {
+                      setCustomCollapsedGroups(prev => {
+                        const next = new Set(prev);
+                        next.has(groupName) ? next.delete(groupName) : next.add(groupName);
+                        return next;
+                      });
+                    }}
+                  >
+                    <span className={`custom-group-collapse-arrow${isCollapsed ? ' collapsed' : ''}`}>▼</span>
                     <input
                       type="checkbox"
                       className="custom-group-select-all"
                       checked={allGroupSelected}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={() => {
                         setCustomSelectedSongs(prev => {
                           const next = new Set(prev);
@@ -2280,7 +2293,7 @@ function App() {
                     <span className="custom-song-group-name">{groupName}</span>
                     <span className="custom-group-selected-count">{groupSelectedCount}曲選択中</span>
                   </div>
-                  {groupSongs.map(s => {
+                  {!isCollapsed && groupSongs.map(s => {
                     const key = `${s.group_name}::${s.song_name}`;
                     return (
                       <label key={key} className={`custom-song-item${customSelectedSongs.has(key) ? ' selected' : ''}`}>
