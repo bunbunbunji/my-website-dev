@@ -650,7 +650,7 @@ function App() {
   // 主条件の文字数範囲で解決し、[{ row, weight }] を返す。
   // 主条件だけでMIN_POOL_SIZE件に満たない場合、範囲外から文字数が近いものを必要数だけ補充する
   // （補充分は重み0.3倍。丸ごと追加はせず、必要な件数だけ近い順に採用する）。
-  const resolveLengthCascade = (pool, tierKey, totalMembers) => {
+  const resolveLengthCascade = (pool, tierKey, totalMembers, allowCascade = true) => {
     const config = TIER_LENGTH_CONFIG[tierKey];
     const [lo, hi] = config.range;
     const eligible = pool.filter((q) => q.length != null && config.extra(q, totalMembers));
@@ -658,7 +658,7 @@ function App() {
     const primary = eligible.filter((q) => q.length >= lo && q.length <= hi);
     const result = primary.map((row) => ({ row, weight: config.weightMultiplier(row, totalMembers) }));
 
-    if (result.length < MIN_POOL_SIZE) {
+    if (allowCascade && result.length < MIN_POOL_SIZE) {
       const rest = eligible
         .filter((q) => q.length < lo || q.length > hi)
         .sort((a, b) => lengthGapFromRange(a.length, config.range) - lengthGapFromRange(b.length, config.range))
@@ -698,15 +698,16 @@ function App() {
   };
 
   // 指定tierでの対象行と重みを解決する（easy/normal/hard/superhardは文字数カスケード、expertは従来方式）
-  const resolveTierRows = (pool, tier, totalMembers) => {
+  // allowCascade=falseで、文字数レンジ外からの補充（MIN_POOL_SIZE未満時の近似文字数での水増し）を行わない
+  const resolveTierRows = (pool, tier, totalMembers, allowCascade = true) => {
     if (tier === 'easy') return resolveEasyPool(pool);
-    if (TIER_LENGTH_CONFIG[tier]) return resolveLengthCascade(pool, tier, totalMembers);
+    if (TIER_LENGTH_CONFIG[tier]) return resolveLengthCascade(pool, tier, totalMembers, allowCascade);
     return null;
   };
 
   // 指定tierに該当する行のID集合のみを返す（重みが不要な用途向け）
-  const getTierMembershipIds = (pool, tier, totalMembers) => {
-    const resolved = resolveTierRows(pool, tier, totalMembers);
+  const getTierMembershipIds = (pool, tier, totalMembers, allowCascade = true) => {
+    const resolved = resolveTierRows(pool, tier, totalMembers, allowCascade);
     if (resolved) return new Set(resolved.map(({ row }) => row.id));
     const tagFilter = TIER_TAG_FILTER[tier];
     return new Set(tagFilter ? pool.filter((q) => tagFilter(q, totalMembers)).map((q) => q.id) : []);
@@ -847,7 +848,8 @@ function App() {
       if (!membershipByGroupTier[cacheKey]) {
         const groupPool = qData.filter(q => q.group_name === group);
         const totalMembers = (memberMap[group] || []).length;
-        membershipByGroupTier[cacheKey] = getTierMembershipIds(groupPool, tier, totalMembers);
+        // カスタムモードでは文字数レンジ外からの補充を行わない（難易度間の重複出題を避けるため）
+        membershipByGroupTier[cacheKey] = getTierMembershipIds(groupPool, tier, totalMembers, false);
       }
       return membershipByGroupTier[cacheKey];
     };
