@@ -2274,8 +2274,8 @@ body::before {
   gap: clamp(3px, 1.5vw, 6px);
   font-size: clamp(0.75rem, 3.2vw, 0.95rem);
   font-weight: bold;
-  color: #6a1b9a;
-  background: linear-gradient(135deg, #ede3fb, #d9c3f2);
+  color: #2e7d4f;
+  background: linear-gradient(135deg, #e3f5e5, #c3e8c8);
   padding: 7px 10px;
   margin: 4px 0;
   border-radius: 10px;
@@ -2284,15 +2284,15 @@ body::before {
   user-select: none;
   transition: background 0.15s;
 }
-.custom-song-group-header:hover { background: linear-gradient(135deg, #e0cff5, #c9a8e8); }
+.custom-song-group-header:hover { background: linear-gradient(135deg, #d2ecd6, #aedbb5); }
 .custom-group-collapse-arrow {
   flex-shrink: 0;
   font-size: 0.6rem;
-  color: #b088dd;
+  color: #6fb582;
   transition: transform 0.15s;
 }
 .custom-group-collapse-arrow.collapsed { transform: rotate(-90deg); }
-.custom-group-select-all { width: 15px; height: 15px; accent-color: #8e24aa; cursor: pointer; flex-shrink: 0; }
+.custom-group-select-all { width: 15px; height: 15px; accent-color: #43a047; cursor: pointer; flex-shrink: 0; }
 .custom-song-group-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-group-selected-count { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; color: #aaa; font-weight: normal; letter-spacing: 0; white-space: nowrap; }
 .custom-song-item {
