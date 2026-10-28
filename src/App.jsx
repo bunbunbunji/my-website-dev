@@ -546,28 +546,52 @@ function App() {
   const GROUP_CLS = { 'FRUITS ZIPPER': 'fz', 'CANDY TUNE': 'cd', 'SWEET STEADY': 'ss', 'CUTIE STREET': 'cs', 'MORE STAR': 'ms' };
 
   // --- エンドレスモード補助関数 ---
-  // 問題番号に応じて、やさしい〜きちくの5段階タグ（TIER_TAG_FILTER）を
-  // 複数組み合わせ、重み付きで出題する。該当が1件もなければ全件（無条件）にフォールバックする。
+  // 問題番号に応じて対象タブ(ネイティブ限定、累積混入なし)を複数組み合わせ、
+  // 「歌詞自身のタブ内重み(繰り返し減衰・weight列など)」×「ステージ係数」を合算して
+  // 重み付きで出題する。該当が1件もなければ全件（無条件）にフォールバックする。
   const ENDLESS_PROGRESSION = [
-    { max: 10, tiers: [{ tier: 'easy', weight: 1 }] },
-    { max: 20, tiers: [{ tier: 'easy', weight: 0.3 }, { tier: 'normal', weight: 1 }] },
-    { max: 35, tiers: [{ tier: 'normal', weight: 1 }] },
-    { max: 50, tiers: [{ tier: 'normal', weight: 0.3 }, { tier: 'hard', weight: 1 }] },
-    { max: 70, tiers: [{ tier: 'normal', weight: 0.15 }, { tier: 'hard', weight: 1 }, { tier: 'superhard', weight: 1 }] },
-    { max: 90, tiers: [{ tier: 'hard', weight: 0.3 }, { tier: 'superhard', weight: 1 }, { tier: 'expert', weight: 0.15 }] },
+    { max: 10, tiers: [{ tier: 'easyUnique', weight: 1 }] },
+    { max: 20, tiers: [{ tier: 'easyNonUnique', weight: 1 }] },
+    { max: 30, tiers: [{ tier: 'normal', weight: 1 }, { tier: 'easy', weight: 0.3 }] },
+    { max: 40, tiers: [{ tier: 'normal', weight: 1 }] },
+    { max: 50, tiers: [{ tier: 'hard', weight: 1 }, { tier: 'normal', weight: 0.5 }] },
+    { max: 70, tiers: [{ tier: 'superhard', weight: 0.3 }, { tier: 'hard', weight: 0.8 }, { tier: 'normal', weight: 0.3 }] },
+    { max: 90, tiers: [{ tier: 'expert', weight: 0.1 }, { tier: 'superhard', weight: 0.8 }, { tier: 'hard', weight: 0.3 }, { tier: 'normal', weight: 0.1 }] },
+    { max: 99, tiers: [{ tier: 'expert', weight: 0.4 }, { tier: 'superhard', weight: 0.6 }, { tier: 'hard', weight: 0.2 }, { tier: 'normal', weight: 0.1 }] },
   ];
-  const ENDLESS_PROGRESSION_LAST = [{ tier: 'superhard', weight: 1 }, { tier: 'expert', weight: 0.6 }];
+  const ENDLESS_PROGRESSION_LAST = [{ tier: 'expert', weight: 0.7 }, { tier: 'superhard', weight: 0.4 }, { tier: 'hard', weight: 0.2 }, { tier: 'normal', weight: 0.1 }];
+
+  // 各歌詞が、ある1段階のタブに「どのくらいの重み」で直接(ネイティブ限定)属するかを返す
+  const resolveEndlessTierDirect = (pool, tier, totalMembers) => {
+    if (tier === 'easyUnique') return resolveTierDirect(pool, 'easy', totalMembers).filter(({ row }) => row.unique === true);
+    if (tier === 'easyNonUnique') return resolveTierDirect(pool, 'easy', totalMembers).filter(({ row }) => row.unique !== true);
+    if (TIER_ORDER.includes(tier)) return resolveTierDirect(pool, tier, totalMembers);
+    if (tier === 'expert') {
+      return pool.filter((q) => TIER_TAG_FILTER.expert(q)).map((row) => ({ row, weight: TIER_TAG_WEIGHT_FN.expert(row, totalMembers) }));
+    }
+    return [];
+  };
+
+  // 複数タブを合算した結果、歌詞自身の重みが小さすぎて出現しなくなるのを防ぐ下限
+  const ENDLESS_WEIGHT_FLOOR = 0.1;
 
   const getEndlessEligiblePool = (pool, qNum, totalMembers) => {
     const tiers = (ENDLESS_PROGRESSION.find(r => qNum <= r.max) || { tiers: ENDLESS_PROGRESSION_LAST }).tiers;
-    const membershipByTier = {};
+    const weightByTier = {};
     tiers.forEach(({ tier }) => {
-      if (!membershipByTier[tier]) membershipByTier[tier] = getTierMembershipIds(pool, tier, totalMembers);
+      if (!weightByTier[tier]) {
+        const map = new Map();
+        resolveEndlessTierDirect(pool, tier, totalMembers).forEach(({ row, weight }) => map.set(row.id, weight));
+        weightByTier[tier] = map;
+      }
     });
     const weighted = pool
       .map(q => {
-        const w = tiers.reduce((sum, t) => sum + (membershipByTier[t.tier].has(q.id) ? t.weight : 0), 0);
-        return w > 0 ? { q, w } : null;
+        const sum = tiers.reduce((s, t) => {
+          const w = weightByTier[t.tier].get(q.id);
+          return w != null ? s + w * t.weight : s;
+        }, 0);
+        return sum > 0 ? { q, w: Math.max(sum, ENDLESS_WEIGHT_FLOOR) } : null;
       })
       .filter(Boolean);
     return weighted.length > 0 ? weighted : pool.map(q => ({ q, w: 1 }));
@@ -710,14 +734,6 @@ function App() {
   const resolveTierRows = (pool, tier, totalMembers) => {
     if (TIER_ORDER.includes(tier)) return resolveTierCumulative(pool, tier, totalMembers);
     return null;
-  };
-
-  // 指定tierに該当する行のID集合のみを返す（重みが不要な用途向け）
-  const getTierMembershipIds = (pool, tier, totalMembers) => {
-    const resolved = resolveTierRows(pool, tier, totalMembers);
-    if (resolved) return new Set(resolved.map(({ row }) => row.id));
-    const tagFilter = TIER_TAG_FILTER[tier];
-    return new Set(tagFilter ? pool.filter((q) => tagFilter(q, totalMembers)).map((q) => q.id) : []);
   };
 
   // カスタムモード専用: 累積（下位難易度からの混入）を行わず、ネイティブ階層のみで判定する。
