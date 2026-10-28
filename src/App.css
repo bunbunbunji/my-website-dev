@@ -2261,7 +2261,7 @@ body::before {
 
 /* 曲選択 */
 .custom-song-list {
-  max-height: 40svh;
+  height: 40svh;
   overflow-y: auto;
   border: 1.5px solid #eee;
   border-radius: 12px;
@@ -2272,7 +2272,7 @@ body::before {
   display: flex;
   align-items: center;
   gap: clamp(3px, 1.5vw, 6px);
-  font-size: clamp(0.68rem, 2.8vw, 0.85rem);
+  font-size: clamp(0.75rem, 3.2vw, 0.95rem);
   font-weight: bold;
   color: #ff69b2;
   padding: 6px 8px 2px;
