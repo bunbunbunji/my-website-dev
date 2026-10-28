@@ -2274,12 +2274,17 @@ body::before {
   gap: clamp(3px, 1.5vw, 6px);
   font-size: clamp(0.75rem, 3.2vw, 0.95rem);
   font-weight: bold;
-  color: #ff69b2;
-  padding: 6px 8px 2px;
+  color: #c2185b;
+  background: linear-gradient(135deg, #ffeaf3, #ffd3e6);
+  padding: 7px 10px;
+  margin: 4px 0;
+  border-radius: 10px;
   letter-spacing: 0.05em;
   cursor: pointer;
   user-select: none;
+  transition: background 0.15s;
 }
+.custom-song-group-header:hover { background: linear-gradient(135deg, #ffd9ea, #ffc2dc); }
 .custom-group-collapse-arrow {
   flex-shrink: 0;
   font-size: 0.6rem;
