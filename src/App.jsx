@@ -585,7 +585,7 @@ function App() {
   };
 
   // --- 難易度タグベースの出題プール解決（5段階） ---
-  // easy/normal/hard/superhardは文字数ベースのカスケード方式（uniqueタグは使わない）、
+  // easy/normal/hard/superhardは「ネイティブ階層（文字数で一意に決定）＋累積（入れ子）」方式、
   // expertのみ人数タグ（TIER_TAG_FILTER.expert）による従来方式。
   const getPersonCount = (q) =>
     (q.correct_members || '').split(/[,、]/).map(s => s.trim()).filter(Boolean).length;
@@ -615,73 +615,82 @@ function App() {
     return Math.max(REPEAT_WEIGHT_FLOOR, 1 - 0.1 * n);
   };
 
-  // lengthは歌詞の文字数（「」()（）等の記号・スペース・改行を除いた実質文字数。
-  // 半角アルファベットは0.5文字換算。CountLyricChars関数と同じ数え方）。
-  const MIN_POOL_SIZE = 30;
+  // 難易度4段階（やさしい⊂ふつう⊂むずかしい⊂げきむず）。きちくは人数ベースの独立軸。
+  const TIER_ORDER = ['easy', 'normal', 'hard', 'superhard'];
+  // 1段差ごとの重み減衰率（例: ふつう選択時、ネイティブやさしいの歌詞は×0.3で薄く混じる）
+  const TIER_STEP_DECAY = 0.3;
 
-  // 難易度ごとの主条件の文字数範囲と、文字数以外の条件（人数・mv・繰り返し等）
-  // unique=trueの歌詞はやさしい専用のため、ふつう/むずかしい/げきむずでは除外する（expertと同様）
-  const TIER_LENGTH_CONFIG = {
-    // 主条件: 14〜24文字。mvがある曲・1人で歌う・繰り返しフレーズでない歌詞が対象
-    normal: {
-      range: [14, 24],
-      extra: (q) => !q.unique && q.mv === true && getPersonCount(q) === 1 && !isRepeatedInSong(q),
-      weightMultiplier: () => 1,
-    },
-    // 主条件: 6〜13文字。1人または全員で歌う歌詞が対象（全員で歌う歌詞は出にくくする）
-    hard: {
-      range: [6, 13],
-      extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
-      // 全員で歌う歌詞は固定で0.3（繰り返し係数は掛けない。全員係数が優先）
-      weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.3 : repeatWeightMultiplier(q)),
-    },
-    // 主条件: 5文字以下。1人または全員で歌う歌詞が対象（全員で歌う歌詞は出にくくする）
-    superhard: {
-      range: [0, 5],
-      extra: (q, totalMembers) => { if (q.unique) return false; const c = getPersonCount(q); return c === 1 || c === totalMembers; },
-      // 全員で歌う歌詞は固定で0.1（繰り返し係数は掛けない。全員係数が優先）
-      weightMultiplier: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : repeatWeightMultiplier(q)),
-    },
+  // 各tierに「ネイティブ（文字数由来）」または「特例（全員齐唱・14文字以上の繰り返し）」で
+  // 直接属する行と重みを返す。累積（下位tierからの混入）はresolveTierCumulative側で扱う。
+  // 通常ロジックで算出した重みと、weight列（手動の抑制指定。未設定なら1扱い）の
+  // どちらか低い方を採用する（weight列は全難易度共通で「上限」としてのみ働く）
+  const capByWeight = (q, computed) => Math.min(computed, q.weight != null ? q.weight : 1);
+
+  const resolveTierDirect = (pool, tier, totalMembers) => {
+    const result = [];
+    pool.forEach((q) => {
+      if (tier === 'easy') {
+        // unique＝1人歌唱の決め台詞的な歌詞は文字数・fam不問でやさしい固定
+        if (q.unique === true && getPersonCount(q) === 1) {
+          result.push({ row: q, weight: capByWeight(q, 1) });
+          return;
+        }
+        // ネイティブやさしい: 25文字以上・1人歌唱・繰り返しでない。famがあれば通常重み、なければ×0.4
+        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 25) {
+          result.push({ row: q, weight: capByWeight(q, q.fam === true ? 1 : 0.4) });
+        }
+        return;
+      }
+      if (tier === 'normal') {
+        // ネイティブふつう: 14〜24文字・1人歌唱・繰り返しでない。mvがあれば通常重み、なければ×0.4
+        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 14 && q.length <= 24) {
+          result.push({ row: q, weight: capByWeight(q, q.mv === true ? 1 : 0.4) });
+        }
+        return;
+      }
+      if (tier === 'hard' || tier === 'superhard') {
+        if (q.unique) return;
+        const [lo, hi] = tier === 'hard' ? [6, 13] : [0, 5];
+        // 全員で歌う歌詞は固定の低重み（むずかしい0.3/げきむず0.1）で文字数不問で特例追加
+        const specialWeight = tier === 'hard' ? 0.3 : 0.1;
+        const pc = getPersonCount(q);
+        if (pc >= 2 && pc === totalMembers) {
+          result.push({ row: q, weight: capByWeight(q, specialWeight) });
+          return;
+        }
+        if (pc !== 1) return; // 全員以外の複数人合唱はきちく専属
+        if (q.length == null) return;
+        // ネイティブ: 文字数レンジ内。繰り返し回数による既存の減衰をそのまま適用
+        if (q.length >= lo && q.length <= hi) {
+          result.push({ row: q, weight: capByWeight(q, repeatWeightMultiplier(q)) });
+          return;
+        }
+        // 特例: 14文字以上の繰り返しフレーズ（やさしい/ふつうでは除外されるため行き場がない分）を
+        // 固定の低重みで文字数不問で追加する
+        if (isRepeatedInSong(q) && q.length >= 14) {
+          result.push({ row: q, weight: capByWeight(q, specialWeight) });
+        }
+      }
+    });
+    return result;
   };
 
-  // 主条件の文字数範囲からどれだけ離れているか（範囲内なら0）
-  const lengthGapFromRange = (length, [lo, hi]) => (length < lo ? lo - length : length > hi ? length - hi : 0);
-
-  // 主条件の文字数範囲で解決し、[{ row, weight }] を返す。
-  // 主条件だけでMIN_POOL_SIZE件に満たない場合、範囲外から文字数が近いものを必要数だけ補充する
-  // （補充分は重み0.3倍。丸ごと追加はせず、必要な件数だけ近い順に採用する）。
-  const resolveLengthCascade = (pool, tierKey, totalMembers, allowCascade = true) => {
-    const config = TIER_LENGTH_CONFIG[tierKey];
-    const [lo, hi] = config.range;
-    const eligible = pool.filter((q) => q.length != null && config.extra(q, totalMembers));
-
-    const primary = eligible.filter((q) => q.length >= lo && q.length <= hi);
-    const result = primary.map((row) => ({ row, weight: config.weightMultiplier(row, totalMembers) }));
-
-    if (allowCascade && result.length < MIN_POOL_SIZE) {
-      const rest = eligible
-        .filter((q) => q.length < lo || q.length > hi)
-        .sort((a, b) => lengthGapFromRange(a.length, config.range) - lengthGapFromRange(b.length, config.range))
-        .slice(0, MIN_POOL_SIZE - result.length);
-      rest.forEach((row) => {
-        result.push({ row, weight: 0.3 * config.weightMultiplier(row, totalMembers) });
+  // 累積版: tierを選ぶと、ネイティブtier以下（易しい側）の歌詞も段差分だけ重みを減衰して含む。
+  // 同一歌詞が複数の経路（例: 全員齐唱がhard直属とnormal経由decayの両方）で候補になった場合は
+  // 重みの最大値を採用する。
+  const resolveTierCumulative = (pool, tier, totalMembers) => {
+    const idx = TIER_ORDER.indexOf(tier);
+    if (idx === -1) return null;
+    const weightMap = new Map();
+    for (let i = 0; i <= idx; i++) {
+      const decay = Math.pow(TIER_STEP_DECAY, idx - i);
+      resolveTierDirect(pool, TIER_ORDER[i], totalMembers).forEach(({ row, weight }) => {
+        const w = weight * decay;
+        const prev = weightMap.get(row.id);
+        if (!prev || w > prev.weight) weightMap.set(row.id, { row, weight: w });
       });
     }
-    return result;
-  };
-
-  // やさしい: famがある曲の25文字以上（カスケードなし、足りなくてもそのまま）＋
-  // uniqueタグ付き・1人歌唱の歌詞を文字数・fam不問で追加する
-  const EASY_FAM_MIN_LENGTH = 25;
-  const resolveEasyPool = (pool) => {
-    const famWeight = (q) => (q.weight != null ? q.weight : 1);
-    const primary = pool.filter((q) => q.fam === true && q.length != null && q.length >= EASY_FAM_MIN_LENGTH && getPersonCount(q) === 1 && !isRepeatedInSong(q));
-    const result = primary.map((row) => ({ row, weight: famWeight(row) }));
-    const includedIds = new Set(primary.map((q) => q.id));
-    pool
-      .filter((q) => q.unique === true && getPersonCount(q) === 1 && !includedIds.has(q.id))
-      .forEach((row) => result.push({ row, weight: famWeight(row) }));
-    return result;
+    return [...weightMap.values()];
   };
 
   // きちく（expert）のみ従来方式：人数2人以上のタグで判定
@@ -690,25 +699,34 @@ function App() {
   };
   const TIER_TAG_WEIGHT_FN = {
     // 全員で歌う歌詞は固定で0.1（繰り返し係数は掛けない。全員係数が優先）
-    expert: (q, totalMembers) => (getPersonCount(q) === totalMembers ? 0.1 : repeatWeightMultiplier(q)),
+    expert: (q, totalMembers) => capByWeight(q, getPersonCount(q) === totalMembers ? 0.1 : repeatWeightMultiplier(q)),
   };
   // タグ条件が1件もヒットしなかった場合に試す、旧重み列
   const TIER_FALLBACK_KEYS = {
     expert: ['expert'],
   };
 
-  // 指定tierでの対象行と重みを解決する（easy/normal/hard/superhardは文字数カスケード、expertは従来方式）
-  // allowCascade=falseで、文字数レンジ外からの補充（MIN_POOL_SIZE未満時の近似文字数での水増し）を行わない
-  const resolveTierRows = (pool, tier, totalMembers, allowCascade = true) => {
-    if (tier === 'easy') return resolveEasyPool(pool);
-    if (TIER_LENGTH_CONFIG[tier]) return resolveLengthCascade(pool, tier, totalMembers, allowCascade);
+  // 指定tierでの対象行と重みを解決する（easy/normal/hard/superhardはネイティブ階層＋累積、expertは従来方式）
+  const resolveTierRows = (pool, tier, totalMembers) => {
+    if (TIER_ORDER.includes(tier)) return resolveTierCumulative(pool, tier, totalMembers);
     return null;
   };
 
   // 指定tierに該当する行のID集合のみを返す（重みが不要な用途向け）
-  const getTierMembershipIds = (pool, tier, totalMembers, allowCascade = true) => {
-    const resolved = resolveTierRows(pool, tier, totalMembers, allowCascade);
+  const getTierMembershipIds = (pool, tier, totalMembers) => {
+    const resolved = resolveTierRows(pool, tier, totalMembers);
     if (resolved) return new Set(resolved.map(({ row }) => row.id));
+    const tagFilter = TIER_TAG_FILTER[tier];
+    return new Set(tagFilter ? pool.filter((q) => tagFilter(q, totalMembers)).map((q) => q.id) : []);
+  };
+
+  // カスタムモード専用: 累積（下位難易度からの混入）を行わず、ネイティブ階層のみで判定する。
+  // カスタムは重み付き抽選をせず該当歌詞を全部使うため、累積混入があると「本来は下位難易度の
+  // 歌詞」が常時・無差別に出てしまう。選んだ難易度の歌詞だけに絞りたい場合はこちらを使う。
+  const getTierMembershipIdsNative = (pool, tier, totalMembers) => {
+    if (TIER_ORDER.includes(tier)) {
+      return new Set(resolveTierDirect(pool, tier, totalMembers).map(({ row }) => row.id));
+    }
     const tagFilter = TIER_TAG_FILTER[tier];
     return new Set(tagFilter ? pool.filter((q) => tagFilter(q, totalMembers)).map((q) => q.id) : []);
   };
@@ -848,8 +866,8 @@ function App() {
       if (!membershipByGroupTier[cacheKey]) {
         const groupPool = qData.filter(q => q.group_name === group);
         const totalMembers = (memberMap[group] || []).length;
-        // カスタムモードでは文字数レンジ外からの補充を行わない（難易度間の重複出題を避けるため）
-        membershipByGroupTier[cacheKey] = getTierMembershipIds(groupPool, tier, totalMembers, false);
+        // カスタムは重み付き抽選をしないため、累積（下位難易度の混入）は使わずネイティブ階層のみで絞る
+        membershipByGroupTier[cacheKey] = getTierMembershipIdsNative(groupPool, tier, totalMembers);
       }
       return membershipByGroupTier[cacheKey];
     };
