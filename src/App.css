@@ -2327,10 +2327,10 @@ body::before {
   min-width: 0;
 }
 .custom-diff-toggle {
-  padding: clamp(2px, 1.6cqw, 9px) clamp(3px, 3cqw, 14px);
+  padding: clamp(2px, 1.6cqw, 7px) clamp(3px, 3cqw, 12px);
   border-radius: 20px;
   border: none;
-  font-size: clamp(0.5rem, 3.6cqw, 1.1rem);
+  font-size: clamp(0.5rem, 3.6cqw, 0.9rem);
   font-weight: bold;
   cursor: pointer;
   opacity: 0.28;
@@ -2372,10 +2372,10 @@ body::before {
   min-width: 0;
 }
 .custom-order-toggle {
-  padding: clamp(2px, 1.6cqw, 9px) clamp(3px, 3cqw, 14px);
+  padding: clamp(2px, 1.6cqw, 7px) clamp(3px, 3cqw, 12px);
   border-radius: 20px;
   border: none;
-  font-size: clamp(0.5rem, 3.6cqw, 1.1rem);
+  font-size: clamp(0.5rem, 3.6cqw, 0.9rem);
   font-weight: bold;
   cursor: pointer;
   white-space: nowrap;
