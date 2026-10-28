@@ -8,7 +8,8 @@ import { execSync } from 'child_process'
 function getAppVersion() {
   try {
     const hash = execSync('git rev-parse --short HEAD').toString().trim()
-    const dirty = execSync('git status --porcelain').toString().trim().length > 0
+    // 未追跡ファイル(作業用の一時ファイル等)は無視し、追跡対象ファイルの変更のみで判定する
+    const dirty = execSync('git status --porcelain --untracked-files=no').toString().trim().length > 0
     return `${hash}${dirty ? '-dirty' : ''}`
   } catch {
     return 'unknown'
