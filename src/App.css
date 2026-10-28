@@ -2300,7 +2300,7 @@ body::before {
 .custom-group-collapse-arrow.collapsed { transform: rotate(-90deg); }
 .custom-group-select-all { width: 19px; height: 19px; accent-color: var(--group-accent, #43a047); cursor: pointer; flex-shrink: 0; }
 .custom-song-group-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.custom-group-selected-count { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; color: #aaa; font-weight: normal; letter-spacing: 0; white-space: nowrap; }
+.custom-group-selected-count { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; color: var(--group-text, #888); opacity: 0.75; font-weight: normal; letter-spacing: 0; white-space: nowrap; }
 .custom-song-item {
   display: flex;
   align-items: center;
