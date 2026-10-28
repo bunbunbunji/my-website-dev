@@ -454,6 +454,8 @@ function App() {
   const [customIsLoading, setCustomIsLoading] = useState(false);
   const [customDifficulties, setCustomDifficulties] = useState(new Set(['easy', 'normal', 'hard', 'superhard', 'expert']));
   const [customDiffError, setCustomDiffError] = useState(false);
+  const [customSongOrder, setCustomSongOrder] = useState('random'); // 'top' | 'bottom' | 'random'
+  const [customLyricOrder, setCustomLyricOrder] = useState('random'); // 'top' | 'bottom' | 'random'
   const [customIsLoadingSongs, setCustomIsLoadingSongs] = useState(false);
   const [customQuitModal, setCustomQuitModal] = useState(false);
   const [customUnlocked, setCustomUnlocked] = useState(() => localStorage.getItem('kawaii_custom_unlocked') === 'true');
@@ -863,7 +865,24 @@ function App() {
       setTimeout(() => setCustomDiffError(false), 3500);
       return;
     }
-    const shuffled = shuffle(filtered).map(addSurrounds);
+    const lyricsBySongKey = new Map();
+    filtered.forEach(q => {
+      const key = `${q.group_name}::${q.song_name}`;
+      if (!lyricsBySongKey.has(key)) lyricsBySongKey.set(key, []);
+      lyricsBySongKey.get(key).push(q);
+    });
+    let songOrderKeys = customSongList
+      .map(s => `${s.group_name}::${s.song_name}`)
+      .filter(key => lyricsBySongKey.has(key));
+    if (customSongOrder === 'bottom') songOrderKeys = songOrderKeys.reverse();
+    else if (customSongOrder === 'random') songOrderKeys = shuffle(songOrderKeys);
+    const ordered = songOrderKeys.flatMap(key => {
+      const lyricsForSong = lyricsBySongKey.get(key);
+      if (customLyricOrder === 'top') return [...lyricsForSong].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+      if (customLyricOrder === 'bottom') return [...lyricsForSong].sort((a, b) => (b.seq ?? 0) - (a.seq ?? 0));
+      return shuffle(lyricsForSong);
+    });
+    const shuffled = ordered.map(addSurrounds);
     console.log('カスタムモード 出題順:', shuffled.map((q, i) => ({
       no: i + 1,
       group_name: q.group_name,
@@ -919,7 +938,10 @@ function App() {
 
   const restartCustomMode = async () => {
     customResultReadyRef.current = false;
-    const shuffled = shuffle(customOriginalPoolRef.current);
+    // 曲順・歌詞順が「ランダム」以外に固定されている場合は、もう一回でも同じ順序を保つ
+    const shuffled = (customSongOrder === 'random' && customLyricOrder === 'random')
+      ? shuffle(customOriginalPoolRef.current)
+      : [...customOriginalPoolRef.current];
     console.log('カスタムモード 出題順（もう一回）:', shuffled.map((q, i) => ({
       no: i + 1,
       group_name: q.group_name,
@@ -2233,32 +2255,49 @@ function App() {
       {screen === 'custom-select-song' && (
         <div className="box custom-select-card zoom-in">
           <h2 className="title">曲を選んでください</h2>
-          <div className="custom-song-toggle-row">
-            <button className="custom-toggle-btn" onClick={() => setCustomSelectedSongs(new Set(customSongList.map(s => `${s.group_name}::${s.song_name}`)))}>全選択</button>
-            <button className="custom-toggle-btn" onClick={() => setCustomSelectedSongs(new Set())}>全解除</button>
-            <span className="custom-selected-count">{customSelectedSongs.size}曲選択中</span>
-          </div>
           <div className="custom-song-list">
-            {[...new Set(customSongList.map(s => s.group_name))].map(groupName => (
-              <div key={groupName}>
-                <div className="custom-song-group-header">{groupName}</div>
-                {customSongList.filter(s => s.group_name === groupName).map(s => {
-                  const key = `${s.group_name}::${s.song_name}`;
-                  return (
-                    <label key={key} className={`custom-song-item${customSelectedSongs.has(key) ? ' selected' : ''}`}>
-                      <input type="checkbox" checked={customSelectedSongs.has(key)} onChange={() => {
+            {[...new Set(customSongList.map(s => s.group_name))].map(groupName => {
+              const groupSongs = customSongList.filter(s => s.group_name === groupName);
+              const groupKeys = groupSongs.map(s => `${s.group_name}::${s.song_name}`);
+              const groupSelectedCount = groupKeys.filter(key => customSelectedSongs.has(key)).length;
+              const allGroupSelected = groupSelectedCount === groupKeys.length;
+              return (
+                <div key={groupName}>
+                  <div className="custom-song-group-header">
+                    <input
+                      type="checkbox"
+                      className="custom-group-select-all"
+                      checked={allGroupSelected}
+                      onChange={() => {
                         setCustomSelectedSongs(prev => {
                           const next = new Set(prev);
-                          next.has(key) ? next.delete(key) : next.add(key);
+                          if (allGroupSelected) groupKeys.forEach(key => next.delete(key));
+                          else groupKeys.forEach(key => next.add(key));
                           return next;
                         });
-                      }} />
-                      {s.song_name}
-                    </label>
-                  );
-                })}
-              </div>
-            ))}
+                      }}
+                    />
+                    <span className="custom-song-group-name">{groupName}</span>
+                    <span className="custom-group-selected-count">{groupSelectedCount}曲選択中</span>
+                  </div>
+                  {groupSongs.map(s => {
+                    const key = `${s.group_name}::${s.song_name}`;
+                    return (
+                      <label key={key} className={`custom-song-item${customSelectedSongs.has(key) ? ' selected' : ''}`}>
+                        <input type="checkbox" checked={customSelectedSongs.has(key)} onChange={() => {
+                          setCustomSelectedSongs(prev => {
+                            const next = new Set(prev);
+                            next.has(key) ? next.delete(key) : next.add(key);
+                            return next;
+                          });
+                        }} />
+                        {s.song_name}
+                      </label>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
           <div className="custom-diff-row">
             <span className="custom-diff-label">難易度</span>
@@ -2285,6 +2324,34 @@ function App() {
           {customDiffError && (
             <p className="custom-diff-error">選択した難易度に該当する歌詞がありません！</p>
           )}
+          <div className="custom-order-row">
+            <span className="custom-order-label">曲順</span>
+            <div className="custom-order-toggles">
+              {[['top', '上から'], ['bottom', '下から'], ['random', 'ランダム']].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`custom-order-toggle${customSongOrder === value ? ' on' : ''}`}
+                  onClick={() => setCustomSongOrder(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="custom-order-row">
+            <span className="custom-order-label">歌詞順</span>
+            <div className="custom-order-toggles">
+              {[['top', '上から'], ['bottom', '下から'], ['random', 'ランダム']].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`custom-order-toggle${customLyricOrder === value ? ' on' : ''}`}
+                  onClick={() => setCustomLyricOrder(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
           <button className="start-btn" disabled={customSelectedSongs.size === 0 || customIsLoading} onClick={startCustomMode}>
             {customIsLoading ? '問題を準備中…' : `スタート！（${customSelectedSongs.size}曲）`}
           </button>
