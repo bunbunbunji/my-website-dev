@@ -2322,6 +2322,8 @@ body::before {
   display: flex;
   gap: clamp(1px, 0.8vw, 5px);
   flex-wrap: nowrap;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .custom-diff-toggle {
   padding: clamp(2px, 0.9vw, 6px) clamp(3px, 2vw, 10px);
@@ -2334,8 +2336,9 @@ body::before {
   background: #888;
   color: #fff;
   white-space: nowrap;
-  flex-shrink: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  text-align: center;
   transition: opacity 0.15s, transform 0.1s;
 }
 .custom-diff-toggle.on { opacity: 1; }
