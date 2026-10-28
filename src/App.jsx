@@ -2255,7 +2255,7 @@ function App() {
       {/* --- カスタム：曲選択 --- */}
       {screen === 'custom-select-song' && (
         <div className="box custom-select-card zoom-in">
-          <h2 className="title">曲を選んでください</h2>
+          <h2 className="title">曲を選びましょう！</h2>
           <div className="custom-song-list">
             {[...new Set(customSongList.map(s => s.group_name))].map(groupName => {
               const groupSongs = customSongList.filter(s => s.group_name === groupName);
