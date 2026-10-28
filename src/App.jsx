@@ -543,6 +543,8 @@ function App() {
 
   const difficultyLabel = { easy: "やさしい", normal: "ふつう", hard: "むずかしい", superhard: "げきむず", expert: "きちく" };
 
+  const GROUP_CLS = { 'FRUITS ZIPPER': 'fz', 'CANDY TUNE': 'cd', 'SWEET STEADY': 'ss', 'CUTIE STREET': 'cs', 'MORE STAR': 'ms' };
+
   // --- エンドレスモード補助関数 ---
   // 問題番号に応じて、やさしい〜きちくの5段階タグ（TIER_TAG_FILTER）を
   // 複数組み合わせ、重み付きで出題する。該当が1件もなければ全件（無条件）にフォールバックする。
@@ -2266,7 +2268,7 @@ function App() {
               return (
                 <div key={groupName}>
                   <div
-                    className="custom-song-group-header"
+                    className={`custom-song-group-header custom-song-group-header--${GROUP_CLS[groupName] || 'fz'}`}
                     onClick={() => {
                       setCustomCollapsedGroups(prev => {
                         const next = new Set(prev);

@@ -2274,8 +2274,8 @@ body::before {
   gap: clamp(3px, 1.5vw, 6px);
   font-size: clamp(0.75rem, 3.2vw, 0.95rem);
   font-weight: bold;
-  color: #2e7d4f;
-  background: linear-gradient(135deg, #e3f5e5, #c3e8c8);
+  color: var(--group-text, #2e7d4f);
+  background: linear-gradient(135deg, var(--group-c1, #e3f5e5), var(--group-c2, #c3e8c8));
   padding: 7px 10px;
   margin: 4px 0;
   border-radius: 10px;
@@ -2284,15 +2284,21 @@ body::before {
   user-select: none;
   transition: background 0.15s;
 }
-.custom-song-group-header:hover { background: linear-gradient(135deg, #d2ecd6, #aedbb5); }
+.custom-song-group-header:hover { background: linear-gradient(135deg, var(--group-c1, #d2ecd6), var(--group-c2-hover, #aedbb5)); }
+/* グループボタンと同系統の配色（CUTIE STREETのみ既存のピンク系） */
+.custom-song-group-header--fz { --group-c1: #ffe8dd; --group-c2: #ffcbb3; --group-c2-hover: #ffb68f; --group-text: #c0470f; --group-accent: #f4511e; --group-accent-soft: #ff9f73; }
+.custom-song-group-header--cd { --group-c1: #d9f5f8; --group-c2: #b0e8ee; --group-c2-hover: #8ddbe3; --group-text: #00636f; --group-accent: #00838f; --group-accent-soft: #4dd0e0; }
+.custom-song-group-header--ss { --group-c1: #f3e5f8; --group-c2: #e1bee7; --group-c2-hover: #cfa0db; --group-text: #6a1b9a; --group-accent: #8e24aa; --group-accent-soft: #c08ad6; }
+.custom-song-group-header--cs { --group-c1: #ffe0ec; --group-c2: #ffc2da; --group-c2-hover: #ff9ec4; --group-text: #c2185b; --group-accent: #e91e8c; --group-accent-soft: #ff8fc0; }
+.custom-song-group-header--ms { --group-c1: #ece3fa; --group-c2: #d4c2f0; --group-c2-hover: #b89ce0; --group-text: #5e35b1; --group-accent: #5e35b1; --group-accent-soft: #a68bdb; }
 .custom-group-collapse-arrow {
   flex-shrink: 0;
   font-size: 0.6rem;
-  color: #6fb582;
+  color: var(--group-accent-soft, #6fb582);
   transition: transform 0.15s;
 }
 .custom-group-collapse-arrow.collapsed { transform: rotate(-90deg); }
-.custom-group-select-all { width: 15px; height: 15px; accent-color: #43a047; cursor: pointer; flex-shrink: 0; }
+.custom-group-select-all { width: 15px; height: 15px; accent-color: var(--group-accent, #43a047); cursor: pointer; flex-shrink: 0; }
 .custom-song-group-name { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-group-selected-count { margin-left: auto; flex-shrink: 0; font-size: 0.68rem; color: #aaa; font-weight: normal; letter-spacing: 0; white-space: nowrap; }
 .custom-song-item {
