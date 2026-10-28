@@ -2319,24 +2319,25 @@ body::before {
   flex-shrink: 0;
 }
 .custom-diff-toggles {
+  container-type: inline-size;
   display: flex;
-  gap: clamp(1px, 0.8vw, 5px);
+  gap: clamp(1px, 1.2cqw, 6px);
   flex-wrap: nowrap;
   flex: 1 1 0;
   min-width: 0;
 }
 .custom-diff-toggle {
-  padding: clamp(2px, 0.9vw, 6px) clamp(3px, 2vw, 10px);
+  padding: clamp(2px, 1.6cqw, 9px) clamp(3px, 3cqw, 14px);
   border-radius: 20px;
   border: none;
-  font-size: clamp(0.5rem, 2vw, 0.75rem);
+  font-size: clamp(0.5rem, 3.6cqw, 1.1rem);
   font-weight: bold;
   cursor: pointer;
   opacity: 0.28;
   background: #888;
   color: #fff;
   white-space: nowrap;
-  flex: 1 1 auto;
+  flex-shrink: 1;
   min-width: 0;
   text-align: center;
   transition: opacity 0.15s, transform 0.1s;
@@ -2363,15 +2364,18 @@ body::before {
   flex-shrink: 0;
 }
 .custom-order-toggles {
+  container-type: inline-size;
   display: flex;
-  gap: clamp(1px, 0.8vw, 5px);
+  gap: clamp(1px, 1.2cqw, 6px);
   flex-wrap: nowrap;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .custom-order-toggle {
-  padding: clamp(2px, 0.9vw, 6px) clamp(3px, 2vw, 10px);
+  padding: clamp(2px, 1.6cqw, 9px) clamp(3px, 3cqw, 14px);
   border-radius: 20px;
   border: none;
-  font-size: clamp(0.5rem, 2vw, 0.75rem);
+  font-size: clamp(0.5rem, 3.6cqw, 1.1rem);
   font-weight: bold;
   cursor: pointer;
   white-space: nowrap;
