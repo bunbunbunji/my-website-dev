@@ -644,7 +644,7 @@ function App() {
   // 1段差ごとの重み減衰率（例: ふつう選択時、ネイティブやさしいの歌詞は×0.3で薄く混じる）
   const TIER_STEP_DECAY = 0.3;
 
-  // 各tierに「ネイティブ（文字数由来）」または「特例（全員齐唱・14文字以上の繰り返し）」で
+  // 各tierに「ネイティブ（文字数由来）」または「特例（全員齐唱・28文字以上の繰り返し）」で
   // 直接属する行と重みを返す。累積（下位tierからの混入）はresolveTierCumulative側で扱う。
   // 通常ロジックで算出した重みと、weight列（手動の抑制指定。未設定なら1扱い）の
   // どちらか低い方を採用する（weight列は全難易度共通で「上限」としてのみ働く）
@@ -659,22 +659,22 @@ function App() {
           result.push({ row: q, weight: capByWeight(q, 1) });
           return;
         }
-        // ネイティブやさしい: 25文字以上・1人歌唱・繰り返しでない。famがあれば通常重み、なければ×0.4
-        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 25) {
+        // ネイティブやさしい: 52文字以上・1人歌唱・繰り返しでない。famがあれば通常重み、なければ×0.4
+        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 52) {
           result.push({ row: q, weight: capByWeight(q, q.fam === true ? 1 : 0.4) });
         }
         return;
       }
       if (tier === 'normal') {
-        // ネイティブふつう: 14〜24文字・1人歌唱・繰り返しでない。mvがあれば通常重み、なければ×0.4
-        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 14 && q.length <= 24) {
+        // ネイティブふつう: 28〜51文字・1人歌唱・繰り返しでない。mvがあれば通常重み、なければ×0.4
+        if (getPersonCount(q) === 1 && !q.unique && !isRepeatedInSong(q) && q.length != null && q.length >= 28 && q.length <= 51) {
           result.push({ row: q, weight: capByWeight(q, q.mv === true ? 1 : 0.4) });
         }
         return;
       }
       if (tier === 'hard' || tier === 'superhard') {
         if (q.unique) return;
-        const [lo, hi] = tier === 'hard' ? [6, 13] : [0, 5];
+        const [lo, hi] = tier === 'hard' ? [12, 27] : [0, 11];
         // 全員で歌う歌詞は固定の低重み（むずかしい0.3/げきむず0.1）で文字数不問で特例追加
         const specialWeight = tier === 'hard' ? 0.3 : 0.1;
         const pc = getPersonCount(q);
@@ -689,9 +689,9 @@ function App() {
           result.push({ row: q, weight: capByWeight(q, repeatWeightMultiplier(q)) });
           return;
         }
-        // 特例: 14文字以上の繰り返しフレーズ（やさしい/ふつうでは除外されるため行き場がない分）を
+        // 特例: 28文字以上の繰り返しフレーズ（やさしい/ふつうでは除外されるため行き場がない分）を
         // 固定の低重みで文字数不問で追加する
-        if (isRepeatedInSong(q) && q.length >= 14) {
+        if (isRepeatedInSong(q) && q.length >= 28) {
           result.push({ row: q, weight: capByWeight(q, specialWeight) });
         }
       }
